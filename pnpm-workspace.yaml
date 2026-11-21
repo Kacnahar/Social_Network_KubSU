@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Expo и React Native надёжнее работают с «плоской» папкой node_modules
+nodeLinker: hoisted
+
+# Пакеты, которым разрешено запускать установочные скрипты
+allowBuilds:
+  esbuild: true
