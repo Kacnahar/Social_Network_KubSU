@@ -1,8 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { deleteAccount } from '../lib/api';
+import { disablePush } from '../lib/push';
 import { useSession, useSignedIn } from '../lib/session';
-import { Body, Button, Card, ErrorText, Screen, Title } from '../ui/components';
+import { useSlots } from '../lib/useSlots';
+import { Body, Button, Card, CardTitle, ErrorText, Screen, Title } from '../ui/components';
+import { PushCard } from '../ui/PushCard';
+import { RoomEntry } from '../ui/RoomEntry';
+import { SlotList } from '../ui/SlotList';
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
@@ -13,6 +18,7 @@ export default function HomeScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { state: slots, reload } = useSlots(token, () => void forgetSession());
 
   const handleSignOut = async () => {
     setBusy('signOut');
@@ -24,6 +30,7 @@ export default function HomeScreen() {
     setBusy('delete');
     try {
       await deleteAccount(token);
+      await disablePush(null);
       await forgetSession();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
@@ -32,16 +39,20 @@ export default function HomeScreen() {
   };
 
   return (
-    <Screen>
+    <Screen align="top">
       <Title>Привет, {me.nickname}</Title>
 
-      <Card>
-        <Body>Расписание комнат</Body>
-        <Body muted>Скоро здесь появятся ближайшие комнаты и напоминания о них.</Body>
-      </Card>
+      <RoomEntry state={slots} />
 
       <Card>
-        <Body>Ник</Body>
+        <CardTitle>Расписание</CardTitle>
+        <SlotList state={slots} onRetry={reload} />
+      </Card>
+
+      <PushCard token={token} disabled={busy !== null} />
+
+      <Card>
+        <CardTitle>Ник</CardTitle>
         {me.nicknameChangeAvailableAt ? (
           <Body muted>Сменить можно будет {dateFormat.format(new Date(me.nicknameChangeAvailableAt))}.</Body>
         ) : (
@@ -59,7 +70,7 @@ export default function HomeScreen() {
           <Button variant="secondary" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
         </Card>
       ) : (
-        <Button variant="danger" title="Удалить аккаунт" onPress={() => setConfirmingDelete(true)} disabled={busy !== null} />
+        <Button variant="plainDanger" title="Удалить аккаунт" onPress={() => setConfirmingDelete(true)} disabled={busy !== null} />
       )}
     </Screen>
   );

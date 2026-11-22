@@ -1,6 +1,7 @@
 import type { MeResponse } from '@rooms/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ApiError, getMe, logout } from './api';
+import { disablePush } from './push';
 import { clearToken, loadToken, saveToken } from './tokenStorage';
 
 type SessionState =
@@ -70,7 +71,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await loadSession(token);
       },
       signOut: async () => {
-        if (state.status === 'signedIn') await logout(state.token).catch(() => undefined);
+        if (state.status === 'signedIn') {
+          // Подписку снимаем, пока токен ещё действует
+          await disablePush(state.token).catch(() => undefined);
+          await logout(state.token).catch(() => undefined);
+        }
         await forgetSession();
       },
       setMe: (me) => setState((current) => (current.status === 'signedIn' ? { ...current, me } : current)),

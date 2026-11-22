@@ -1,6 +1,7 @@
 import { LOGIN_CODE_LENGTH } from '@rooms/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { authStart, authVerify } from '../lib/api';
 import { useSession } from '../lib/session';
 import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../ui/components';
@@ -61,37 +62,41 @@ export default function VerifyScreen() {
         Если всё верно, на {pendingLogin.email} пришло письмо с кодом из {LOGIN_CODE_LENGTH} цифр. Он действует 10 минут.
       </Body>
 
-      {pendingLogin.devCode ? (
-        <Card>
-          <Body>Режим разработки: письма пока не отправляются. Ваш код — {pendingLogin.devCode}</Body>
-        </Card>
-      ) : null}
+      <Card>
+        {pendingLogin.devCode ? (
+          <Body muted>Режим разработки: письма пока не отправляются. Ваш код — {pendingLogin.devCode}</Body>
+        ) : null}
+        <Field
+          label="Код"
+          value={code}
+          onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, LOGIN_CODE_LENGTH))}
+          keyboardType="number-pad"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={LOGIN_CODE_LENGTH}
+          placeholder="000000"
+          returnKeyType="go"
+          onSubmitEditing={submit}
+          autoFocus
+          style={styles.code}
+        />
+        <ErrorText>{error}</ErrorText>
+        {notice ? <Body muted>{notice}</Body> : null}
+        <Button title="Войти" onPress={submit} loading={loading === 'verify'} disabled={loading === 'resend'} />
+        <Button
+          variant="secondary"
+          title="Отправить код ещё раз"
+          onPress={resend}
+          loading={loading === 'resend'}
+          disabled={loading === 'verify'}
+        />
+      </Card>
 
-      <Field
-        label="Код"
-        value={code}
-        onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, LOGIN_CODE_LENGTH))}
-        keyboardType="number-pad"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={LOGIN_CODE_LENGTH}
-        placeholder="000000"
-        returnKeyType="go"
-        onSubmitEditing={submit}
-        autoFocus
-      />
-
-      <ErrorText>{error}</ErrorText>
-      {notice ? <Body muted>{notice}</Body> : null}
-      <Button title="Войти" onPress={submit} loading={loading === 'verify'} disabled={loading === 'resend'} />
-      <Button
-        variant="secondary"
-        title="Отправить код ещё раз"
-        onPress={resend}
-        loading={loading === 'resend'}
-        disabled={loading === 'verify'}
-      />
-      <Button variant="secondary" title="Изменить почту" onPress={changeEmail} disabled={loading !== null} />
+      <Button variant="plain" title="Изменить почту" onPress={changeEmail} disabled={loading !== null} />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  code: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: 8, textAlign: 'center', fontVariant: ['tabular-nums'] },
+});

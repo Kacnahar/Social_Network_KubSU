@@ -9,6 +9,11 @@ export const ERROR_CODES = [
   'nickname_invalid',
   'nickname_taken',
   'nickname_change_too_soon',
+  'push_unavailable',
+  'room_not_open',
+  'voice_unavailable',
+  'nickname_required',
+  'account_banned',
   'not_found',
   'internal_error',
 ] as const;

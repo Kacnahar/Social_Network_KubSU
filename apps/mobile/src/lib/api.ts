@@ -5,14 +5,21 @@ import {
   authVerifyResponseSchema,
   errorResponseSchema,
   healthResponseSchema,
+  joinRoomResponseSchema,
   meResponseSchema,
   okResponseSchema,
+  pushConfigResponseSchema,
+  slotsResponseSchema,
   type AccountResponse,
   type AuthStartRequest,
   type AuthStartResponse,
   type ErrorCode,
   type HealthResponse,
+  type JoinRoomResponse,
   type MeResponse,
+  type PushConfigResponse,
+  type PushSubscribeRequest,
+  type SlotsResponse,
 } from '@rooms/shared';
 import type { z } from 'zod';
 
@@ -88,3 +95,19 @@ export const getAccount = (token: string): Promise<AccountResponse> =>
   request('/account', accountResponseSchema, { token });
 
 export const deleteAccount = (token: string) => request('/account', okResponseSchema, { method: 'DELETE', token });
+
+export const getSlots = (token: string): Promise<SlotsResponse> => request('/slots', slotsResponseSchema, { token });
+
+export const getPushConfig = (): Promise<PushConfigResponse> => request('/push/config', pushConfigResponseSchema);
+
+export const subscribePush = (token: string, body: PushSubscribeRequest) =>
+  request('/push/subscriptions', okResponseSchema, { method: 'POST', token, body });
+
+export const unsubscribePush = (token: string, endpoint: string) =>
+  request('/push/subscriptions', okResponseSchema, { method: 'DELETE', token, body: { endpoint } });
+
+export const joinRoom = (token: string, slotId: string): Promise<JoinRoomResponse> =>
+  request(`/slots/${encodeURIComponent(slotId)}/join`, joinRoomResponseSchema, { method: 'POST', token });
+
+export const leaveRoom = (token: string, roomId: string) =>
+  request(`/rooms/${encodeURIComponent(roomId)}/leave`, okResponseSchema, { method: 'POST', token });

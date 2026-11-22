@@ -27,6 +27,12 @@ pnpm install
 pnpm dev:server
 ```
 
+Сервер звука — нужен, чтобы входить в комнаты (ставится один раз: `brew install livekit`):
+
+```bash
+livekit-server --dev
+```
+
 Приложение в браузере (адрес http://localhost:8081):
 
 ```bash

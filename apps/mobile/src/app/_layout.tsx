@@ -24,6 +24,7 @@ function Navigation() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={hasNickname}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="room" />
       </Stack.Protected>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="nickname" />

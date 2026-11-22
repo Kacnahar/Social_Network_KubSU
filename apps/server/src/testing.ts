@@ -4,6 +4,9 @@ import { loadConfig, type Config } from './config';
 import { createDb, type Db } from './db/client';
 import { createInviteCode } from './invites';
 import type { Mailer } from './mailer';
+import type { PushGateway, PushTarget } from './push/service';
+import type { PushMessage } from '@rooms/shared';
+import type { VoiceGateway } from './voice/gateway';
 
 export class CapturingMailer implements Mailer {
   readonly sent: { email: string; code: string }[] = [];
@@ -19,6 +22,44 @@ export class CapturingMailer implements Mailer {
   }
 }
 
+export class CapturingPush implements PushGateway {
+  readonly publicKey = 'test-vapid-public-key';
+  readonly sent: { endpoint: string; message: PushMessage; ttlSeconds: number }[] = [];
+  readonly goneEndpoints = new Set<string>();
+  readonly brokenEndpoints = new Set<string>();
+
+  async send(target: PushTarget, message: PushMessage, ttlSeconds: number): Promise<'sent' | 'gone'> {
+    if (this.brokenEndpoints.has(target.endpoint)) throw new Error('push-сервис недоступен');
+    if (this.goneEndpoints.has(target.endpoint)) return 'gone';
+    this.sent.push({ endpoint: target.endpoint, message, ttlSeconds });
+    return 'sent';
+  }
+}
+
+export class FakeVoice implements VoiceGateway {
+  readonly url = 'ws://voice.test';
+  readonly counts = new Map<string, number>();
+  readonly closed: string[] = [];
+  readonly tokens: { roomName: string; identity: string; name: string; ttlSeconds: number }[] = [];
+  down = false;
+
+  async createToken(input: { roomName: string; identity: string; name: string; ttlSeconds: number }): Promise<string> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    this.tokens.push(input);
+    return `voice-token-${this.tokens.length}`;
+  }
+
+  async countParticipants(roomName: string): Promise<number> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    return this.counts.get(roomName) ?? 0;
+  }
+
+  async closeRoom(roomName: string): Promise<void> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    this.closed.push(roomName);
+  }
+}
+
 export const TEST_INVITE = 'TEST-INVITE';
 
 export type TestContext = {
@@ -26,6 +67,8 @@ export type TestContext = {
   db: Db;
   config: Config;
   mailer: CapturingMailer;
+  push: CapturingPush;
+  voice: FakeVoice;
   // Тела всех ответов сервера за время теста — для проверки анонимности
   responses: { url: string; body: string }[];
   close: () => Promise<void>;
@@ -39,12 +82,15 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     DEV_EXPOSE_LOGIN_CODES: 'false',
     RATE_LIMIT_PER_MINUTE: '100000',
     AUTH_RATE_LIMIT_PER_MINUTE: '100000',
+    SCHEDULE_WEEKDAYS: '',
     ...env,
   });
   const { db, close: closeDb } = await createDb(config.database);
   await createInviteCode(db, { code: TEST_INVITE, label: 'тест', maxUses: 100 });
   const mailer = new CapturingMailer();
-  const app = await buildApp({ config, db, mailer });
+  const push = new CapturingPush();
+  const voice = new FakeVoice();
+  const app = await buildApp({ config, db, mailer, push, voice });
 
   const responses: TestContext['responses'] = [];
   app.addHook('onSend', async (request, _reply, payload) => {
@@ -69,6 +115,8 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     db,
     config,
     mailer,
+    push,
+    voice,
     responses,
     register,
     authed: (token) => ({ authorization: `Bearer ${token}` }),

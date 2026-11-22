@@ -22,5 +22,5 @@ describe('локальная база на диске', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

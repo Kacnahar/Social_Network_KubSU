@@ -5,7 +5,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { decryptEmail } from './crypto';
-import { accounts, sessions } from './db/schema';
+import { accounts, sessions, slots } from './db/schema';
 import { createTestContext, type TestContext } from './testing';
 
 const EMAIL = 'secret.student@example.com';
@@ -33,6 +33,19 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: 'плохо', code: '1' } });
     await t.app.inject({ method: 'GET', url: `/v1/nope?email=${EMAIL}` });
+    await t.app.inject({ method: 'GET', url: '/v1/slots', headers });
+    const [slot] = await t.db
+      .insert(slots)
+      .values({ title: 'Комната', startsAt: new Date(Date.now() - 60_000), durationMinutes: 45, createdAt: new Date() })
+      .returning();
+    const joined = await t.app.inject({ method: 'POST', url: `/v1/slots/${slot!.id}/join`, headers });
+    await t.app.inject({ method: 'POST', url: `/v1/rooms/${joined.json().roomId}/leave`, headers });
+    await t.app.inject({ method: 'POST', url: '/v1/slots/not-an-id/join', headers });
+    await t.app.inject({ method: 'GET', url: '/v1/push/config' });
+    const subscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/device-1', keys: { p256dh: 'k', auth: 'a' } };
+    await t.app.inject({ method: 'POST', url: '/v1/push/subscriptions', headers, payload: subscription });
+    await t.app.inject({ method: 'POST', url: '/v1/push/subscriptions', headers, payload: { endpoint: 'https://evil.example/x', keys: subscription.keys } });
+    await t.app.inject({ method: 'DELETE', url: '/v1/push/subscriptions', headers, payload: { endpoint: subscription.endpoint } });
   });
 
   afterAll(async () => {
@@ -51,6 +64,14 @@ describe('анонимность', () => {
       }
       expect(body, `ответ ${url}`).not.toMatch(/account_?id|email/i);
     }
+  });
+
+  it('серверу звука сообщаются только персона и ник', async () => {
+    const [account] = await t.db.select().from(accounts);
+    const issued = JSON.stringify(t.voice.tokens);
+    expect(t.voice.tokens).toHaveLength(1);
+    expect(issued).toContain(NICKNAME);
+    for (const secret of [EMAIL, account!.id, account!.emailHash]) expect(issued).not.toContain(secret);
   });
 
   it('данные аккаунта и данные персоны не встречаются в одном ответе', async () => {

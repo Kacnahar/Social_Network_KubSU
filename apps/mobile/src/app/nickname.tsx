@@ -9,7 +9,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ApiError, setNickname } from '../lib/api';
 import { useSession, useSignedIn } from '../lib/session';
-import { Body, Button, ErrorText, Field, Screen, Title } from '../ui/components';
+import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../ui/components';
 
 export default function NicknameScreen() {
   const router = useRouter();
@@ -55,31 +55,32 @@ export default function NicknameScreen() {
         Под этим ником вас будут видеть в комнатах. Настоящее имя и почту собеседники не узнают.
       </Body>
 
-      <Field
-        label="Ник"
-        value={nickname}
-        onChangeText={(text) => {
-          setNicknameText(text);
-          setError(null);
-        }}
-        onBlur={() => setTouched(true)}
-        maxLength={NICKNAME_MAX_LENGTH + 10}
-        placeholder="Например, Ночной_кот"
-        hint={`От ${NICKNAME_MIN_LENGTH} до ${NICKNAME_MAX_LENGTH} символов: буквы, цифры и «_».`}
-        error={localError}
-        returnKeyType="done"
-        onSubmitEditing={submit}
-        autoFocus
-      />
+      <Card>
+        <Field
+          label="Ник"
+          value={nickname}
+          onChangeText={(text) => {
+            setNicknameText(text);
+            setError(null);
+          }}
+          onBlur={() => setTouched(true)}
+          maxLength={NICKNAME_MAX_LENGTH + 10}
+          placeholder="Например, Ночной_кот"
+          hint={`От ${NICKNAME_MIN_LENGTH} до ${NICKNAME_MAX_LENGTH} символов: буквы, цифры и «_».`}
+          error={localError}
+          returnKeyType="done"
+          onSubmitEditing={submit}
+          autoFocus
+        />
+        <Body muted>Сменить ник можно будет только через {NICKNAME_CHANGE_INTERVAL_DAYS} дней — выбирайте внимательно.</Body>
+        <ErrorText>{error}</ErrorText>
+        <Button title="Сохранить" onPress={submit} loading={loading} />
+      </Card>
 
-      <Body muted>Сменить ник можно будет только через {NICKNAME_CHANGE_INTERVAL_DAYS} дней — выбирайте внимательно.</Body>
-
-      <ErrorText>{error}</ErrorText>
-      <Button title="Сохранить" onPress={submit} loading={loading} />
       {isChange ? (
-        <Button variant="secondary" title="Отмена" onPress={() => router.replace('/')} disabled={loading} />
+        <Button variant="plain" title="Отмена" onPress={() => router.replace('/')} disabled={loading} />
       ) : (
-        <Button variant="secondary" title="Выйти" onPress={signOut} disabled={loading} />
+        <Button variant="plain" title="Выйти" onPress={signOut} disabled={loading} />
       )}
     </Screen>
   );

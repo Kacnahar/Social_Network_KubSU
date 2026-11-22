@@ -2,7 +2,7 @@
 
 Какие таблицы будут в базе (PostgreSQL) и что в них хранится. Названия полей — рабочие, уточняются при написании кода.
 
-Уже созданы (этап 1): `accounts`, `invite_codes`, `email_login_codes`, `sessions`, `persona_links`, `personas`. Точное описание — в `apps/server/src/db/schema.ts`. Остальные таблицы появятся на своих этапах.
+Уже созданы (этапы 1–3): `accounts`, `invite_codes`, `email_login_codes`, `sessions`, `persona_links`, `personas`, `slots`, `slot_reminders`, `push_subscriptions`, `rooms`, `room_participations`. Точное описание — в `apps/server/src/db/schema.ts`. Остальные таблицы появятся на своих этапах.
 
 Правило: таблицы делятся на **зону аккаунта** (знает, кто человек) и **зону персоны** (знает только ник). Мост между ними один — `persona_links`.
 
@@ -46,8 +46,8 @@ account_id, persona_id. Одна персона на аккаунт. **Чита�
 | starts_at, ends_at | срок |
 | source | vote / auto / admin |
 
-### push_tokens — адреса для push
-account_id, platform (ios / android / web), token, created_at.
+### push_subscriptions — адреса для push
+account_id, kind (пока только `webpush` — браузер), endpoint (адрес у push-сервиса браузера, уникальный), p256dh и auth (ключи шифрования уведомления), created_at. Один браузер — одна запись; наружу не отдаётся.
 
 ## Зона персоны (то, что видят собеседники)
 
@@ -72,13 +72,16 @@ account_id, platform (ios / android / web), token, created_at.
 ## Расписание и комнаты
 
 ### slots — слоты расписания
-id, starts_at, duration_minutes, title, status (scheduled / live / finished / cancelled).
+id, starts_at (уникальное), duration_minutes, title, status (scheduled / cancelled). «Идёт» и «закончилась» вычисляются по времени.
+
+### slot_reminders — отправленные напоминания
+slot_id, minutes_before (60 или 5), sent_at. Нужна, чтобы каждое напоминание ушло ровно один раз.
 
 ### rooms — комнаты
-id, slot_id, index (1 или 2), livekit_room_name, opened_at, closed_at.
+id, slot_id, index (1, 2, …), voice_room_name (случайное имя на сервере звука), opened_at, closed_at.
 
 ### room_participations — кто был в комнате
-room_id, persona_id, joined_at, left_at, spoke (брал ли слово), speak_seconds.
+room_id, persona_id, joined_at, left_at. Поля «брал ли слово» и «сколько говорил» добавятся на этапе метрик (6).
 Нужна для: списка «с кем я был в комнате» (отметки), метрик, правил голосования.
 
 Кто находится в комнате прямо сейчас — в Redis, а не в базе.
