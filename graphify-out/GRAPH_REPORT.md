@@ -1,94 +1,92 @@
 # Graph Report - Social_Network_KubSU  (2026-11-22)
 
 ## Corpus Check
-- 138 files · ~51,607 words
+- 155 files · ~61,872 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 2, .example 1)
 
 ## Summary
-- 887 nodes · 2228 edges · 55 communities (40 shown, 15 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 34 edges (avg confidence: 0.83)
-- Token cost: 0 input · 138,898 output
+- 1035 nodes · 2804 edges · 53 communities (43 shown, 10 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 36 edges (avg confidence: 0.86)
+- Token cost: 0 input · 144,218 output
 
 ## Community Hubs (Navigation)
 - Экраны приложения и навигация
-- Ядро сервера: аккаунт, роли, профиль
+- Сервер постов и таблицы
+- Аккаунт, роли и ошибки
 - Зависимости приложения
 - Зависимости сервера
-- Настройки приложения Expo
-- Сборка сервера
-- Клиент API комнат
+- Вход в комнату и расписание
+- Напоминания и тесты ролей
+- Сборка и настройки сервера
+- Тесты входа и приглашения
 - Клиент API ядра
-- Настройки сервера
+- Настройки приложения Expo
+- Структура кода приложения
+- Тесты анонимности и хранилище фото
+- Клиент API комнат
 - Настройки TypeScript
-- Правила анонимности и документы
+- Жёсткие правила и анонимность
+- Модули соцсети
+- Клиент API постов
+- Аккаунт и коды приглашения
+- Персона комнат и ник
 - Общий пакет типов
-- Тесты входа, профиля и базы
-- Запросы приложения к серверу
+- Админка и журнал
+- Аккаунт и мост identity
 - Автопроверка GitHub
 - Форматы профиля
-- Фоновые задачи комнат
-- Напоминания и тесты ролей
-- Хранение и обработка фото
-- Модули: посты, лента, истории
-- Общие форматы входа
 - Звук в браузере (LiveKit)
-- Сессия пользователя
-- Хранилище фото на диске
-- Профиль и вход в документах
+- Запросы входа и профиля
 - Корневой пакет
-- Жёсткие правила проекта
-- Тесты анонимности и запуска
-- Устройство кода и дизайн
-- Правила ника комнат
-- Структура кода приложения
-- Проверка фото перед отправкой
-- Три личности и текущий этап
+- Уведомления в браузере
+- Три личности человека
+- Текущий этап и документы
+- Время поста
+- Вход по коду из письма
 - Навык дизайна Apple
-- Роли и права
-- Сервер звука и его подмена
 - Ядро и модули
-- Ошибки API
+- Форматы уведомлений
 - TypeScript приложения
+- Хранилище фото на диске
+- Отправка уведомлений
+- Правила Expo
+- Хранение фото и траты
 - Модерация комнат
 - Настройки pnpm
-- Правила Expo
-- Название и вопросы к вузу
-- Уведомления
+- Уведомления и безопасность
+- Дизайн Apple
 - Навык Graphify
-- Тест запуска сервера
-- Тестовые коды приглашения
 - Карта проекта Graphify
-- Коды ошибок
+- Работа с помощниками
+- Помощник тестов сервера
 - Будущие модули
-- Косвенные утечки
 - Структура репозитория
-- Журнал админов
-- Правила записей
+- Сервер звука при разработке
 
 ## God Nodes (most connected - your core abstractions)
-1. `Body()` - 30 edges
-2. `Button()` - 30 edges
-3. `useColors()` - 30 edges
-4. `ApiError` - 27 edges
-5. `useSession()` - 26 edges
-6. `Screen()` - 23 edges
-7. `drizzle-orm` - 23 edges
-8. `react` - 22 edges
-9. `request()` - 22 edges
-10. `useSignedIn()` - 22 edges
+1. `useColors()` - 42 edges
+2. `Body()` - 41 edges
+3. `Button()` - 41 edges
+4. `request()` - 34 edges
+5. `ApiError` - 34 edges
+6. `useSignedIn()` - 33 edges
+7. `useSession()` - 30 edges
+8. `Card()` - 30 edges
+9. `react` - 29 edges
+10. `Screen()` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Таблица persona_links (мост)` --semantically_similar_to--> `persona_links (единственный мост)`  [INFERRED] [semantically similar]
-  docs/DATA_MODEL.md → CLAUDE.md
-- `Как защищена анонимность (сводка)` --semantically_similar_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED] [semantically similar]
+- `Как защищена анонимность` --semantically_similar_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED] [semantically similar]
   docs/PROGRESS.md → CLAUDE.md
-- `Три личности: аккаунт, профиль, персона` --semantically_similar_to--> `Персона комнат (анонимный ник)`  [INFERRED] [semantically similar]
-  docs/DATA_MODEL.md → CLAUDE.md
-- `Вопросы к юристу (C1–C12)` --references--> `Студенческая соцсеть (проект)`  [INFERRED]
+- `API: роли и отказы 403 forbidden` --implements--> `Роли: студент, преподаватель, гость`  [EXTRACTED]
+  docs/API.md → CLAUDE.md
+- `Часть 2: посты, лайки, комментарии` --implements--> `Модуль «Посты»`  [EXTRACTED]
+  docs/ROADMAP.md → CLAUDE.md
+- `F10: статус «в сети» и риск деанонимизации` --conceptually_related_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED]
   docs/OPEN_QUESTIONS.md → CLAUDE.md
-- `T41–T49: решения по голосовым комнатам` --rationale_for--> `Модуль «Голосовые комнаты»`  [EXTRACTED]
-  docs/DECISIONS.md → CLAUDE.md
+- `F5: что открывается на ступенях раскрытия` --conceptually_related_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED]
+  docs/OPEN_QUESTIONS.md → CLAUDE.md
 
 ## Import Cycles
 - None detected.
@@ -96,191 +94,211 @@
 ## Hyperedges (group relationships)
 - **Принципы текучего интерфейса Apple** — _claude_skills_apple_design_skill_interruptibility, _claude_skills_apple_design_skill_springs, _claude_skills_apple_design_skill_momentum_projection, _claude_skills_apple_design_skill_direct_manipulation [EXTRACTED 1.00]
 - **Модули соцсети первой версии** — docs_architecture_rooms_module, docs_architecture_posts_module, docs_architecture_feed_module, docs_architecture_stories_module [EXTRACTED 1.00]
-- **Три личности: аккаунт, профиль, персона комнат** — claude_account, claude_profile, claude_persona, claude_persona_links [EXTRACTED 1.00]
-- **Порядок частей строительства соцсети** — docs_roadmap_part1_roles_profile, docs_roadmap_part2_posts, docs_roadmap_part3_feed, docs_roadmap_part4_stories [EXTRACTED 1.00]
-- **Цепочка проверки ролей: правила, сервер, тесты** — claude_roles, claude_server_role_checks, claude_role_tests, docs_api_roles_table [INFERRED 0.85]
+- **Три личности человека в системе** — claude_account, claude_social_profile, claude_rooms_persona [EXTRACTED 1.00]
+- **Модули соцсети: комнаты, посты, лента, истории** — claude_module_rooms, claude_module_posts, claude_module_feed, claude_module_stories [EXTRACTED 1.00]
+- **Механизмы защиты анонимности персоны** — claude_core_identity, claude_persona_links, claude_anonymity_test, claude_rule_anonymity [INFERRED 0.85]
 
-## Communities (55 total, 15 thin omitted)
+## Communities (53 total, 10 thin omitted)
 
 ### Community 0 - "Экраны приложения и навигация"
-Cohesion: 0.06
-Nodes (106): HomeScreen(), styles, Navigation(), RootLayout(), LoginScreen(), Mode, ProfileEditScreen(), MyProfileScreen() (+98 more)
-
-### Community 1 - "Ядро сервера: аккаунт, роли, профиль"
-Cohesion: 0.06
-Nodes (93): AccountStanding, deleteAccount(), forbidden(), getAccountStanding(), isBanned(), requireCapability(), AuthDeps, authenticate() (+85 more)
-
-### Community 2 - "Зависимости приложения"
 Cohesion: 0.05
-Nodes (52): dependencies, @app/shared@workspace:*, expo@~58.0.26, expo-blur@~58.0.6, expo-constants@~58.0.16, expo-glass-effect@~58.0.5, expo-image-picker@~58.0.10, expo-linear-gradient@~58.0.4 (+44 more)
+Nodes (137): HomeScreen(), styles, Navigation(), RootLayout(), LoginScreen(), Mode, NewPostScreen(), Picked (+129 more)
 
-### Community 3 - "Зависимости сервера"
+### Community 1 - "Сервер постов и таблицы"
+Cohesion: 0.06
+Nodes (63): findProfileId(), ProfileRef, mediaFiles, profiles, postComments, postLikes, postPhotos, postReports (+55 more)
+
+### Community 2 - "Аккаунт, роли и ошибки"
+Cohesion: 0.08
+Nodes (58): deleteAccount(), forbidden(), getAccountStanding(), requireCapability(), AuthDeps, authenticate(), endSession(), findUsableInviteId() (+50 more)
+
+### Community 3 - "Зависимости приложения"
+Cohesion: 0.05
+Nodes (51): dependencies, @app/shared@workspace:*, expo@~58.0.26, expo-blur@~58.0.6, expo-constants@~58.0.16, expo-glass-effect@~58.0.5, expo-image-picker@~58.0.10, expo-linear-gradient@~58.0.4 (+43 more)
+
+### Community 4 - "Зависимости сервера"
 Cohesion: 0.06
 Nodes (46): dependencies, @app/shared@workspace:*, drizzle-orm@^0.45.4, @electric-sql/pglite@^0.5.17, fastify@^5.0.0, @fastify/cors@^11.0.0, @fastify/rate-limit@^11.3.0, livekit-server-sdk@^2.20.1 (+38 more)
 
-### Community 4 - "Настройки приложения Expo"
+### Community 5 - "Вход в комнату и расписание"
+Cohesion: 0.11
+Nodes (28): ScheduleConfig, isBanned(), Db, closeFinishedRooms(), joinSlot(), leaveRoom(), pickRoom(), Room (+20 more)
+
+### Community 6 - "Напоминания и тесты ролей"
+Cohesion: 0.12
+Nodes (23): broadcastPush(), isAllowedPushEndpoint(), personaLinks, id(), time(), accounts, pushSubscriptions, sessions (+15 more)
+
+### Community 7 - "Сборка и настройки сервера"
+Cohesion: 0.11
+Nodes (21): AppDeps, buildApp(), errorBody(), Config, DEV_EMAIL_ENCRYPTION_KEY, envSchema, flag, VapidConfig (+13 more)
+
+### Community 8 - "Тесты входа и приглашения"
+Cohesion: 0.13
+Nodes (14): loadConfig(), createInviteCode(), createDb(), inviteCodes, NOW, schedule, CapturingMailer, createTestContext() (+6 more)
+
+### Community 9 - "Клиент API ядра"
+Cohesion: 0.10
+Nodes (22): API_URL, networkError(), RequestOptions, AccountResponse, accountResponseSchema, AuthStartRequest, authStartRequestSchema, AuthStartResponse (+14 more)
+
+### Community 10 - "Настройки приложения Expo"
 Cohesion: 0.08
 Nodes (24): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, predictiveBackGestureEnabled, typedRoutes, expo (+16 more)
 
-### Community 5 - "Сборка сервера"
-Cohesion: 0.14
-Nodes (15): AppDeps, buildApp(), errorBody(), Config, ConsoleMailer, Mailer, PushGateway, PushTarget (+7 more)
+### Community 11 - "Структура кода приложения"
+Cohesion: 0.10
+Nodes (15): Структура кода приложения: lib, ui, features, Экраны-исключения, подключающие модули, Разделение на ядро и модули, Главный экран: истории, кнопка войса, лента, Модуль «Лента», Orb и RoomEntry (круглая кнопка входа в комнату), Студенческая соцсеть (проект), Стек: pnpm, PostgreSQL + Drizzle, LiveKit (+7 more)
 
-### Community 6 - "Клиент API комнат"
+### Community 12 - "Тесты анонимности и хранилище фото"
 Cohesion: 0.12
-Nodes (16): getPersona(), getSlots(), joinRoom(), leaveRoom(), PersonaState, okResponseSchema, RoomPersonaResponse, roomPersonaResponseSchema (+8 more)
+Nodes (4): sourceFiles(), serverDir, MediaStorage, MemoryMediaStorage
 
-### Community 7 - "Клиент API ядра"
-Cohesion: 0.17
-Nodes (19): setNickname(), authVerify(), fetchHealth(), getProfileById(), getPushConfig(), networkError(), request(), subscribePush() (+11 more)
+### Community 13 - "Клиент API комнат"
+Cohesion: 0.15
+Nodes (13): getPersona(), getSlots(), joinRoom(), leaveRoom(), PersonaState, useSlots(), RoomPersonaResponse, roomPersonaResponseSchema (+5 more)
 
-### Community 8 - "Настройки сервера"
-Cohesion: 0.14
-Nodes (14): DEV_EMAIL_ENCRYPTION_KEY, envSchema, flag, loadConfig(), VapidConfig, VoiceConfig, createWebPushGateway(), generateVapidKeys() (+6 more)
-
-### Community 9 - "Настройки TypeScript"
+### Community 14 - "Настройки TypeScript"
 Cohesion: 0.10
 Nodes (17): compilerOptions, types, extends, include, extends, include, compilerOptions, esModuleInterop (+9 more)
 
-### Community 10 - "Правила анонимности и документы"
-Cohesion: 0.12
-Nodes (13): Автотест анонимности (anonymity.test.ts), Документация — источник правды, Работа с помощниками на дешёвой модели, Персона комнат (анонимный ник), Общие правила API (нет accountId и почты в ответах), API: список запросов, Роли и отказы (403 forbidden), Модель данных (PostgreSQL) (+5 more)
+### Community 15 - "Жёсткие правила и анонимность"
+Cohesion: 0.11
+Nodes (14): Автотест анонимности (anonymity.test.ts), Жёсткие правила, LiveKit (голос на своём сервере), Удаление аккаунта удаляет всё, «Ещё раз», отметки, мэтчи, раскрытие ступеней, Косвенные утечки персоны, Сроки хранения данных, Таблица room_marks (тайные отметки) (+6 more)
 
-### Community 11 - "Общий пакет типов"
+### Community 16 - "Модули соцсети"
+Cohesion: 0.12
+Nodes (14): Модуль «Посты», Модуль «Голосовые комнаты», requireCapability (core/account.ts), requireProfile (core/profile/service.ts), Роль Гость, Роль Студент, Роль Преподаватель, Роли: студент, преподаватель, гость (+6 more)
+
+### Community 17 - "Клиент API постов"
+Cohesion: 0.23
+Nodes (15): addComment(), createPost(), deleteComment(), deletePost(), getComments(), getPost(), getProfilePosts(), likePost() (+7 more)
+
+### Community 18 - "Аккаунт и коды приглашения"
+Cohesion: 0.13
+Nodes (16): Тестовые коды приглашения (TEST/TEACHER/GUEST-2026), Аккаунт: /v1/account, Коды ошибок API, Запрос ленты GET /v1/feed, Фото: /v1/media, API: общие правила, Запросы модуля Посты: посты, лайки, комментарии, жалобы, Профиль: /v1/profile, /v1/profiles/:id (+8 more)
+
+### Community 19 - "Персона комнат и ник"
+Cohesion: 0.24
+Nodes (15): changeAvailableAt(), getPersona(), loadPersona(), nicknameTaken(), setNickname(), toResponse(), checkNickname(), NICKNAME_CHANGE_INTERVAL_DAYS (+7 more)
+
+### Community 20 - "Общий пакет типов"
 Cohesion: 0.13
 Nodes (17): dependencies, zod@^4.0.0, devDependencies, typescript@~6.0.3, vitest@^4.0.0, typescript, vitest, zod (+9 more)
 
-### Community 12 - "Тесты входа, профиля и базы"
-Cohesion: 0.22
-Nodes (6): createInviteCode(), inviteCodes, NOW, START, TestContext, slotsResponseSchema
+### Community 21 - "Админка и журнал"
+Cohesion: 0.12
+Nodes (14): Админка /v1/admin, Таблицы admins и admin_audit_log, Будущие модули: друзья, сообщения, группы, новости, Модерация записей соцсети не решена, B8: согласовывать соцсеть или пилот комнат, D4: аккаунт разработчика Apple, F6: бан из комнат — только комнаты или вся соцсеть, G10: модерация постов и комментариев (+6 more)
 
-### Community 13 - "Запросы приложения к серверу"
-Cohesion: 0.17
-Nodes (12): API_URL, RequestOptions, API_PREFIX, HealthResponse, healthResponseSchema, PushConfigResponse, pushConfigResponseSchema, pushMessageSchema (+4 more)
+### Community 22 - "Аккаунт и мост identity"
+Cohesion: 0.20
+Nodes (10): AccountStanding, deletePersonaOfAccount(), findPersonaId(), getOrCreatePersonaId(), DbHandle, DbOrTx, isUniqueViolation(), migrationsFolder (+2 more)
 
-### Community 14 - "Автопроверка GitHub"
+### Community 23 - "Автопроверка GitHub"
 Cohesion: 0.12
 Nodes (15): runs-on, steps, timeout-minutes, jobs, check, name, on, pull_request (+7 more)
 
-### Community 15 - "Форматы профиля"
-Cohesion: 0.15
-Nodes (12): MyProfileResponse, myProfileResponseSchema, PROFILE_ABOUT_MAX, PROFILE_COURSE_MAX, PROFILE_FACULTY_MAX, PROFILE_NAME_MAX, profileSchema, UpdateProfileRequest (+4 more)
+### Community 24 - "Форматы профиля"
+Cohesion: 0.16
+Nodes (11): MyProfileResponse, myProfileResponseSchema, PROFILE_ABOUT_MAX, PROFILE_COURSE_MAX, PROFILE_FACULTY_MAX, PROFILE_NAME_MAX, profileSchema, UpdateProfileRequest (+3 more)
 
-### Community 16 - "Фоновые задачи комнат"
-Cohesion: 0.23
-Nodes (12): ScheduleConfig, closeFinishedRooms(), JobDeps, startBackgroundJobs(), NOW, schedule, ensureDevLiveSlot(), generateSlots() (+4 more)
-
-### Community 17 - "Напоминания и тесты ролей"
-Cohesion: 0.18
-Nodes (11): broadcastPush(), pushSubscriptions, slotReminders, slots, keys, NOW, START, ReminderDeps (+3 more)
-
-### Community 18 - "Хранение и обработка фото"
-Cohesion: 0.18
-Nodes (13): MediaStorage и core/media (хранение фото), Никаких платных трат без согласования, Стирание служебных данных из фото, Фото: /v1/media, Хранилище и обработка фото, Таблица media_files, Таблицы модуля «Посты», Таблица profiles (+5 more)
-
-### Community 19 - "Модули: посты, лента, истории"
-Cohesion: 0.17
-Nodes (13): Модуль «Лента»: /v1/feed, Модуль «Посты»: /v1/posts, Модуль «Истории»: /v1/stories, Модерация записей соцсети не решена, G10: модерация постов и жалобы, Что проверяется в каждой части, Будущие модули (друзья, группы, сообщения, новости), План работ (+5 more)
-
-### Community 20 - "Общие форматы входа"
-Cohesion: 0.14
-Nodes (12): AccountResponse, accountResponseSchema, AuthStartRequest, authStartRequestSchema, AuthStartResponse, authStartResponseSchema, AuthVerifyRequest, authVerifyRequestSchema (+4 more)
-
-### Community 21 - "Звук в браузере (LiveKit)"
+### Community 25 - "Звук в браузере (LiveKit)"
 Cohesion: 0.21
 Nodes (10): call, voiceSupported, listParticipants(), ROOM_EVENTS, toParticipant(), useCall(), voiceSupported, Call (+2 more)
 
-### Community 22 - "Сессия пользователя"
-Cohesion: 0.24
-Nodes (12): getAccount(), getProfile(), logout(), PendingLogin, SessionContext, SessionContextValue, SessionProvider(), SessionState (+4 more)
-
-### Community 23 - "Хранилище фото на диске"
+### Community 26 - "Запросы входа и профиля"
 Cohesion: 0.18
-Nodes (3): DiskMediaStorage, MediaStorage, MemoryMediaStorage
+Nodes (11): authVerify(), fetchHealth(), getAccount(), getProfile(), getProfileById(), logout(), profile, SessionProvider() (+3 more)
 
-### Community 24 - "Профиль и вход в документах"
-Cohesion: 0.15
-Nodes (11): Профиль соцсети (открытая личность), Вход: /v1/auth (два режима), Путь «вошёл → кнопка → в комнате», Профиль: /v1/profile, /v1/profiles, Модуль комнат: /v1/rooms, «Ещё раз», отметки и раскрытие — позже, Модерация комнат (голосования, жалобы) — позже, Расписание и вход: /v1/rooms/slots (+3 more)
-
-### Community 25 - "Корневой пакет"
+### Community 27 - "Корневой пакет"
 Cohesion: 0.14
 Nodes (13): engines, node, name, packageManager, private, scripts, check, dev:mobile (+5 more)
 
-### Community 26 - "Жёсткие правила проекта"
-Cohesion: 0.15
-Nodes (11): Удаление аккаунта удаляет всё, Просмотр связи ник↔аккаунт админом с причиной и журналом, Жёсткие правила проекта, Аккаунт: /v1/account, Админка: /v1/admin, Таблица accounts, Таблица invite_codes, Таблица persona_links (мост) (+3 more)
+### Community 28 - "Уведомления в браузере"
+Cohesion: 0.33
+Nodes (11): getPushConfig(), subscribePush(), unsubscribePush(), base64UrlToBytes(), currentSubscription(), disablePush(), enablePush(), getPushStatus() (+3 more)
 
-### Community 28 - "Устройство кода и дизайн"
-Cohesion: 0.17
-Nodes (7): Дизайн: стиль Apple и «жидкое стекло», Круглая кнопка входа в комнату (Orb, RoomEntry), Модуль «Голосовые комнаты», Стек: pnpm, PostgreSQL, Drizzle, LiveKit, Готовые элементы ui/components.tsx и theme.ts, F6–F7: бан из комнат и чат после раскрытия, livekit-server --dev (сервер звука)
-
-### Community 29 - "Правила ника комнат"
-Cohesion: 0.27
-Nodes (9): checkNickname(), NICKNAME_CHANGE_INTERVAL_DAYS, NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, NICKNAME_PROBLEM_TEXT, nicknameKey(), NicknameProblem, normalizeNickname() (+1 more)
-
-### Community 30 - "Структура кода приложения"
-Cohesion: 0.20
-Nodes (9): Структура кода приложения (lib, ui, features), Исключение: index.tsx подключает RoomsHomeSection, Главный экран (истории, кнопка войса, лента), Путь пользователя, apps/mobile (Expo + React Native), apps/server (Node.js + Fastify), packages/shared (общие типы), pnpm check (типы и автотесты) (+1 more)
-
-### Community 31 - "Проверка фото перед отправкой"
-Cohesion: 0.27
-Nodes (7): checkPhoto(), MEDIA_MAX_BYTES, MEDIA_PURPOSES, MEDIA_TYPES, MediaPurpose, mediaPurposeSchema, uploadMediaResponseSchema
-
-### Community 32 - "Три личности и текущий этап"
+### Community 29 - "Три личности человека"
 Cohesion: 0.24
-Nodes (8): Аккаунт (закрытая личность), core/identity (читает мост), Где мы сейчас (части 0–4), persona_links (единственный мост), Студенческая соцсеть (проект), Как модуль комнат не выдаёт человека, Безопасность и данные, Вопросы к юристу (C1–C12)
+Nodes (9): Аккаунт (закрытый), core/identity (единственный читатель моста), Таблица persona_links (мост), Персона комнат (анонимный ник), Три личности: аккаунт, профиль, персона комнат, Персона и ник комнат: /v1/rooms/me, Как модуль комнат не выдаёт человека, Модель данных: ядро, комнаты, мост, модули (+1 more)
+
+### Community 30 - "Текущий этап и документы"
+Cohesion: 0.18
+Nodes (12): Где мы сейчас: части 0-4, Документация — источник правды, Модуль «Истории», Запросы Историй: просмотры, 24 часа, Таблицы историй: stories, story_views, E9: живой звук между людьми не проверен, G20: неиспользованные фото не удаляются, Сводка прогресса на 22 ноября 2026 (+4 more)
+
+### Community 31 - "Время поста"
+Cohesion: 0.29
+Nodes (7): calendarDaysBetween(), dateFormat, dateYearFormat, formatPostTime(), plural(), startOfDay(), now
+
+### Community 32 - "Вход по коду из письма"
+Cohesion: 0.20
+Nodes (9): Вход: /v1/auth/*, Два режима auth/start: регистрация и вход, Код из письма: 6 цифр, 10 минут, 5 попыток, Путь: вошёл, нажал кнопку, в комнате, Расписание и вход в комнату: slots/join/leave, Путь пользователя, Таблицы комнат: slots, rooms, participations, Таблицы sessions и email_login_codes (+1 more)
 
 ### Community 33 - "Навык дизайна Apple"
 Cohesion: 0.22
 Nodes (9): Навык apple-design, Прямое манипулирование и отклик, Восемь принципов дизайна Apple, Прерываемость анимаций, Материалы и глубина (translucency), Проекция импульса и передача скорости, Reduced motion и доступность, Пружинные анимации (springs) (+1 more)
 
-### Community 34 - "Роли и права"
-Cohesion: 0.28
-Nodes (7): Роль «Гость», Роль «Студент», Роль «Преподаватель», Автотесты ролей (отказы), Роли: студент, преподаватель, гость, Проверка ролей на сервере (requireCapability / can), G1: подтверждение статуса студента
-
-### Community 36 - "Ядро и модули"
+### Community 34 - "Ядро и модули"
 Cohesion: 0.29
 Nodes (7): Ядро соцсети, Модуль «Лента», Голос: LiveKit только звук, без записи, Модуль «Посты», Модуль «Голосовые комнаты», Модуль «Истории», Схема системы: клиент, сервер, LiveKit, PostgreSQL
 
-### Community 37 - "Ошибки API"
-Cohesion: 0.29
-Nodes (4): ERROR_CODES, ErrorCode, ErrorResponse, errorResponseSchema
+### Community 35 - "Форматы уведомлений"
+Cohesion: 0.25
+Nodes (7): PushConfigResponse, pushConfigResponseSchema, pushMessageSchema, PushSubscribeRequest, pushSubscribeRequestSchema, PushUnsubscribeRequest, pushUnsubscribeRequestSchema
 
-### Community 38 - "TypeScript приложения"
+### Community 36 - "TypeScript приложения"
 Cohesion: 0.29
 Nodes (6): compilerOptions, noUncheckedIndexedAccess, strict, extends, include, expo/tsconfig.base
 
-### Community 39 - "Модерация комнат"
+### Community 38 - "Отправка уведомлений"
+Cohesion: 0.47
+Nodes (4): PushGateway, PushTarget, CapturingPush, PushMessage
+
+### Community 39 - "Правила Expo"
+Cohesion: 0.40
+Nodes (4): EAS: сборка и обновления, Expo / React Native приложение, Пакеты Expo только через expo install, Expo Router (src/app)
+
+### Community 40 - "Хранение фото и траты"
+Cohesion: 0.40
+Nodes (3): MediaStorage / core/media (загрузка и обработка фото), Хранилище и обработка фото, D8: хранилище фото для боевого запуска
+
+### Community 41 - "Модерация комнат"
 Cohesion: 0.40
 Nodes (5): Автобан: 3 выгона за 7 дней, Голосование «Выгнать на 24 часа», Голосование «Выключить микрофон», «Заглушить для себя», Слабые места модерации (сговор троих)
 
-### Community 40 - "Настройки pnpm"
+### Community 42 - "Настройки pnpm"
 Cohesion: 0.40
 Nodes (4): allowBuilds, esbuild, nodeLinker, packages
 
-### Community 42 - "Название и вопросы к вузу"
-Cohesion: 0.67
-Nodes (3): Не использовать название и логотип КубГУ, F1: название соцсети, Вопросы к вузу (B1–B8)
+### Community 43 - "Уведомления и безопасность"
+Cohesion: 0.50
+Nodes (3): Уведомления: /v1/push/*, Безопасность и данные, Вопросы к юристу (C1-C12)
+
+## Ambiguous Edges - Review These
+- `Модуль «Голосовые комнаты»` → `Модуль «Посты»`  [AMBIGUOUS]
+  apps/mobile/AGENTS.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **48 isolated node(s):** `expo/tsconfig.base`, `Навык graphify (/graphify)`, `Проекция импульса и передача скорости`, `Материалы и глубина (translucency)`, `Типографика: tracking и leading` (+43 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 270 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **49 isolated node(s):** `expo/tsconfig.base`, `Навык graphify (/graphify)`, `Проекция импульса и передача скорости`, `Материалы и глубина (translucency)`, `Типографика: tracking и leading` (+44 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 312 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `Экраны приложения и навигация` to `Зависимости приложения`, `Звук в браузере (LiveKit)`, `Клиент API комнат`, `Сессия пользователя`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `react` connect `Экраны приложения и навигация` to `Звук в браузере (LiveKit)`, `Зависимости приложения`, `Клиент API комнат`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **What connects `expo/tsconfig.base`, `Навык graphify (/graphify)`, `Проекция импульса и передача скорости` to the rest of the system?**
-  _48 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _49 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Экраны приложения и навигация` be split into smaller, more focused modules?**
-  _Cohesion score 0.05981371338794748 - nodes in this community are weakly interconnected._
-- **Why does `drizzle-orm` connect `Ядро сервера: аккаунт, роли, профиль` to `Зависимости сервера`, `Сборка сервера`, `Тесты входа, профиля и базы`, `Фоновые задачи комнат`, `Напоминания и тесты ролей`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Should `Ядро сервера: аккаунт, роли, профиль` be split into smaller, more focused modules?**
-  _Cohesion score 0.05573668684986803 - nodes in this community are weakly interconnected._
-- **Why does `react-native` connect `Экраны приложения и навигация` to `Зависимости приложения`, `Сессия пользователя`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Should `Зависимости приложения` be split into smaller, more focused modules?**
-  _Cohesion score 0.05079825834542816 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.052090334722408926 - nodes in this community are weakly interconnected._
+- **Why does `drizzle-orm` connect `Напоминания и тесты ролей` to `Сервер постов и таблицы`, `Аккаунт, роли и ошибки`, `Зависимости сервера`, `Вход в комнату и расписание`, `Сборка и настройки сервера`, `Тесты входа и приглашения`, `Персона комнат и ник`, `Аккаунт и мост identity`?**
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Should `Сервер постов и таблицы` be split into smaller, more focused modules?**
+  _Cohesion score 0.05755693581780538 - nodes in this community are weakly interconnected._
+- **Why does `react-native` connect `Экраны приложения и навигация` to `Запросы входа и профиля`, `Зависимости приложения`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+
+### Low-confidence Hints
+_AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
+
+- **What is the exact relationship between `Модуль «Голосовые комнаты»` and `Модуль «Посты»`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._

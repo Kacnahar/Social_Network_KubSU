@@ -12,3 +12,6 @@ export * from './rooms/nickname';
 export * from './rooms/persona';
 export * from './rooms/rooms';
 export * from './rooms/schedule';
+
+// Модуль «Посты»
+export * from './posts/posts';

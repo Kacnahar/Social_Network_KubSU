@@ -9,7 +9,7 @@
 | Ядро: состояние сервера, вход, аккаунт, уведомления | `/v1/health`, `/v1/auth/*`, `/v1/account`, `/v1/push/*` | сделано |
 | Ядро: профиль и фото | `/v1/profile`, `/v1/profiles/*`, `/v1/media/*` | часть 1 |
 | Модуль «Голосовые комнаты» (только студентам) | `/v1/rooms/*` | сделано для браузера |
-| Модуль «Посты» | `/v1/posts/*` | часть 2 |
+| Модуль «Посты» | `/v1/posts/*` | сделано |
 | Модуль «Лента» | `/v1/feed` | часть 3 |
 | Модуль «Истории» | `/v1/stories/*` | часть 4 |
 | Друзья, сообщения, группы, новости | — | позже |
@@ -103,7 +103,6 @@
 | `GET /v1/profile` | Свой профиль: `{ profile }`; `null`, если ещё не заполнен — приложение ведёт на экран заполнения |
 | `PUT /v1/profile` | Создать или изменить свой профиль: имя, факультет, курс, «о себе», аватар |
 | `GET /v1/profiles/:profileId` | Чужой профиль: имя, аватар, факультет, курс, «о себе», роль |
-| `GET /v1/profiles/:profileId/posts` | Посты этого человека (часть 2) |
 
 В ответах профиля никогда нет `personaId` и ника комнат.
 
@@ -118,17 +117,21 @@
 
 ---
 
-## Модуль «Посты» — `/v1/posts` ⏳ часть 2
+## Модуль «Посты» — `/v1/posts` ✅
 
-| Запрос | Что делает |
-|---|---|
-| `POST /v1/posts` | Опубликовать пост: текст и до 10 фото |
-| `GET /v1/posts/:postId` | Один пост |
-| `DELETE /v1/posts/:postId` | Удалить свой пост вместе с фото, лайками и комментариями |
-| `PUT/DELETE /v1/posts/:postId/like` | Поставить или убрать лайк |
-| `GET /v1/posts/:postId/comments` | Комментарии |
-| `POST /v1/posts/:postId/comments` | Написать комментарий |
-| `DELETE /v1/posts/comments/:commentId` | Удалить свой комментарий |
+| Запрос | Что делает | Кому можно |
+|---|---|---|
+| `POST /v1/posts` | Опубликовать пост: текст (до 5000 знаков) и до 10 фото, загруженных через `POST /v1/media?purpose=post` | студент, преподаватель |
+| `GET /v1/posts/:postId` | Один пост | все вошедшие |
+| `DELETE /v1/posts/:postId` | Удалить свой пост вместе с фото, лайками и комментариями | автор |
+| `GET /v1/profiles/:profileId/posts?before=…` | Посты человека, новые сверху, по 20 | все вошедшие |
+| `PUT/DELETE /v1/posts/:postId/like` | Поставить или убрать лайк | студент, преподаватель |
+| `GET /v1/posts/:postId/comments?after=…` | Комментарии, от старых к новым, по 50 | все вошедшие |
+| `POST /v1/posts/:postId/comments` | Написать комментарий (до 1000 знаков) | студент, преподаватель |
+| `DELETE /v1/posts/comments/:commentId` | Удалить комментарий | автор комментария или автор поста |
+| `POST /v1/posts/:postId/report`, `POST /v1/posts/comments/:commentId/report` | Пожаловаться | все вошедшие, включая гостя |
+
+В ответе о посте: автор (профиль: идентификатор, имя, аватар, роль), текст, фото с размерами, число лайков, поставил ли лайк я, число комментариев, время, могу ли я удалить. Чтобы публиковать, лайкать и комментировать, нужен заполненный профиль — иначе отказ `profile_required`.
 
 ## Модуль «Лента» — `/v1/feed` ⏳ часть 3
 
@@ -215,4 +218,4 @@
 
 ## Коды ошибок
 
-`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. `forbidden` (роль не позволяет), `media_invalid`, `media_too_large`. ⏳ С части 2 — `profile_required` (сначала заполните профиль).
+`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. `forbidden` (роль не позволяет), `profile_required` (сначала заполните профиль), `media_invalid`, `media_too_large`.

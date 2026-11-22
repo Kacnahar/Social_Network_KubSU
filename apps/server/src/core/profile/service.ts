@@ -1,8 +1,8 @@
-import { mediaPath, type Profile, type Role, type UpdateProfileRequest } from '@app/shared';
+import { mediaPath, type Capability, type Profile, type Role, type UpdateProfileRequest } from '@app/shared';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../../db/client';
 import { accounts, profiles } from '../../db/schema';
-import { getAccountStanding } from '../account';
+import { getAccountStanding, requireCapability } from '../account';
 import { ApiError, unauthorized } from '../errors';
 import { deleteMedia, findOwnMedia, type MediaDeps } from '../media/service';
 
@@ -73,4 +73,23 @@ export async function saveOwnProfile(deps: MediaDeps, accountId: string, input: 
     await deleteMedia(deps, existing.avatarMediaId);
   }
   return toProfile(saved!, account.role);
+}
+
+export type ProfileRef = { profileId: string; role: Role };
+
+const profileRequired = () => new ApiError(409, 'profile_required', 'Сначала заполните профиль');
+
+// Для модулей соцсети: «кто я» в виде открытого профиля. Заодно проверяет право роли.
+export async function requireProfile(db: Db, accountId: string, capability?: Capability): Promise<ProfileRef> {
+  const account = capability ? await requireCapability(db, accountId, capability) : await getAccountStanding(db, accountId);
+  if (!account) throw unauthorized();
+  const [row] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.accountId, accountId));
+  if (!row) throw profileRequired();
+  return { profileId: row.id, role: account.role };
+}
+
+// Для чтения: профиль может быть ещё не заполнен
+export async function findProfileId(db: Db, accountId: string): Promise<string | null> {
+  const [row] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.accountId, accountId));
+  return row?.id ?? null;
 }

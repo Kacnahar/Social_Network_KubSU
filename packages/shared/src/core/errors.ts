@@ -7,6 +7,7 @@ export const ERROR_CODES = [
   'too_many_requests',
   'unauthorized',
   'forbidden',
+  'profile_required',
   'media_invalid',
   'media_too_large',
   'nickname_invalid',

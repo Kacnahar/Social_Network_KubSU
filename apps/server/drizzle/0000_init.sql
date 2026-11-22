@@ -84,6 +84,46 @@ CREATE TABLE "sessions" (
 	CONSTRAINT "sessions_token_hash_unique" UNIQUE("token_hash")
 );
 --> statement-breakpoint
+CREATE TABLE "post_comments" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"post_id" uuid NOT NULL,
+	"author_profile_id" uuid NOT NULL,
+	"text" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "post_likes" (
+	"post_id" uuid NOT NULL,
+	"profile_id" uuid NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "post_likes_post_id_profile_id_pk" PRIMARY KEY("post_id","profile_id")
+);
+--> statement-breakpoint
+CREATE TABLE "post_photos" (
+	"post_id" uuid NOT NULL,
+	"media_id" uuid NOT NULL,
+	"position" integer NOT NULL,
+	CONSTRAINT "post_photos_post_id_position_pk" PRIMARY KEY("post_id","position"),
+	CONSTRAINT "post_photos_media_id_unique" UNIQUE("media_id")
+);
+--> statement-breakpoint
+CREATE TABLE "post_reports" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"reporter_profile_id" uuid,
+	"target_type" text NOT NULL,
+	"target_id" uuid NOT NULL,
+	"reason" text NOT NULL,
+	"status" text DEFAULT 'new' NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "posts" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"author_profile_id" uuid NOT NULL,
+	"text" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "room_personas" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"nickname" text,
@@ -138,6 +178,14 @@ ALTER TABLE "profiles" ADD CONSTRAINT "profiles_account_id_accounts_id_fk" FOREI
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_avatar_media_id_media_files_id_fk" FOREIGN KEY ("avatar_media_id") REFERENCES "public"."media_files"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_comments" ADD CONSTRAINT "post_comments_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_comments" ADD CONSTRAINT "post_comments_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_likes" ADD CONSTRAINT "post_likes_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_likes" ADD CONSTRAINT "post_likes_profile_id_profiles_id_fk" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_photos" ADD CONSTRAINT "post_photos_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_photos" ADD CONSTRAINT "post_photos_media_id_media_files_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media_files"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_reports" ADD CONSTRAINT "post_reports_reporter_profile_id_profiles_id_fk" FOREIGN KEY ("reporter_profile_id") REFERENCES "public"."profiles"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "posts" ADD CONSTRAINT "posts_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rooms" ADD CONSTRAINT "rooms_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

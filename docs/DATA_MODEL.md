@@ -149,7 +149,7 @@ from_persona_id, to_persona_id, room_id, created_at. Не отдаются ни 
 
 ---
 
-## Модуль «Посты» ⏳ часть 2
+## Модуль «Посты» ✅
 
 Работает с профилем. О комнатах и персоне ничего не знает.
 
@@ -163,7 +163,10 @@ post_id, media_id, position (порядок, от 1 до 10).
 post_id, profile_id, created_at. Один лайк от человека на пост.
 
 ### post_comments — комментарии
-id, post_id, author_profile_id, text, created_at. Удалить может автор комментария; может ли автор поста — вопрос G11.
+id, post_id, author_profile_id, text, created_at. Удалить может автор комментария и автор поста.
+
+### post_reports — жалобы
+id, reporter_profile_id, target_type (пост или комментарий), target_id, reason, status (новая / закрыта), created_at. Жалоба сохраняется, даже если автор удалил саму запись. Разбирать их будет админ.
 
 ## Модуль «Истории» ⏳ часть 4
 

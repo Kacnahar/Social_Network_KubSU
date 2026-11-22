@@ -37,6 +37,18 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'GET', url: '/v1/profiles/not-an-id', headers });
     await t.app.inject({ method: 'PUT', url: '/v1/profile', headers, payload: { displayName: '' } });
     await t.app.inject({ method: 'POST', url: '/v1/media?purpose=avatar', headers: { ...headers, 'content-type': 'image/jpeg' }, payload: Buffer.from('не фото') });
+    // Посты, лайки, комментарии, жалобы — всё от имени открытого профиля
+    const post = await t.app.inject({ method: 'POST', url: '/v1/posts', headers, payload: { text: 'Первый пост' } });
+    const postId = post.json().postId as string;
+    await t.app.inject({ method: 'GET', url: `/v1/posts/${postId}`, headers });
+    await t.app.inject({ method: 'PUT', url: `/v1/posts/${postId}/like`, headers });
+    const comment = await t.app.inject({ method: 'POST', url: `/v1/posts/${postId}/comments`, headers, payload: { text: 'комментарий' } });
+    await t.app.inject({ method: 'GET', url: `/v1/posts/${postId}/comments`, headers });
+    await t.app.inject({ method: 'GET', url: `/v1/profiles/${saved.json().profile.profileId}/posts`, headers });
+    await t.app.inject({ method: 'POST', url: `/v1/posts/${postId}/report`, headers, payload: { reason: 'тест' } });
+    await t.app.inject({ method: 'DELETE', url: `/v1/posts/comments/${comment.json().commentId}`, headers });
+    await t.app.inject({ method: 'DELETE', url: `/v1/posts/${postId}/like`, headers });
+    await t.app.inject({ method: 'POST', url: '/v1/posts', headers, payload: {} });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL, inviteCode: 'NOPE' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });

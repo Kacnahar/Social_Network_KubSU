@@ -62,6 +62,10 @@ export default function HomeScreen() {
         </Card>
       )}
 
+      {can(account.role, 'publish') ? (
+        <Button variant="secondary" title="Новый пост" onPress={() => router.push('/posts/new')} disabled={busy !== null} />
+      ) : null}
+
       <Button variant="secondary" title="Выйти" onPress={handleSignOut} loading={busy === 'signOut'} disabled={busy === 'delete'} />
 
       {confirmingDelete ? (

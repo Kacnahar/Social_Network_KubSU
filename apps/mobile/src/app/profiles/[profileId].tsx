@@ -5,6 +5,7 @@ import { ApiError, getProfileById } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components';
 import { ProfileView } from '../../ui/ProfileView';
+import { ProfilePosts } from '../../features/posts/ProfilePosts';
 
 type LoadState =
   | { status: 'loading' }
@@ -42,6 +43,7 @@ export default function ProfileByIdScreen() {
       <Screen align="top">
         <ProfileView profile={mine} />
         <Button variant="secondary" title="Редактировать" onPress={() => router.push('/profile/edit')} />
+        <ProfilePosts profileId={mine.profileId} />
         <Button variant="plain" title="Назад" onPress={back} />
       </Screen>
     );
@@ -51,6 +53,7 @@ export default function ProfileByIdScreen() {
     return (
       <Screen align="top">
         <ProfileView profile={state.profile} />
+        <ProfilePosts profileId={state.profile.profileId} />
         <Button variant="plain" title="Назад" onPress={back} />
       </Screen>
     );
