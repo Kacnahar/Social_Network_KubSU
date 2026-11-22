@@ -11,3 +11,6 @@ graphify-out/cache/
 
 # Локальная база данных для разработки
 .data/
+
+# Отметка работающей ночной сессии
+.claude/night-heartbeat

@@ -34,7 +34,7 @@ import { getOwnProfile, getProfileById, saveOwnProfile } from './profile/service
 import { removeSubscription, saveSubscription, type PushGateway } from './push/service';
 
 const SERVICE_NAME = 'app-server';
-const SERVICE_VERSION = '0.6.0';
+const SERVICE_VERSION = '0.8.0';
 const idParam = z.uuid();
 
 export type CoreDeps = {

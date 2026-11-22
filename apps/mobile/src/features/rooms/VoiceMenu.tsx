@@ -10,8 +10,8 @@ import { PushCard } from '../../ui/PushCard';
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
-// Всё «комнатное» на главном экране; рисуется только у студента, поэтому запросы комнат у других ролей не уходят
-export function RoomsHomeSection({ disabled }: { disabled: boolean }) {
+// Содержимое вкладки «Войс»; вкладка есть только у студента, поэтому запросы комнат у других ролей не уходят
+export function VoiceMenu() {
   const router = useRouter();
   const { forgetSession } = useSession();
   const { token } = useSignedIn();
@@ -39,10 +39,10 @@ export function RoomsHomeSection({ disabled }: { disabled: boolean }) {
         <SlotList state={slots} onRetry={reload} />
       </Card>
 
-      <PushCard token={token} disabled={disabled} />
+      <PushCard token={token} />
 
       {canChange ? (
-        <Button variant="plain" title="Сменить ник комнат" onPress={() => router.push('/rooms/nickname')} disabled={disabled} />
+        <Button variant="plain" title="Сменить ник комнат" onPress={() => router.push('/rooms/nickname')} />
       ) : changeAt ? (
         <Body muted>Ник комнат можно будет сменить {dateFormat.format(changeAt)}.</Body>
       ) : null}

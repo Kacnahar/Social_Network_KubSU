@@ -1,5 +1,5 @@
-import { can, type Post } from '@app/shared';
-import { useFocusEffect, useRouter } from 'expo-router';
+import type { Post } from '@app/shared';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
@@ -16,11 +16,9 @@ type State =
 
 // Посты одного человека под карточкой его профиля
 export function ProfilePosts({ profileId }: { profileId: string }) {
-  const router = useRouter();
   const colors = useColors();
   const fail = useFail();
-  const { token, account, profile } = useSignedIn();
-  const isMine = profile?.profileId === profileId;
+  const { token } = useSignedIn();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [now, setNow] = useState(() => new Date());
   const [loadingMore, setLoadingMore] = useState(false);
@@ -85,8 +83,6 @@ export function ProfilePosts({ profileId }: { profileId: string }) {
 
   return (
     <View style={styles.list}>
-      {isMine && can(account.role, 'publish') ? <Button title="Новый пост" onPress={() => router.push('/posts/new')} /> : null}
-
       {state.status === 'loading' ? <ActivityIndicator color={colors.accent} style={styles.spinner} /> : null}
 
       {state.status === 'error' ? (

@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -16,28 +16,62 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius, type, useColors, useReduceMotion, useReduceTransparency, useScheme } from './theme';
 
 // Настоящее «жидкое стекло» есть только на iOS 26+; на остальных платформах — размытие с подсветкой края
 const liquidGlass = isLiquidGlassAvailable();
 
-export function Screen({ children, align = 'center' }: { children: ReactNode; align?: 'center' | 'top' }) {
+// Плавающая нижняя панель вкладок: её высота и отступы нужны и самой панели, и экранам под ней
+export const TAB_BAR = { height: 64, margin: 16 };
+
+// Сколько места снизу занимает панель вкладок; вне вкладок — 0
+const TabBarSpaceContext = createContext(0);
+
+export function TabBarSpaceProvider({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const space = TAB_BAR.height + Math.max(insets.bottom, TAB_BAR.margin) + TAB_BAR.margin;
+  return <TabBarSpaceContext.Provider value={space}>{children}</TabBarSpaceContext.Provider>;
+}
+
+export const useTabBarSpace = () => useContext(TabBarSpaceContext);
+
+// Общая рамка экрана: фон, безопасная зона (снизу её заменяет отступ под панелью вкладок)
+function ScreenFrame({ children }: { children: ReactNode }) {
   const colors = useColors();
+  const underTabs = useTabBarSpace() > 0;
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <SafeAreaView style={styles.screen}>
-        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
-            contentContainerStyle={[styles.scroll, align === 'center' && styles.scrollCentered]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.content}>{children}</View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+      <SafeAreaView style={styles.screen} edges={underTabs ? ['top', 'left', 'right'] : undefined}>
+        {children}
       </SafeAreaView>
     </View>
+  );
+}
+
+export function Screen({ children, align = 'center' }: { children: ReactNode; align?: 'center' | 'top' }) {
+  const space = useTabBarSpace();
+  return (
+    <ScreenFrame>
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, align === 'center' && styles.scrollCentered]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.column, styles.content, space > 0 && { paddingBottom: space }]}>{children}</View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenFrame>
+  );
+}
+
+// Экран под список (FlatList): сам прокручивается, поэтому ScrollView из Screen не нужен
+export function ListScreen({ children }: { children: ReactNode }) {
+  return (
+    <ScreenFrame>
+      <View style={[styles.screen, styles.column]}>{children}</View>
+    </ScreenFrame>
   );
 }
 
@@ -69,36 +103,54 @@ export function Separator() {
   return <View style={[styles.separator, { backgroundColor: colors.border }]} />;
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+type GlassProps = {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  // Стиль содержимого (отступы, раскладка); у родного стекла он применяется к самому стеклу
+  contentStyle?: StyleProp<ViewStyle>;
+  cornerRadius?: number;
+};
+
+// Стеклянная поверхность: родное стекло на iOS 26+, размытие в остальных случаях, сплошная при «Понижении прозрачности»
+export function Glass({ children, style, contentStyle, cornerRadius = radius.card }: GlassProps) {
   const colors = useColors();
   const scheme = useScheme();
   const solid = useReduceTransparency();
+  const shape = { borderRadius: cornerRadius, borderCurve: 'continuous' } as const;
   const shadow = { shadowColor: colors.shadow };
 
   if (solid) {
     return (
-      <View style={[styles.card, styles.cardShadow, shadow, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
-        <View style={styles.cardBody}>{children}</View>
+      <View style={[styles.glass, shape, styles.glassShadow, shadow, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
+        <View style={contentStyle}>{children}</View>
       </View>
     );
   }
   if (liquidGlass) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme={scheme} style={[styles.card, styles.cardBody, style]}>
+      <GlassView glassEffectStyle="regular" colorScheme={scheme} style={[styles.glass, shape, contentStyle, style]}>
         {children}
       </GlassView>
     );
   }
   return (
-    <View style={[styles.card, styles.cardShadow, shadow, { borderColor: colors.glassBorder }, style]}>
+    <View style={[styles.glass, shape, styles.glassShadow, shadow, { borderColor: colors.glassBorder }, style]}>
       <BlurView
         intensity={Platform.OS === 'android' ? 60 : 44}
         tint={scheme}
-        style={[styles.cardClip, { backgroundColor: colors.glassTint }]}
+        style={[styles.glassClip, shape, { backgroundColor: colors.glassTint }]}
       >
-        <View style={styles.cardBody}>{children}</View>
+        <View style={contentStyle}>{children}</View>
       </BlurView>
     </View>
+  );
+}
+
+export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return (
+    <Glass style={style} contentStyle={styles.cardBody}>
+      {children}
+    </Glass>
   );
 }
 
@@ -232,12 +284,13 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   scroll: { flexGrow: 1 },
   scrollCentered: { justifyContent: 'center' },
-  content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 28, gap: 16 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20 },
+  content: { paddingVertical: 28, gap: 16 },
   separator: { height: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
-  card: { borderRadius: radius.card, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, borderColor: 'transparent' },
-  cardClip: { borderRadius: radius.card, borderCurve: 'continuous', overflow: 'hidden' },
+  glass: { borderWidth: StyleSheet.hairlineWidth, borderColor: 'transparent' },
+  glassClip: { overflow: 'hidden' },
+  glassShadow: { shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 28, elevation: 3 },
   cardBody: { padding: 20, gap: 14 },
-  cardShadow: { shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 28, elevation: 3 },
   field: { gap: 6 },
   label: { fontWeight: '500', marginLeft: 4 },
   input: {

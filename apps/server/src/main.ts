@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { buildApp } from './app';
 import { loadConfig, type Config, type VapidConfig } from './config';
+import { startMaintenance } from './maintenance';
 import { createDb } from './db/client';
 import { createInviteCode } from './core/invites';
 import { startBackgroundJobs } from './modules/rooms/jobs';
@@ -48,6 +49,7 @@ const app = await buildApp({ config, db, mailer, push, voice, media });
 
 await startBackgroundJobs({ db, schedule: config.schedule, push, voice, onError: (error) => app.log.error(error) });
 if (config.devLiveSlot) await ensureDevLiveSlot(db, new Date());
+startMaintenance({ db, media }, (error) => app.log.error(error));
 
 try {
   await app.listen({ host: config.host, port: config.port });

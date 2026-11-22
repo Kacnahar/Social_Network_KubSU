@@ -61,7 +61,7 @@ function NicknameForm({
     setLoading(true);
     try {
       setPersona(await setNickname(token, nickname));
-      router.replace('/');
+      router.dismissTo('/voice');
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') {
         await forgetSession();
@@ -101,9 +101,9 @@ function NicknameForm({
       </Card>
 
       {isChange ? (
-        <Button variant="plain" title="Отмена" onPress={() => router.replace('/')} disabled={loading} />
+        <Button variant="plain" title="Отмена" onPress={() => router.dismissTo('/voice')} disabled={loading} />
       ) : (
-        <Button variant="plain" title="Назад" onPress={() => router.replace('/')} disabled={loading} />
+        <Button variant="plain" title="Назад" onPress={() => router.dismissTo('/voice')} disabled={loading} />
       )}
     </Screen>
   );

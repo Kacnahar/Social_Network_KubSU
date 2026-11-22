@@ -180,6 +180,11 @@ async function pageOfPosts(db: Db, where: SQL | undefined, viewerProfileId: stri
   };
 }
 
+// Общая лента: посты всех пользователей, новые сверху. Друзья и подписки появятся позже.
+export async function listAllPosts(db: Db, before: string | undefined, viewerProfileId: string | null): Promise<PostsPage> {
+  return pageOfPosts(db, olderThan(decodeCursor(before)), viewerProfileId);
+}
+
 export async function listProfilePosts(
   db: Db,
   profileId: string,

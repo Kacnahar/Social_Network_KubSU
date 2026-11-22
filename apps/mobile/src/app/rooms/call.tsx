@@ -22,7 +22,7 @@ type JoinState =
 
 export default function RoomScreen() {
   const { slotId } = useLocalSearchParams<{ slotId?: string }>();
-  if (!slotId) return <Redirect href="/" />;
+  if (!slotId) return <Redirect href="/voice" />;
   if (!voiceSupported) return <Unsupported />;
   return <NicknameGate slotId={slotId} />;
 }
@@ -41,7 +41,7 @@ function NicknameGate({ slotId }: { slotId: string }) {
         <Title>Комната</Title>
         <Body muted>Не получилось загрузить данные. Проверьте интернет и попробуйте ещё раз.</Body>
         <Button title="Попробовать ещё раз" onPress={reload} />
-        <Button variant="plain" title="На главную" onPress={() => router.replace('/')} />
+        <Button variant="plain" title="К комнатам" onPress={() => router.dismissTo('/voice')} />
       </Screen>
     );
   }
@@ -56,7 +56,7 @@ function Unsupported() {
     <Screen>
       <Title>Комната</Title>
       <Body muted>{error ?? 'Звонки в приложении появятся позже. Пока откройте комнату в браузере'}</Body>
-      <Button title="На главную" onPress={() => router.replace('/')} />
+      <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
     </Screen>
   );
 }
@@ -110,7 +110,7 @@ function Room({ slotId }: { slotId: string }) {
         leftRef.current = true;
         void leaveRoom(token, roomId).catch(() => undefined);
       }
-      if (goHome) router.replace('/');
+      if (goHome) router.dismissTo('/voice');
     },
     [hangUp, roomId, token, router],
   );
@@ -149,7 +149,7 @@ function Room({ slotId }: { slotId: string }) {
       <Screen>
         <Title>Комната</Title>
         <ErrorText>{joinState.message}</ErrorText>
-        <Button title="На главную" onPress={() => router.replace('/')} />
+        <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
       </Screen>
     );
   }
@@ -159,7 +159,7 @@ function Room({ slotId }: { slotId: string }) {
       <Screen>
         <Title>Комната закончилась</Title>
         <Body muted>Спасибо, что были с нами. Загляните в следующий раз.</Body>
-        <Button title="На главную" onPress={() => router.replace('/')} />
+        <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
       </Screen>
     );
   }
@@ -169,7 +169,7 @@ function Room({ slotId }: { slotId: string }) {
       <Screen>
         <Title>Комната</Title>
         <ErrorText>{call.error ?? 'Вы вышли из комнаты'}</ErrorText>
-        <Button title="На главную" onPress={() => router.replace('/')} />
+        <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
       </Screen>
     );
   }

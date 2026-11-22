@@ -49,6 +49,14 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'DELETE', url: `/v1/posts/comments/${comment.json().commentId}`, headers });
     await t.app.inject({ method: 'DELETE', url: `/v1/posts/${postId}/like`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/posts', headers, payload: {} });
+    await t.app.inject({ method: 'GET', url: '/v1/feed', headers });
+    await t.app.inject({ method: 'GET', url: '/v1/feed?before=x', headers });
+    // Истории
+    await t.app.inject({ method: 'GET', url: '/v1/stories', headers });
+    await t.app.inject({ method: 'POST', url: '/v1/stories', headers, payload: {} });
+    await t.app.inject({ method: 'POST', url: `/v1/stories/${postId}/view`, headers });
+    await t.app.inject({ method: 'GET', url: `/v1/stories/${postId}/viewers`, headers });
+    await t.app.inject({ method: 'DELETE', url: `/v1/stories/${postId}`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL, inviteCode: 'NOPE' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });

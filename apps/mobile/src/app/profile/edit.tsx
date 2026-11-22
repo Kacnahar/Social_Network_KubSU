@@ -12,9 +12,9 @@ export default function ProfileEditScreen() {
       initial={profile}
       onSaved={(next) => {
         setProfile(next);
-        router.replace('/profile');
+        router.dismissTo('/profile');
       }}
-      footer={{ title: 'Отмена', onPress: () => (router.canGoBack() ? router.back() : router.replace('/profile')) }}
+      footer={{ title: 'Отмена', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/profile')) }}
     />
   );
 }

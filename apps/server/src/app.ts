@@ -13,8 +13,10 @@ import type { MediaStorage } from './core/media/storage';
 import type { PushGateway } from './core/push/service';
 import { registerCoreRoutes } from './core/routes';
 import type { Db } from './db/client';
+import { registerFeedRoutes } from './modules/feed/routes';
 import { registerPostsRoutes } from './modules/posts/routes';
 import { registerRoomsRoutes } from './modules/rooms/routes';
+import { registerStoriesRoutes } from './modules/stories/routes';
 import type { VoiceGateway } from './modules/rooms/voice/gateway';
 
 export type AppDeps = {
@@ -82,6 +84,8 @@ export async function buildApp({ config, db, mailer, push, voice, media, onRoute
   registerCoreRoutes(app, { config, db, mailer, push, media });
   registerRoomsRoutes(app, { db, voice });
   registerPostsRoutes(app, { db, media });
+  registerFeedRoutes(app, { db });
+  registerStoriesRoutes(app, { db, media });
 
   return app;
 }

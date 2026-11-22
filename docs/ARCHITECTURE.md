@@ -150,7 +150,8 @@ apps/
   server/src/
     core/                 ЯДРО: вход, аккаунт, роли, профиль, фото, уведомления, identity («мост»)
     modules/rooms/        МОДУЛЬ комнат: персона, расписание, напоминания, вход в комнату, звук
-    modules/posts/        МОДУЛЬ постов (часть 2); дальше — feed/, stories/
+    modules/posts/        МОДУЛЬ постов
+    modules/feed/         МОДУЛЬ ленты (собирает посты); дальше — stories/
     db/schema/            таблицы: core.ts, rooms.ts, bridge.ts
     app.ts                сборка сервера: ядро + модули
   mobile/src/

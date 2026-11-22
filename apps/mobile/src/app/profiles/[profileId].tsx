@@ -1,5 +1,5 @@
 import type { Profile } from '@app/shared';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, getProfileById } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
@@ -38,16 +38,8 @@ export default function ProfileByIdScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  if (isMine && mine) {
-    return (
-      <Screen align="top">
-        <ProfileView profile={mine} />
-        <Button variant="secondary" title="Редактировать" onPress={() => router.push('/profile/edit')} />
-        <ProfilePosts profileId={mine.profileId} />
-        <Button variant="plain" title="Назад" onPress={back} />
-      </Screen>
-    );
-  }
+  // Свой профиль — это вкладка «Профиль»
+  if (isMine) return <Redirect href="/profile" />;
   if (state.status === 'loading') return <LoadingScreen />;
   if (state.status === 'ready') {
     return (

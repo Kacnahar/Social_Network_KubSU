@@ -169,6 +169,23 @@ CREATE TABLE "room_slots" (
 	CONSTRAINT "room_slots_starts_at_unique" UNIQUE("starts_at")
 );
 --> statement-breakpoint
+CREATE TABLE "stories" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"author_profile_id" uuid NOT NULL,
+	"media_id" uuid NOT NULL,
+	"caption" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "stories_media_id_unique" UNIQUE("media_id")
+);
+--> statement-breakpoint
+CREATE TABLE "story_views" (
+	"story_id" uuid NOT NULL,
+	"viewer_profile_id" uuid NOT NULL,
+	"viewed_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "story_views_story_id_viewer_profile_id_pk" PRIMARY KEY("story_id","viewer_profile_id")
+);
+--> statement-breakpoint
 ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -189,4 +206,8 @@ ALTER TABLE "posts" ADD CONSTRAINT "posts_author_profile_id_profiles_id_fk" FORE
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rooms" ADD CONSTRAINT "rooms_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "room_slot_reminders" ADD CONSTRAINT "room_slot_reminders_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "room_slot_reminders" ADD CONSTRAINT "room_slot_reminders_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stories" ADD CONSTRAINT "stories_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stories" ADD CONSTRAINT "stories_media_id_media_files_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media_files"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "story_views" ADD CONSTRAINT "story_views_story_id_stories_id_fk" FOREIGN KEY ("story_id") REFERENCES "public"."stories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "story_views" ADD CONSTRAINT "story_views_viewer_profile_id_profiles_id_fk" FOREIGN KEY ("viewer_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;

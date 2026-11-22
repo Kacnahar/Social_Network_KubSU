@@ -13,7 +13,7 @@ import { useFail } from '../../features/posts/useFail';
 
 type Picked = { key: number; uri: string; blob: Blob };
 
-export default function NewPostScreen() {
+export default function CreateScreen() {
   const router = useRouter();
   const colors = useColors();
   const fail = useFail();
@@ -83,7 +83,8 @@ export default function NewPostScreen() {
       }
       setProgress(null);
       await createPost(token, { text: text.trim(), photoMediaIds: ids });
-      router.replace('/profile');
+      reset();
+      router.navigate('/');
     } catch (caught) {
       setError(await fail(caught));
       setProgress(null);
@@ -91,7 +92,21 @@ export default function NewPostScreen() {
     }
   };
 
-  const cancel = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  // Вкладка остаётся открытой в памяти, поэтому форму очищаем сами
+  const reset = () => {
+    setText('');
+    setPhotos([]);
+    setError(null);
+    setPhotoError(null);
+    setProgress(null);
+    setPublishing(false);
+    uploaded.current.clear();
+  };
+
+  const cancel = () => {
+    reset();
+    router.navigate('/');
+  };
 
   return (
     <Screen align="top">

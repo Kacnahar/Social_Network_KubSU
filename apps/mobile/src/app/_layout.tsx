@@ -21,7 +21,6 @@ function Navigation() {
   const signedIn = state.status === 'signedIn';
   const hasProfile = signedIn && state.profile !== null;
   const canUseRooms = signedIn && can(state.account.role, 'rooms');
-  const canPublish = signedIn && can(state.account.role, 'publish');
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -33,14 +32,10 @@ function Navigation() {
         <Stack.Screen name="profile/setup" />
       </Stack.Protected>
       <Stack.Protected guard={hasProfile}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="profile/index" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="profiles/[profileId]" />
         <Stack.Screen name="posts/[postId]" />
-      </Stack.Protected>
-      <Stack.Protected guard={hasProfile && canPublish}>
-        <Stack.Screen name="posts/new" />
       </Stack.Protected>
       <Stack.Protected guard={hasProfile && canUseRooms}>
         <Stack.Screen name="rooms/nickname" />

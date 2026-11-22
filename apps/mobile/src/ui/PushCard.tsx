@@ -8,7 +8,7 @@ const unsupportedText =
     ? 'Этот браузер не поддерживает уведомления. На iPhone добавьте сайт на экран «Домой»'
     : 'Напоминания в приложении появятся позже';
 
-export function PushCard({ token, disabled }: { token: string; disabled: boolean }) {
+export function PushCard({ token, disabled = false }: { token: string; disabled?: boolean }) {
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function PushCard({ token, disabled }: { token: string; disabled: boolean
         </>
       )}
       {status === 'off' && (
-        <Button title="Включить напоминания" onPress={() => void toggle(true)} loading={busy} disabled={disabled} />
+        <Button variant="secondary" title="Включить напоминания" onPress={() => void toggle(true)} loading={busy} disabled={disabled} />
       )}
       {status === 'blocked' && (
         <Body muted>Уведомления запрещены в настройках браузера. Разрешите их для этого сайта и обновите страницу</Body>
