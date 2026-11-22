@@ -289,7 +289,7 @@ export async function report(
   reason: string,
 ): Promise<void> {
   const table = target.type === 'post' ? posts : postComments;
-  const [exists] = await db.select({ id: table.id }).from(table).where(eq(table.id, target.id));
+  const [exists] = await db.select({ id: table.id, authorProfileId: table.authorProfileId }).from(table).where(eq(table.id, target.id));
   if (!exists) throw notFound(target.type === 'post' ? 'Такого поста нет' : 'Такого комментария нет');
   // Повторная жалоба того же человека на ту же запись ничего не добавляет
   if (reporterProfileId) {
@@ -305,5 +305,12 @@ export async function report(
       );
     if (already) return;
   }
-  await db.insert(postReports).values({ reporterProfileId, targetType: target.type, targetId: target.id, reason, createdAt: new Date() });
+  await db.insert(postReports).values({
+    reporterProfileId,
+    targetType: target.type,
+    targetId: target.id,
+    targetAuthorProfileId: exists.authorProfileId,
+    reason,
+    createdAt: new Date(),
+  });
 }

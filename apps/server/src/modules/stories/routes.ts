@@ -29,7 +29,7 @@ export function registerStoriesRoutes(app: FastifyInstance, { db, media }: { db:
 
   app.post(STORIES, async (request): Promise<OkResponse> => {
     const accountId = await accountOf(request);
-    const me = await requireProfile(db, accountId, 'publish');
+    const me = await requireProfile(db, accountId, 'publish', 'new');
     const input = createStoryRequestSchema.parse(request.body);
     await createStory(db, me, accountId, input, new Date());
     return { ok: true };

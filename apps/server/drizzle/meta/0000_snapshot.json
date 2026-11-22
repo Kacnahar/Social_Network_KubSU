@@ -1,5 +1,5 @@
 {
-  "id": "cb64d982-6acc-485d-9aaa-ec479eea256e",
+  "id": "e820ea2a-232f-464c-a344-dc87b9292ebd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -929,6 +929,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "target_author_profile_id": {
+          "name": "target_author_profile_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "reason": {
           "name": "reason",
           "type": "text",
@@ -969,6 +975,19 @@
           "tableTo": "profiles",
           "columnsFrom": [
             "reporter_profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "post_reports_target_author_profile_id_profiles_id_fk": {
+          "name": "post_reports_target_author_profile_id_profiles_id_fk",
+          "tableFrom": "post_reports",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "target_author_profile_id"
           ],
           "columnsTo": [
             "id"

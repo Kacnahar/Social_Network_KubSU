@@ -23,6 +23,15 @@ export function isBanned(standing: Pick<AccountStanding, 'status' | 'bannedUntil
 
 export const forbidden = () => new ApiError(403, 'forbidden', 'Для вашей роли это недоступно');
 
+const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
+
+// Бан в соцсети: нельзя публиковать, лайкать и комментировать; смотреть и удалять своё — можно
+export function requireNotBanned(account: Pick<AccountStanding, 'status' | 'bannedUntil'>, now: Date): void {
+  if (!isBanned(account, now)) return;
+  const until = account.bannedUntil ? ` до ${dateFormat.format(account.bannedUntil)}` : '';
+  throw new ApiError(403, 'account_banned', `Вам временно запрещено публиковать, лайкать и комментировать${until}`);
+}
+
 // Проверка роли на сервере: скрытая в приложении кнопка защитой не считается
 export async function requireCapability(db: DbOrTx, accountId: string, capability: Capability): Promise<AccountStanding> {
   const account = await getAccountStanding(db, accountId);

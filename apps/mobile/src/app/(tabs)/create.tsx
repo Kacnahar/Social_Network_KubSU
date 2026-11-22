@@ -5,7 +5,8 @@ import { useCallback, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { uploadMedia } from '../../lib/api';
 import { checkPhoto, readPhoto } from '../../lib/photo';
-import { useSignedIn } from '../../lib/session';
+import { pausedBodyText } from '../../lib/banText';
+import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../../ui/components';
 import { Segmented } from '../../ui/Segmented';
 import { radius, useColors } from '../../ui/theme';
@@ -27,7 +28,8 @@ export default function CreateScreen() {
   const fail = useFail();
   const params = useLocalSearchParams<{ kind?: string }>();
   const [kind, setKind] = useState<Kind>('post');
-  const { token } = useSignedIn();
+  const { token, account } = useSignedIn();
+  const { refreshAccount } = useSession();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<Picked[]>([]);
   const [picking, setPicking] = useState(false);
@@ -42,11 +44,13 @@ export default function CreateScreen() {
   // Кружок «Добавить» открывает сразу историю; параметр сбрасываем, чтобы он не держал выбор насовсем
   useFocusEffect(
     useCallback(() => {
+      // Бан могли выдать, пока приложение открыто
+      void refreshAccount();
       if (params.kind === 'story') {
         setKind('story');
         router.setParams({ kind: undefined });
       }
-    }, [params.kind, router]),
+    }, [params.kind, router, refreshAccount]),
   );
 
   const busy = picking || publishing;
@@ -127,6 +131,16 @@ export default function CreateScreen() {
     reset();
     router.navigate('/');
   };
+
+  if (account.status === 'banned') {
+    return (
+      <Screen align="top">
+        <Title>Публикации на паузе</Title>
+        <Body>{pausedBodyText(account.bannedUntil)}</Body>
+        <Body muted>Если считаете это ошибкой, напишите организаторам</Body>
+      </Screen>
+    );
+  }
 
   return (
     <Screen align="top">

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  banAccount,
   banFromRooms,
   closeRoomReport,
   dismissPostReport,
@@ -8,6 +9,7 @@ import {
   listPostReports,
   listRoomReports,
   removeReportedRecord,
+  unbanAccount,
 } from './api';
 
 function mockFetch(body: unknown, status = 200) {
@@ -32,6 +34,7 @@ const postReport = {
   reporter: author,
   target: { author, text: 'Привет', photos: [], createdAt: '2026-11-22T09:00:00.000Z' },
   reportsOnTarget: 2,
+  offender: { ...author, bannedUntil: null },
 };
 const roomReport = {
   reportId: 'q1',
@@ -95,6 +98,21 @@ describe('клиент API админки', () => {
     const fetchMock = mockFetch({ ok: true });
     await liftRoomsBan('tok', 'b');
     expect(call(fetchMock).url).toMatch(/\/v1\/admin\/rooms\/personas\/b\/ban$/);
+    expect(call(fetchMock).init?.method).toBe('DELETE');
+  });
+
+  it('banAccount отправляет срок PUT-ом', async () => {
+    const fetchMock = mockFetch({ ok: true });
+    await banAccount('tok', 'pr1', 7);
+    expect(call(fetchMock).url).toMatch(/\/v1\/admin\/profiles\/pr1\/ban$/);
+    expect(call(fetchMock).init?.method).toBe('PUT');
+    expect(call(fetchMock).init?.body).toBe(JSON.stringify({ days: 7 }));
+  });
+
+  it('unbanAccount снимает запрет DELETE-ом', async () => {
+    const fetchMock = mockFetch({ ok: true });
+    await unbanAccount('tok', 'pr1');
+    expect(call(fetchMock).url).toMatch(/\/v1\/admin\/profiles\/pr1\/ban$/);
     expect(call(fetchMock).init?.method).toBe('DELETE');
   });
 

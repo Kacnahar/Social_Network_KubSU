@@ -2,6 +2,7 @@
 
 import {
   API_PREFIX,
+  adminAccountBanRequestSchema,
   adminRoomsBanRequestSchema,
   reportStatusSchema,
   type AdminLogResponse,
@@ -17,6 +18,7 @@ import type { MediaStorage } from '../core/media/storage';
 import type { Db } from '../db/client';
 import type { VoiceGateway } from '../modules/rooms/voice/gateway';
 import {
+  banAccount,
   banFromRooms,
   closeRoomReport,
   dismissPostReport,
@@ -26,6 +28,7 @@ import {
   listRoomReports,
   removeReportedRecord,
   requireAdmin,
+  unbanAccount,
   type AdminDeps,
 } from './service';
 
@@ -43,6 +46,7 @@ export type AdminRouteDeps = {
 type StatusQuery = { Querystring: { status?: string } };
 type ReportParams = { Params: { reportId: string } };
 type PersonaParams = { Params: { personaId: string } };
+type ProfileParams = { Params: { profileId: string } };
 
 export function registerAdminRoutes(app: FastifyInstance, { config, db, media, voice }: AdminRouteDeps): void {
   const deps: AdminDeps = { db, media, voice, onError: (error) => app.log.error(error) };
@@ -56,7 +60,7 @@ export function registerAdminRoutes(app: FastifyInstance, { config, db, media, v
 
   app.get<StatusQuery>(`${ADMIN_PREFIX}/reports/posts`, async (request): Promise<AdminPostReportsResponse> => {
     await whoIs(request);
-    return listPostReports(db, statusQuery.parse(request.query.status));
+    return listPostReports(db, statusQuery.parse(request.query.status), new Date());
   });
 
   app.post<ReportParams>(`${ADMIN_PREFIX}/reports/posts/:reportId/dismiss`, async (request): Promise<OkResponse> => {
@@ -68,6 +72,21 @@ export function registerAdminRoutes(app: FastifyInstance, { config, db, media, v
   app.post<ReportParams>(`${ADMIN_PREFIX}/reports/posts/:reportId/remove`, async (request): Promise<OkResponse> => {
     const admin = await whoIs(request);
     await removeReportedRecord(deps, admin, idParam.parse(request.params.reportId), new Date());
+    return { ok: true };
+  });
+
+  // ---------- Бан в соцсети ----------
+
+  app.put<ProfileParams>(`${ADMIN_PREFIX}/profiles/:profileId/ban`, async (request): Promise<OkResponse> => {
+    const admin = await whoIs(request);
+    const { days } = adminAccountBanRequestSchema.parse(request.body);
+    await banAccount(db, config, admin, idParam.parse(request.params.profileId), days, new Date());
+    return { ok: true };
+  });
+
+  app.delete<ProfileParams>(`${ADMIN_PREFIX}/profiles/:profileId/ban`, async (request): Promise<OkResponse> => {
+    const admin = await whoIs(request);
+    await unbanAccount(db, admin, idParam.parse(request.params.profileId), new Date());
     return { ok: true };
   });
 

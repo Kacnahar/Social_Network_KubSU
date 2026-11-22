@@ -5,6 +5,7 @@ import { authorSchema, postPhotoSchema } from '../posts/posts';
 // профиль и ник в одном ответе не встречаются и здесь.
 
 export const ADMIN_ROOMS_BAN_MAX_DAYS = 30;
+export const ADMIN_ACCOUNT_BAN_MAX_DAYS = 30;
 export const ADMIN_PAGE_SIZE = 100;
 
 export const reportStatusSchema = z.enum(['new', 'closed']);
@@ -31,6 +32,13 @@ export const adminPostReportSchema = z.object({
       createdAt: z.iso.datetime(),
     })
     .nullable(),
+  // Автор записи, на которую пожаловались: известен, даже если запись уже удалена. null — он удалил аккаунт
+  offender: authorSchema
+    .extend({
+      // До какого времени ему запрещено публиковать, лайкать и комментировать
+      bannedUntil: z.iso.datetime().nullable(),
+    })
+    .nullable(),
   // Сколько всего жалоб на эту запись
   reportsOnTarget: z.number().int(),
 });
@@ -38,6 +46,12 @@ export type AdminPostReport = z.infer<typeof adminPostReportSchema>;
 
 export const adminPostReportsResponseSchema = z.object({ reports: z.array(adminPostReportSchema) });
 export type AdminPostReportsResponse = z.infer<typeof adminPostReportsResponseSchema>;
+
+// Запрет публиковать, лайкать и комментировать; вход и просмотр остаются
+export const adminAccountBanRequestSchema = z.object({
+  days: z.number().int().min(1).max(ADMIN_ACCOUNT_BAN_MAX_DAYS),
+});
+export type AdminAccountBanRequest = z.infer<typeof adminAccountBanRequestSchema>;
 
 // ---------- Жалобы из комнат ----------
 
@@ -80,6 +94,8 @@ export const ADMIN_ACTIONS = [
   'room_report_closed',
   'rooms_ban_set',
   'rooms_ban_lifted',
+  'account_ban_set',
+  'account_ban_lifted',
 ] as const;
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
@@ -90,6 +106,8 @@ export const ADMIN_ACTION_LABEL: Record<AdminAction, string> = {
   room_report_closed: 'Жалоба из комнаты закрыта',
   rooms_ban_set: 'Закрыт вход в комнаты',
   rooms_ban_lifted: 'Вход в комнаты открыт',
+  account_ban_set: 'Запрещено публиковать',
+  account_ban_lifted: 'Запрет публиковать снят',
 };
 
 export const adminLogEntrySchema = z.object({

@@ -50,7 +50,7 @@ describe('админка', () => {
 
   it('пускает только тех, чья почта есть в настройках, и только после входа', async () => {
     const adminRoutes = t.routes.filter((route) => route.url.startsWith('/v1/admin') && route.method !== 'HEAD');
-    expect(adminRoutes.length).toBeGreaterThanOrEqual(8);
+    expect(adminRoutes.length).toBeGreaterThanOrEqual(10);
     const guest = t.authed(await t.registerAs('guest', 'guest.admin@example.com'));
     const teacher = t.authed(await t.registerAs('teacher', 'teacher.admin@example.com'));
 
@@ -237,6 +237,93 @@ describe('админка', () => {
       expect((await call('POST', `/v1/admin/reports/rooms/${reportId}/close`, admin)).statusCode).toBe(200);
       expect((await call('GET', '/v1/admin/reports/rooms', admin)).json().reports).toHaveLength(0);
       expect((await call('GET', '/v1/admin/reports/rooms?status=closed', admin)).json().reports).toHaveLength(1);
+    });
+  });
+
+  describe('бан в соцсети', () => {
+    let authorProfileId: string;
+    let ownPostId: string;
+    let likedPostId: string;
+
+    beforeAll(async () => {
+      authorProfileId = (await call('GET', '/v1/profile', author)).json().profile.profileId;
+      ownPostId = await newPost('Мой пост до бана');
+      likedPostId = (await call('POST', '/v1/posts', reporter, { text: 'Чужой пост' })).json().postId;
+      await call('PUT', `/v1/posts/${likedPostId}/like`, author);
+    });
+
+    it('жалоба помнит автора записи, даже когда запись уже удалена', async () => {
+      const { postId, reportId } = await newReportedPost('Удалят, а автор известен');
+      await call('POST', `/v1/admin/reports/posts/${reportId}/remove`, admin);
+      const closed = (await call('GET', '/v1/admin/reports/posts?status=closed', admin)).json().reports;
+      const report = closed.find((item: { reportId: string }) => item.reportId === reportId);
+      expect(report.target).toBeNull();
+      expect(report.offender).toMatchObject({ profileId: authorProfileId, displayName: AUTHOR_NAME, bannedUntil: null });
+      expect(postId).toBeTruthy();
+    });
+
+    it('забаненный не может публиковать, лайкать и комментировать — отказывает сервер', async () => {
+      expect((await call('PUT', `/v1/admin/profiles/${authorProfileId}/ban`, admin, { days: 7 })).statusCode).toBe(200);
+
+      const attempts = [
+        await call('POST', '/v1/posts', author, { text: 'Пост во время бана' }),
+        await call('POST', `/v1/posts/${likedPostId}/comments`, author, { text: 'Комментарий во время бана' }),
+        await call('PUT', `/v1/posts/${ownPostId}/like`, author),
+        await call('POST', '/v1/stories', author, { mediaId: '00000000-0000-4000-8000-000000000000' }),
+      ];
+      for (const response of attempts) {
+        expect(response.statusCode).toBe(403);
+        expect(response.json().error.code).toBe('account_banned');
+        expect(response.json().error.message).toContain('временно запрещено');
+      }
+    });
+
+    it('забаненный по-прежнему входит, смотрит, жалуется и убирает своё', async () => {
+      expect((await call('GET', '/v1/feed', author)).statusCode).toBe(200);
+      expect((await call('GET', '/v1/stories', author)).statusCode).toBe(200);
+      expect((await call('POST', `/v1/posts/${likedPostId}/report`, author, { reason: 'жалоба забаненного' })).statusCode).toBe(200);
+      expect((await call('DELETE', `/v1/posts/${likedPostId}/like`, author)).statusCode).toBe(200);
+      expect((await call('DELETE', `/v1/posts/${ownPostId}`, author)).statusCode).toBe(200);
+    });
+
+    it('человек видит свой бан в ответе об аккаунте, админ — в жалобе и в журнале', async () => {
+      const account = (await call('GET', '/v1/account', author)).json();
+      expect(account.status).toBe('banned');
+      expect(new Date(account.bannedUntil).getTime()).toBeGreaterThan(Date.now() + 6.9 * 24 * 60 * 60 * 1000);
+
+      const closed = (await call('GET', '/v1/admin/reports/posts?status=closed', admin)).json().reports;
+      expect(closed.some((item: { offender: { bannedUntil: string | null } | null }) => item.offender?.bannedUntil)).toBe(true);
+      expect((await call('GET', '/v1/admin/log', admin)).json().entries[0]).toMatchObject({ action: 'account_ban_set', note: 'на 7 дн.' });
+    });
+
+    it('срок — от 1 до 30 дней; админа и несуществующий профиль забанить нельзя', async () => {
+      for (const days of [0, 31, 2.5]) {
+        expect((await call('PUT', `/v1/admin/profiles/${authorProfileId}/ban`, admin, { days })).statusCode).toBe(400);
+      }
+      expect((await call('PUT', '/v1/admin/profiles/00000000-0000-4000-8000-000000000000/ban', admin, { days: 1 })).statusCode).toBe(404);
+      const adminProfileId = (await call('GET', '/v1/profile', admin)).json().profile.profileId;
+      const response = await call('PUT', `/v1/admin/profiles/${adminProfileId}/ban`, secondAdmin, { days: 1 });
+      expect(response.statusCode).toBe(403);
+      expect((await call('GET', '/v1/account', admin)).json().status).toBe('active');
+    });
+
+    it('когда срок бана вышел, человек снова публикует без участия админа', async () => {
+      await t.db.update(accounts).set({ bannedUntil: new Date(Date.now() - 1000) });
+      expect((await call('POST', '/v1/posts', author, { text: 'Пост после истёкшего бана' })).statusCode).toBe(200);
+      expect((await call('GET', '/v1/account', author)).json()).toMatchObject({ status: 'active', bannedUntil: null });
+      await t.db.update(accounts).set({ bannedUntil: null });
+    });
+
+    it('админ снимает бан досрочно', async () => {
+      await call('PUT', `/v1/admin/profiles/${authorProfileId}/ban`, admin, { days: 30 });
+      expect((await call('POST', '/v1/posts', author, { text: 'Нельзя' })).statusCode).toBe(403);
+      expect((await call('DELETE', `/v1/admin/profiles/${authorProfileId}/ban`, admin)).statusCode).toBe(200);
+      expect((await call('POST', '/v1/posts', author, { text: 'Снова можно' })).statusCode).toBe(200);
+      expect((await call('GET', '/v1/admin/log', admin)).json().entries[0].action).toBe('account_ban_lifted');
+      // Снимать нечего — в журнал ничего не пишется
+      const before = (await t.db.select().from(adminAuditLog)).length;
+      await call('DELETE', `/v1/admin/profiles/${authorProfileId}/ban`, admin);
+      expect((await t.db.select().from(adminAuditLog)).length).toBe(before);
     });
   });
 

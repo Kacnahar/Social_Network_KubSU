@@ -1,6 +1,7 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { deleteAccount } from '../../lib/api';
+import { pausedUntilText } from '../../lib/banText';
 import { disablePush } from '../../lib/push';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, Card, CardTitle, ErrorText, Screen } from '../../ui/components';
@@ -9,11 +10,18 @@ import { ProfilePosts } from '../../features/posts/ProfilePosts';
 
 export default function MyProfileScreen() {
   const router = useRouter();
-  const { signOut, forgetSession } = useSession();
+  const { signOut, forgetSession, refreshAccount } = useSession();
   const { token, profile, account } = useSignedIn();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Бан могли выдать или снять, пока приложение открыто
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAccount();
+    }, [refreshAccount]),
+  );
 
   const handleSignOut = async () => {
     setBusy('signOut');
@@ -37,6 +45,7 @@ export default function MyProfileScreen() {
   return (
     <Screen align="top">
       <ProfileView profile={profile} />
+      {account.status === 'banned' ? <Body muted>{pausedUntilText(account.bannedUntil)}</Body> : null}
       <Button variant="secondary" title="Редактировать" onPress={() => router.push('/profile/edit')} disabled={busy !== null} />
       {account.isAdmin ? <Button variant="secondary" title="Админка" onPress={() => router.push('/admin')} disabled={busy !== null} /> : null}
       <ProfilePosts profileId={profile.profileId} />

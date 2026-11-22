@@ -5,8 +5,8 @@ import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { useFail } from '../../lib/useFail';
 import { Body, Button, Card, CardTitle, ErrorText } from '../../ui/components';
-import { Segmented } from '../../ui/Segmented';
 import { type, useColors } from '../../ui/theme';
+import { BanControl } from './BanControl';
 import { banFromRooms, closeRoomReport, liftRoomsBan } from './api';
 import { BAN_DAY_OPTIONS, blockedUntilText, roomReporterLabel, roomTargetLabel } from './format';
 
@@ -17,8 +17,6 @@ export function RoomReportCard({ report, now, onDone }: Props) {
   const colors = useColors();
   const fail = useFail();
   const { token } = useSignedIn();
-  const [banning, setBanning] = useState(false);
-  const [days, setDays] = useState(BAN_DAY_OPTIONS[0]?.value ?? '1');
   const [busy, setBusy] = useState<'ban' | 'lift' | 'close' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +25,6 @@ export function RoomReportCard({ report, now, onDone }: Props) {
     setBusy(kind);
     try {
       await action();
-      setBanning(false);
       onDone();
     } catch (caught) {
       setError(await fail(caught));
@@ -60,21 +57,14 @@ export function RoomReportCard({ report, now, onDone }: Props) {
           />
         </>
       ) : target ? (
-        banning ? (
-          <>
-            <Segmented options={BAN_DAY_OPTIONS} value={days} onChange={setDays} />
-            <Button
-              variant="danger"
-              title="Закрыть вход"
-              onPress={() => void act('ban', () => banFromRooms(token, target.personaId, Number(days)))}
-              loading={busy === 'ban'}
-              disabled={busy !== null}
-            />
-            <Button variant="plain" title="Отмена" onPress={() => setBanning(false)} disabled={busy !== null} />
-          </>
-        ) : (
-          <Button variant="plainDanger" title="Закрыть вход в комнаты" onPress={() => setBanning(true)} disabled={busy !== null} />
-        )
+        <BanControl
+          options={BAN_DAY_OPTIONS}
+          startTitle="Закрыть вход в комнаты"
+          confirmTitle="Закрыть вход"
+          busy={busy === 'ban'}
+          disabled={busy !== null}
+          onConfirm={(days) => void act('ban', () => banFromRooms(token, target.personaId, days))}
+        />
       ) : null}
 
       {report.status === 'new' ? (

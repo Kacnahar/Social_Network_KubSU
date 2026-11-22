@@ -9,8 +9,9 @@ import { useFail } from '../../lib/useFail';
 import { Avatar } from '../../ui/Avatar';
 import { Body, Button, Card, CardTitle, ErrorText } from '../../ui/components';
 import { radius, type, useColors } from '../../ui/theme';
-import { dismissPostReport, removeReportedRecord } from './api';
-import { photoPreview, postReportTitle, postReporterLabel, reportsOnTargetNote, resolutionLabel } from './format';
+import { banAccount, dismissPostReport, removeReportedRecord, unbanAccount } from './api';
+import { BanControl } from './BanControl';
+import { ACCOUNT_BAN_DAY_OPTIONS, offenderBannedText, photoPreview, postReportTitle, postReporterLabel, reportsOnTargetNote, resolutionLabel } from './format';
 
 const THUMB = 72;
 
@@ -22,14 +23,14 @@ export function PostReportCard({ report, now, onDone }: Props) {
   const fail = useFail();
   const { token } = useSignedIn();
   const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState<'remove' | 'dismiss' | null>(null);
+  const [busy, setBusy] = useState<'remove' | 'dismiss' | 'ban' | 'unban' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const act = async (kind: 'remove' | 'dismiss') => {
+  const act = async (kind: 'remove' | 'dismiss' | 'ban' | 'unban', action?: () => Promise<unknown>) => {
     setError(null);
     setBusy(kind);
     try {
-      await (kind === 'remove' ? removeReportedRecord(token, report.reportId) : dismissPostReport(token, report.reportId));
+      await (action ? action() : kind === 'remove' ? removeReportedRecord(token, report.reportId) : dismissPostReport(token, report.reportId));
       onDone();
     } catch (caught) {
       setError(await fail(caught));
@@ -40,6 +41,7 @@ export function PostReportCard({ report, now, onDone }: Props) {
 
   const note = reportsOnTargetNote(report.reportsOnTarget);
   const target = report.target;
+  const offender = report.offender;
   const { shown, more } = photoPreview(target?.photos ?? []);
 
   return (
@@ -84,6 +86,45 @@ export function PostReportCard({ report, now, onDone }: Props) {
       ) : (
         <Body muted>Запись уже удалена</Body>
       )}
+
+      {offender ? (
+        <View style={[styles.record, { backgroundColor: colors.fill }]}>
+          {target === null ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Открыть профиль: ${offender.displayName}`}
+              onPress={() => router.push(`/profiles/${offender.profileId}`)}
+              style={({ pressed }) => [styles.author, { opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text numberOfLines={1} style={[type.headline, styles.authorName, { color: colors.text }]}>
+                Автор записи: {offender.displayName}
+              </Text>
+            </Pressable>
+          ) : null}
+          {offender.bannedUntil ? (
+            <>
+              <Body muted>{offenderBannedText(offender.bannedUntil)}</Body>
+              <Button
+                variant="secondary"
+                title="Снять запрет"
+                onPress={() => void act('unban', () => unbanAccount(token, offender.profileId))}
+                loading={busy === 'unban'}
+                disabled={busy !== null}
+              />
+            </>
+          ) : (
+            <BanControl
+              options={ACCOUNT_BAN_DAY_OPTIONS}
+              startTitle="Запретить автору публиковать"
+              confirmTitle="Запретить"
+              hint="Он сможет входить и смотреть, но не публиковать, лайкать и комментировать"
+              busy={busy === 'ban'}
+              disabled={busy !== null}
+              onConfirm={(days) => void act('ban', () => banAccount(token, offender.profileId, days))}
+            />
+          )}
+        </View>
+      ) : null}
 
       {report.status === 'closed' ? (
         <Body muted>{resolutionLabel(report.resolution)}</Body>

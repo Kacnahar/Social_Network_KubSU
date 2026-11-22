@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACCOUNT_BAN_DAY_OPTIONS,
   BAN_DAY_OPTIONS,
   blockedUntilText,
   logSubline,
+  offenderBannedText,
   photoPreview,
   postReportTitle,
   postReporterLabel,
@@ -74,5 +76,15 @@ describe('журнал', () => {
   it('подпись под записью', () => {
     expect(logSubline({ adminLabel: 'Админ 1', byMe: true }, '5 минут назад')).toBe('Админ 1 · вы · 5 минут назад');
     expect(logSubline({ adminLabel: 'Админ 2', byMe: false }, 'вчера')).toBe('Админ 2 · вчера');
+  });
+});
+
+describe('бан автора записи', () => {
+  it('«запрещено до» содержит дату и время', () => {
+    expect(offenderBannedText('2026-12-05T11:30:00.000Z')).toMatch(/^Автору запрещено публиковать до \d{1,2} \S+, \d{2}:\d{2}$/);
+  });
+
+  it('варианты срока', () => {
+    expect(ACCOUNT_BAN_DAY_OPTIONS.map((option) => option.value)).toEqual(['1', '7', '30']);
   });
 });

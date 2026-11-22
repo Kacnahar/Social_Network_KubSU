@@ -1,0 +1,11 @@
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/CLAUDE.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/README.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/apps/mobile/AGENTS.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/API.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/ARCHITECTURE.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/DATA_MODEL.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/DECISIONS.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/MODERATION_RULES.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/OPEN_QUESTIONS.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/PROGRESS.md
+/Users/hamletvardanyan/Desktop/Social_Network_KubSU/docs/ROADMAP.md

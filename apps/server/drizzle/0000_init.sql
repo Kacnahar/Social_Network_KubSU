@@ -122,6 +122,7 @@ CREATE TABLE "post_reports" (
 	"reporter_profile_id" uuid,
 	"target_type" text NOT NULL,
 	"target_id" uuid NOT NULL,
+	"target_author_profile_id" uuid,
 	"reason" text NOT NULL,
 	"status" text DEFAULT 'new' NOT NULL,
 	"resolution" text,
@@ -265,6 +266,7 @@ ALTER TABLE "post_likes" ADD CONSTRAINT "post_likes_profile_id_profiles_id_fk" F
 ALTER TABLE "post_photos" ADD CONSTRAINT "post_photos_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "post_photos" ADD CONSTRAINT "post_photos_media_id_media_files_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media_files"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "post_reports" ADD CONSTRAINT "post_reports_reporter_profile_id_profiles_id_fk" FOREIGN KEY ("reporter_profile_id") REFERENCES "public"."profiles"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "post_reports" ADD CONSTRAINT "post_reports_target_author_profile_id_profiles_id_fk" FOREIGN KEY ("target_author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "posts" ADD CONSTRAINT "posts_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

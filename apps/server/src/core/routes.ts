@@ -24,7 +24,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
 import { z } from 'zod';
-import { deleteAccount, getAccountStanding } from './account';
+import { deleteAccount, getAccountStanding, isBanned } from './account';
 import { authenticate, endSession, startLogin, verifyLogin, type AuthDeps } from './auth/service';
 import { ApiError, unauthorized } from './errors';
 import type { Mailer } from './mailer';
@@ -81,10 +81,12 @@ export function registerCoreRoutes(app: FastifyInstance, { config, db, mailer, p
     const session = await authenticate(db, request.headers.authorization);
     const account = await getAccountStanding(db, session.accountId);
     if (!account) throw unauthorized();
+    // Истёкший бан наружу не показываем: для приложения человек снова «активен»
+    const banned = isBanned(account, new Date());
     return {
       role: account.role,
-      status: account.status,
-      bannedUntil: account.bannedUntil?.toISOString() ?? null,
+      status: banned ? 'banned' : 'active',
+      bannedUntil: banned ? (account.bannedUntil?.toISOString() ?? null) : null,
       isAdmin: config.adminEmailHashes.includes(account.emailHash),
     };
   });

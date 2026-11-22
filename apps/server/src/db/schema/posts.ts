@@ -61,6 +61,8 @@ export const postReports = pgTable('post_reports', {
   targetType: text('target_type', { enum: ['post', 'comment'] }).notNull(),
   // Без внешнего ключа: жалоба должна пережить удаление самой записи автором
   targetId: uuid('target_id').notNull(),
+  // Автор записи на момент жалобы: чтобы админ мог принять меры и после удаления записи
+  targetAuthorProfileId: uuid('target_author_profile_id').references(() => profiles.id, { onDelete: 'set null' }),
   reason: text('reason').notNull(),
   status: text('status', { enum: ['new', 'closed'] })
     .notNull()

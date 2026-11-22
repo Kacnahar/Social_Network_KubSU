@@ -1,4 +1,4 @@
-// Модуль админки: запросы к серверу (разбор жалоб, запреты входа, журнал)
+// Модуль админки: запросы к серверу (разбор жалоб, запреты входа и публикаций, журнал)
 import {
   adminLogResponseSchema,
   adminPostReportsResponseSchema,
@@ -33,6 +33,12 @@ export const banFromRooms = (token: string, personaId: string, days: number) =>
 
 export const liftRoomsBan = (token: string, personaId: string) =>
   request(`/admin/rooms/personas/${id(personaId)}/ban`, okResponseSchema, { method: 'DELETE', token });
+
+export const banAccount = (token: string, profileId: string, days: number) =>
+  request(`/admin/profiles/${id(profileId)}/ban`, okResponseSchema, { method: 'PUT', token, body: { days } });
+
+export const unbanAccount = (token: string, profileId: string) =>
+  request(`/admin/profiles/${id(profileId)}/ban`, okResponseSchema, { method: 'DELETE', token });
 
 export const listAdminLog = (token: string): Promise<AdminLogEntry[]> =>
   request('/admin/log', adminLogResponseSchema, { token }).then((r) => r.entries);

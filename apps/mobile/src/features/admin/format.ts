@@ -1,12 +1,17 @@
 // Чистая логика админки: подписи карточек и сроков (без React, чтобы проверять тестами)
-import { ADMIN_ROOMS_BAN_MAX_DAYS, type AdminPostReport, type AdminRoomReport, type PostPhoto } from '@app/shared';
+import { banDateTimeText } from '../../lib/banText';
+import { ADMIN_ACCOUNT_BAN_MAX_DAYS, ADMIN_ROOMS_BAN_MAX_DAYS, type AdminPostReport, type AdminRoomReport, type PostPhoto } from '@app/shared';
 
 export const MAX_PREVIEW_PHOTOS = 3;
 
+const dayOptions = (max: number) =>
+  ([1, 7, 30] as const).filter((days) => days <= max).map((days) => ({ value: String(days), label: days === 1 ? '1 день' : `${days} дней` }));
+
 // Сроки закрытия входа; не больше предела сервера
-export const BAN_DAY_OPTIONS = ([1, 7, 30] as const)
-  .filter((days) => days <= ADMIN_ROOMS_BAN_MAX_DAYS)
-  .map((days) => ({ value: String(days), label: days === 1 ? '1 день' : `${days} дней` }));
+export const BAN_DAY_OPTIONS = dayOptions(ADMIN_ROOMS_BAN_MAX_DAYS);
+export const ACCOUNT_BAN_DAY_OPTIONS = dayOptions(ADMIN_ACCOUNT_BAN_MAX_DAYS);
+
+export const offenderBannedText = (bannedUntil: string): string => `Автору запрещено публиковать до ${banDateTimeText(bannedUntil)}`;
 
 export const postReportTitle = (targetType: AdminPostReport['targetType']): string =>
   targetType === 'post' ? 'Жалоба на пост' : 'Жалоба на комментарий';
@@ -30,13 +35,7 @@ export const roomTargetLabel = (target: AdminRoomReport['target']): string =>
 export const roomReporterLabel = (reporter: AdminRoomReport['reporter']): string =>
   `От кого: ${reporter ? (reporter.nickname ?? 'без ника') : 'аккаунт удалён'}`;
 
-const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
-const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-export function blockedUntilText(blockedUntil: string): string {
-  const date = new Date(blockedUntil);
-  return `Вход в комнаты закрыт до ${dateFormat.format(date)}, ${timeFormat.format(date)}`;
-}
+export const blockedUntilText = (blockedUntil: string): string => `Вход в комнаты закрыт до ${banDateTimeText(blockedUntil)}`;
 
 export const logSubline = (entry: { adminLabel: string; byMe: boolean }, when: string): string =>
   `${entry.adminLabel}${entry.byMe ? ' · вы' : ''} · ${when}`;

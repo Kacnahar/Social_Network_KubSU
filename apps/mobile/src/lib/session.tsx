@@ -1,5 +1,5 @@
 import { type AccountResponse, type Profile, type Role } from '@app/shared';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, getAccount, getProfile, logout } from './api';
 import { disablePush } from './push';
 import { clearToken, loadToken, saveToken } from './tokenStorage';
@@ -22,6 +22,8 @@ type SessionContextValue = {
   // Сервер сказал, что сессия недействительна (или аккаунт удалён) — забываем её локально
   forgetSession: () => Promise<void>;
   setProfile: (profile: Profile) => void;
+  // Бан могли выдать или снять, пока приложение открыто; сбой молча игнорируем — останутся прежние данные
+  refreshAccount: () => Promise<void>;
   retry: () => void;
 };
 
@@ -49,6 +51,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [forgetSession],
   );
+
+  // Ссылка стабильна: от неё зависят эффекты фокуса экранов, иначе обновление аккаунта зациклится
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = state.status === 'signedIn' ? state.token : null;
+  const refreshAccount = useCallback(async () => {
+    const token = tokenRef.current;
+    if (!token) return;
+    try {
+      const account = await getAccount(token);
+      setState((current) => (current.status === 'signedIn' && current.token === token ? { ...current, account } : current));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'unauthorized') await forgetSession();
+    }
+  }, [forgetSession]);
 
   const restore = useCallback(async () => {
     setState({ status: 'loading' });
@@ -81,9 +97,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await forgetSession();
       },
       setProfile: (profile) => setState((current) => (current.status === 'signedIn' ? { ...current, profile } : current)),
+      refreshAccount,
       retry: () => void restore(),
     }),
-    [state, pendingLogin, forgetSession, loadSession, restore],
+    [state, pendingLogin, forgetSession, loadSession, restore, refreshAccount],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

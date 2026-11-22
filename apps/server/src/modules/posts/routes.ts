@@ -46,7 +46,7 @@ export function registerPostsRoutes(app: FastifyInstance, { db, media }: PostsDe
 
   app.post(POSTS, async (request): Promise<Post> => {
     const accountId = await accountOf(request);
-    const me = await requireProfile(db, accountId, 'publish');
+    const me = await requireProfile(db, accountId, 'publish', 'new');
     const input = createPostRequestSchema.parse(request.body);
     return createPost(db, me, accountId, input);
   });
@@ -80,7 +80,8 @@ export function registerPostsRoutes(app: FastifyInstance, { db, media }: PostsDe
       method,
       url: `${POSTS}/:postId/like`,
       handler: async (request): Promise<LikeResponse> => {
-        const me = await requireProfile(db, await accountOf(request), 'react');
+        // Снять свой лайк можно и при бане, поставить новый — нельзя
+        const me = await requireProfile(db, await accountOf(request), 'react', liked ? 'new' : undefined);
         return setLike(db, me, idParam.parse(request.params.postId), liked);
       },
     });
@@ -97,7 +98,7 @@ export function registerPostsRoutes(app: FastifyInstance, { db, media }: PostsDe
   );
 
   app.post<{ Params: { postId: string } }>(`${POSTS}/:postId/comments`, async (request): Promise<Comment> => {
-    const me = await requireProfile(db, await accountOf(request), 'react');
+    const me = await requireProfile(db, await accountOf(request), 'react', 'new');
     const { text } = createCommentRequestSchema.parse(request.body);
     return addComment(db, me, idParam.parse(request.params.postId), text);
   });

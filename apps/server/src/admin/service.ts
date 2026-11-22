@@ -14,6 +14,7 @@ import {
 } from '@app/shared';
 import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import type { Config } from '../config';
+import { isBanned } from '../core/account';
 import { ApiError, unauthorized } from '../core/errors';
 import { deleteMedia, type MediaDeps } from '../core/media/service';
 import type { Db } from '../db/client';
@@ -95,7 +96,7 @@ async function loadAuthors(db: Db, profileIds: string[]): Promise<Map<string, Au
   );
 }
 
-export async function listPostReports(db: Db, status: ReportStatus): Promise<AdminPostReportsResponse> {
+export async function listPostReports(db: Db, status: ReportStatus, now: Date): Promise<AdminPostReportsResponse> {
   const rows = await db
     .select()
     .from(postReports)
@@ -127,7 +128,20 @@ export async function listPostReports(db: Db, status: ReportStatus): Promise<Adm
       .groupBy(postReports.targetId),
   ]);
 
+  const offenderIds = rows.flatMap((row) => (row.targetAuthorProfileId ? [row.targetAuthorProfileId] : []));
+  const bans = offenderIds.length
+    ? await db
+        .select({ profileId: profiles.id, status: accounts.status, bannedUntil: accounts.bannedUntil })
+        .from(profiles)
+        .innerJoin(accounts, eq(accounts.id, profiles.accountId))
+        .where(inArray(profiles.id, offenderIds))
+    : [];
+  const bannedUntilOf = new Map(
+    bans.map((row) => [row.profileId, isBanned(row, now) ? (row.bannedUntil?.toISOString() ?? null) : null]),
+  );
+
   const authors = await loadAuthors(db, [
+    ...offenderIds,
     ...rows.flatMap((row) => (row.reporterProfileId ? [row.reporterProfileId] : [])),
     ...postRows.map((row) => row.authorProfileId),
     ...commentRows.map((row) => row.authorProfileId),
@@ -135,6 +149,11 @@ export async function listPostReports(db: Db, status: ReportStatus): Promise<Adm
   const postsById = new Map(postRows.map((row) => [row.id, row]));
   const commentsById = new Map(commentRows.map((row) => [row.id, row]));
   const countByTarget = new Map(counts.map((row) => [row.targetId, row.count]));
+
+  const offenderOf = (profileId: string | null) => {
+    const author = profileId ? authors.get(profileId) : undefined;
+    return author ? { ...author, bannedUntil: bannedUntilOf.get(author.profileId) ?? null } : null;
+  };
 
   return {
     reports: rows.map((row) => {
@@ -162,6 +181,7 @@ export async function listPostReports(db: Db, status: ReportStatus): Promise<Adm
                 createdAt: record.createdAt.toISOString(),
               }
             : null,
+        offender: offenderOf(row.targetAuthorProfileId),
         reportsOnTarget: countByTarget.get(row.targetId) ?? 1,
       };
     }),
@@ -208,6 +228,36 @@ export async function removeReportedRecord(deps: AdminDeps, admin: Admin, report
     .where(and(eq(postReports.targetType, report.targetType), eq(postReports.targetId, report.targetId), eq(postReports.status, 'new')));
   // Запись мог успеть удалить сам автор — тогда удалять нечего и в журнал писать не о чем
   if (removed) await writeLog(db, admin, report.targetType === 'post' ? 'post_removed' : 'comment_removed', report.targetId, null, now);
+}
+
+// ---------- Бан в соцсети: по профилю автора ----------
+
+async function accountOfProfile(db: Db, profileId: string) {
+  const [row] = await db
+    .select({ accountId: accounts.id, emailHash: accounts.emailHash, status: accounts.status, bannedUntil: accounts.bannedUntil })
+    .from(profiles)
+    .innerJoin(accounts, eq(accounts.id, profiles.accountId))
+    .where(eq(profiles.id, profileId));
+  if (!row) throw notFound('Такого профиля нет');
+  return row;
+}
+
+// Запретить человеку публиковать, лайкать и комментировать на несколько дней. Вход и просмотр остаются
+export async function banAccount(db: Db, config: Config, admin: Admin, profileId: string, days: number, now: Date): Promise<void> {
+  const account = await accountOfProfile(db, profileId);
+  if (config.adminEmailHashes.includes(account.emailHash)) throw new ApiError(403, 'forbidden', 'Админа заблокировать нельзя');
+  await db
+    .update(accounts)
+    .set({ status: 'banned', bannedUntil: new Date(now.getTime() + days * DAY) })
+    .where(eq(accounts.id, account.accountId));
+  await writeLog(db, admin, 'account_ban_set', profileId, `на ${days} дн.`, now);
+}
+
+export async function unbanAccount(db: Db, admin: Admin, profileId: string, now: Date): Promise<void> {
+  const account = await accountOfProfile(db, profileId);
+  const wasBanned = isBanned(account, now);
+  await db.update(accounts).set({ status: 'active', bannedUntil: null }).where(eq(accounts.id, account.accountId));
+  if (wasBanned) await writeLog(db, admin, 'account_ban_lifted', profileId, null, now);
 }
 
 // ---------- Жалобы из комнат: только ники ----------

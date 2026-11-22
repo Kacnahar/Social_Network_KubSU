@@ -2,7 +2,7 @@ import { mediaPath, type Capability, type Profile, type Role, type UpdateProfile
 import { eq } from 'drizzle-orm';
 import type { Db } from '../../db/client';
 import { accounts, profiles } from '../../db/schema';
-import { getAccountStanding, requireCapability } from '../account';
+import { getAccountStanding, requireCapability, requireNotBanned } from '../account';
 import { ApiError, unauthorized } from '../errors';
 import { deleteMedia, findOwnMedia, type MediaDeps } from '../media/service';
 
@@ -80,9 +80,11 @@ export type ProfileRef = { profileId: string; role: Role };
 const profileRequired = () => new ApiError(409, 'profile_required', 'Сначала заполните профиль');
 
 // Для модулей соцсети: «кто я» в виде открытого профиля. Заодно проверяет право роли.
-export async function requireProfile(db: Db, accountId: string, capability?: Capability): Promise<ProfileRef> {
+// write: 'new' — запрос создаёт новое (пост, лайк, комментарий, историю): забаненному это запрещено.
+export async function requireProfile(db: Db, accountId: string, capability?: Capability, write?: 'new'): Promise<ProfileRef> {
   const account = capability ? await requireCapability(db, accountId, capability) : await getAccountStanding(db, accountId);
   if (!account) throw unauthorized();
+  if (write === 'new') requireNotBanned(account, new Date());
   const [row] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.accountId, accountId));
   if (!row) throw profileRequired();
   return { profileId: row.id, role: account.role };
