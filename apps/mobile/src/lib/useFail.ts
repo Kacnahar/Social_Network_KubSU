@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { ApiError } from '../../lib/api';
-import { useSession } from '../../lib/session';
+import { ApiError } from './api';
+import { useSession } from './session';
 
 // Текст ошибки для показа; если сессия недействительна — выходим, и показывать нечего
 export function useFail(): (caught: unknown) => Promise<string | null> {

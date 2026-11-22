@@ -8,6 +8,7 @@ export * from './core/push';
 export * from './core/roles';
 
 // Модуль «Голосовые комнаты»
+export * from './rooms/moderation';
 export * from './rooms/nickname';
 export * from './rooms/persona';
 export * from './rooms/rooms';

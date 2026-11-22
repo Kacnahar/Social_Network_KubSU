@@ -9,12 +9,7 @@ export default function FeedScreen() {
   return (
     <ListScreen>
       <FeedList
-        header={
-          <>
-            <Title>Лента</Title>
-            {/* здесь будет ряд историй */}
-          </>
-        }
+        header={<Title>Лента</Title>}
         // Запросы комнат уходят только у студента: у остальных строки войса нет вовсе
         pinned={can(account.role, 'rooms') ? <VoiceBar /> : undefined}
       />

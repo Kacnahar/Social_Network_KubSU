@@ -3,10 +3,13 @@
 
 import {
   API_PREFIX,
+  roomReportRequestSchema,
   setNicknameRequestSchema,
+  startVoteRequestSchema,
   type JoinRoomResponse,
   type OkResponse,
   type RoomPersonaResponse,
+  type RoomState,
   type SlotsResponse,
 } from '@app/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -16,6 +19,7 @@ import { requireCapability } from '../../core/account';
 import { getOrCreatePersonaId } from '../../core/identity';
 import type { Db } from '../../db/client';
 import { joinSlot, leaveRoom } from './entry/service';
+import { castBallot, getRoomState, reportToAdmins, setPersonalMute, startVote } from './moderation/service';
 import { getPersona, setNickname } from './persona/service';
 import { listUpcomingSlots } from './schedule/service';
 import type { VoiceGateway } from './voice/gateway';
@@ -69,6 +73,50 @@ export function registerRoomsRoutes(app: FastifyInstance, { db, voice }: RoomsDe
     const { personaId } = await whoIs(request);
     const roomId = idParam.parse(request.params.roomId);
     await leaveRoom(db, personaId, roomId, new Date());
+    return { ok: true };
+  });
+
+  // ---------- Модерация: голосования участников ----------
+
+  const moderation = { db, voice, onError: (error: unknown) => app.log.error(error) };
+
+  app.get<{ Params: { roomId: string } }>(`${ROOMS_PREFIX}/:roomId/state`, async (request): Promise<RoomState> => {
+    const { personaId } = await whoIs(request);
+    return getRoomState(moderation, personaId, idParam.parse(request.params.roomId), new Date());
+  });
+
+  app.post<{ Params: { roomId: string } }>(`${ROOMS_PREFIX}/:roomId/votes`, async (request): Promise<OkResponse> => {
+    const { personaId } = await whoIs(request);
+    const roomId = idParam.parse(request.params.roomId);
+    await startVote(moderation, personaId, roomId, startVoteRequestSchema.parse(request.body), new Date());
+    return { ok: true };
+  });
+
+  app.post<{ Params: { voteId: string } }>(`${ROOMS_PREFIX}/votes/:voteId/ballot`, async (request): Promise<OkResponse> => {
+    const { personaId } = await whoIs(request);
+    await castBallot(moderation, personaId, idParam.parse(request.params.voteId), new Date());
+    return { ok: true };
+  });
+
+  // «Заглушить для себя»: видит и слышит это только сам человек
+  for (const [method, muted] of [
+    ['PUT', true],
+    ['DELETE', false],
+  ] as const) {
+    app.route<{ Params: { personaId: string } }>({
+      method,
+      url: `${ROOMS_PREFIX}/me/mutes/:personaId`,
+      handler: async (request): Promise<OkResponse> => {
+        const me = await whoIs(request);
+        await setPersonalMute(db, me.personaId, idParam.parse(request.params.personaId), muted);
+        return { ok: true };
+      },
+    });
+  }
+
+  app.post(`${ROOMS_PREFIX}/reports`, async (request): Promise<OkResponse> => {
+    const { personaId } = await whoIs(request);
+    await reportToAdmins(db, personaId, roomReportRequestSchema.parse(request.body));
     return { ok: true };
   });
 }

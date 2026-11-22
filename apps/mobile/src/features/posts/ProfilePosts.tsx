@@ -7,7 +7,7 @@ import { Body, Button, Card, CardTitle, ErrorText } from '../../ui/components';
 import { useColors } from '../../ui/theme';
 import { getProfilePosts } from './api';
 import { PostCard } from './PostCard';
-import { useFail } from './useFail';
+import { useFail } from '../../lib/useFail';
 
 type State =
   | { status: 'loading' }

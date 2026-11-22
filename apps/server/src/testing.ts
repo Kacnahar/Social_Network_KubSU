@@ -42,10 +42,14 @@ export class FakeVoice implements VoiceGateway {
   readonly url = 'ws://voice.test';
   readonly counts = new Map<string, number>();
   readonly closed: string[] = [];
-  readonly tokens: { roomName: string; identity: string; name: string; ttlSeconds: number }[] = [];
+  readonly tokens: { roomName: string; identity: string; name: string; ttlSeconds: number; canPublish?: boolean }[] = [];
+  // Кто «на связи» в каждой комнате; тест задаёт это сам
+  readonly present = new Map<string, Set<string>>();
+  readonly publishChanges: { roomName: string; identity: string; canPublish: boolean }[] = [];
+  readonly removed: { roomName: string; identity: string }[] = [];
   down = false;
 
-  async createToken(input: { roomName: string; identity: string; name: string; ttlSeconds: number }): Promise<string> {
+  async createToken(input: { roomName: string; identity: string; name: string; ttlSeconds: number; canPublish?: boolean }): Promise<string> {
     if (this.down) throw new Error('сервер звука недоступен');
     this.tokens.push(input);
     return `voice-token-${this.tokens.length}`;
@@ -53,7 +57,23 @@ export class FakeVoice implements VoiceGateway {
 
   async countParticipants(roomName: string): Promise<number> {
     if (this.down) throw new Error('сервер звука недоступен');
-    return this.counts.get(roomName) ?? 0;
+    return this.counts.get(roomName) ?? this.present.get(roomName)?.size ?? 0;
+  }
+
+  async listIdentities(roomName: string): Promise<string[]> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    return [...(this.present.get(roomName) ?? [])];
+  }
+
+  async setCanPublish(roomName: string, identity: string, canPublish: boolean): Promise<void> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    this.publishChanges.push({ roomName, identity, canPublish });
+  }
+
+  async removeParticipant(roomName: string, identity: string): Promise<void> {
+    if (this.down) throw new Error('сервер звука недоступен');
+    this.removed.push({ roomName, identity });
+    this.present.get(roomName)?.delete(identity);
   }
 
   async closeRoom(roomName: string): Promise<void> {

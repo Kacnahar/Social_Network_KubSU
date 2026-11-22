@@ -1,5 +1,5 @@
 {
-  "id": "ffa804db-c4ee-479c-9d80-53203de79e9a",
+  "id": "8f18054b-fe7a-45ae-84e3-7ad033db71ec",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1065,6 +1065,442 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_personal_mutes": {
+      "name": "room_personal_mutes",
+      "schema": "",
+      "columns": {
+        "persona_id": {
+          "name": "persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "muted_persona_id": {
+          "name": "muted_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_personal_mutes_persona_id_room_personas_id_fk": {
+          "name": "room_personal_mutes_persona_id_room_personas_id_fk",
+          "tableFrom": "room_personal_mutes",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "room_personal_mutes_muted_persona_id_room_personas_id_fk": {
+          "name": "room_personal_mutes_muted_persona_id_room_personas_id_fk",
+          "tableFrom": "room_personal_mutes",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "muted_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "room_personal_mutes_persona_id_muted_persona_id_pk": {
+          "name": "room_personal_mutes_persona_id_muted_persona_id_pk",
+          "columns": [
+            "persona_id",
+            "muted_persona_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_reports": {
+      "name": "room_reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reporter_persona_id": {
+          "name": "reporter_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_persona_id": {
+          "name": "target_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "room_id": {
+          "name": "room_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_reports_reporter_persona_id_room_personas_id_fk": {
+          "name": "room_reports_reporter_persona_id_room_personas_id_fk",
+          "tableFrom": "room_reports",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "reporter_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "room_reports_target_persona_id_room_personas_id_fk": {
+          "name": "room_reports_target_persona_id_room_personas_id_fk",
+          "tableFrom": "room_reports",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "target_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "room_reports_room_id_rooms_id_fk": {
+          "name": "room_reports_room_id_rooms_id_fk",
+          "tableFrom": "room_reports",
+          "tableTo": "rooms",
+          "columnsFrom": [
+            "room_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_sanctions": {
+      "name": "room_sanctions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "persona_id": {
+          "name": "persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "room_id": {
+          "name": "room_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lifted_at": {
+          "name": "lifted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_sanctions_persona_id_room_personas_id_fk": {
+          "name": "room_sanctions_persona_id_room_personas_id_fk",
+          "tableFrom": "room_sanctions",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "room_sanctions_room_id_rooms_id_fk": {
+          "name": "room_sanctions_room_id_rooms_id_fk",
+          "tableFrom": "room_sanctions",
+          "tableTo": "rooms",
+          "columnsFrom": [
+            "room_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_vote_ballots": {
+      "name": "room_vote_ballots",
+      "schema": "",
+      "columns": {
+        "vote_id": {
+          "name": "vote_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "voter_persona_id": {
+          "name": "voter_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_vote_ballots_vote_id_room_votes_id_fk": {
+          "name": "room_vote_ballots_vote_id_room_votes_id_fk",
+          "tableFrom": "room_vote_ballots",
+          "tableTo": "room_votes",
+          "columnsFrom": [
+            "vote_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "room_vote_ballots_voter_persona_id_room_personas_id_fk": {
+          "name": "room_vote_ballots_voter_persona_id_room_personas_id_fk",
+          "tableFrom": "room_vote_ballots",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "voter_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "room_vote_ballots_vote_id_voter_persona_id_pk": {
+          "name": "room_vote_ballots_vote_id_voter_persona_id_pk",
+          "columns": [
+            "vote_id",
+            "voter_persona_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.room_votes": {
+      "name": "room_votes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "room_id": {
+          "name": "room_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_persona_id": {
+          "name": "target_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initiator_persona_id": {
+          "name": "initiator_persona_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "participants_at_start": {
+          "name": "participants_at_start",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "votes_needed": {
+          "name": "votes_needed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_votes_room_id_rooms_id_fk": {
+          "name": "room_votes_room_id_rooms_id_fk",
+          "tableFrom": "room_votes",
+          "tableTo": "rooms",
+          "columnsFrom": [
+            "room_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "room_votes_target_persona_id_room_personas_id_fk": {
+          "name": "room_votes_target_persona_id_room_personas_id_fk",
+          "tableFrom": "room_votes",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "target_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "room_votes_initiator_persona_id_room_personas_id_fk": {
+          "name": "room_votes_initiator_persona_id_room_personas_id_fk",
+          "tableFrom": "room_votes",
+          "tableTo": "room_personas",
+          "columnsFrom": [
+            "initiator_persona_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

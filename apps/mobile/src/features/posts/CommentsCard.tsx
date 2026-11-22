@@ -7,8 +7,8 @@ import { Avatar } from '../../ui/Avatar';
 import { Body, Button, Card, CardTitle, ErrorText, Field, Separator } from '../../ui/components';
 import { type, useColors } from '../../ui/theme';
 import { addComment, deleteComment, getComments, reportComment } from './api';
-import { formatPostTime } from './postTime';
-import { useFail } from './useFail';
+import { formatPostTime } from '../../lib/relativeTime';
+import { useFail } from '../../lib/useFail';
 
 type State =
   | { status: 'loading' }

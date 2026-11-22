@@ -168,7 +168,7 @@ id, post_id, author_profile_id, text, created_at. Удалить может ав
 ### post_reports — жалобы
 id, reporter_profile_id, target_type (пост или комментарий), target_id, reason, status (новая / закрыта), created_at. Жалоба сохраняется, даже если автор удалил саму запись. Разбирать их будет админ.
 
-## Модуль «Истории» ⏳ часть 4
+## Модуль «Истории» ✅
 
 ### stories — истории
 id, author_profile_id, media_id, caption, created_at, expires_at (через 24 часа). После срока история не отдаётся ни в одном запросе; файл и запись удаляет фоновая задача.

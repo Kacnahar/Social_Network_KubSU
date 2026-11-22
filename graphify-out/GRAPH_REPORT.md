@@ -1,17 +1,17 @@
 # Graph Report - Social_Network_KubSU  (2026-11-22)
 
 ## Corpus Check
-- 170 files · ~70,145 words
+- 182 files · ~79,585 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 2, .example 1)
 
 ## Summary
-- 1140 nodes · 3183 edges · 71 communities (59 shown, 12 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 36 edges (avg confidence: 0.86)
+- 1289 nodes · 3598 edges · 76 communities (62 shown, 14 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 37 edges (avg confidence: 0.86)
 - Token cost: 0 input · 560,684 output
 
 ## Graph Freshness
-- Built from commit: `6d927182`
+- Built from commit: `fe51aa66`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,42 +19,42 @@
 - useColors
 - Сервер постов и таблицы
 - core/routes.ts
-- Зависимости приложения
+- dependencies
 - Зависимости сервера
 - entry/service.ts
-- reminders.test.ts
-- main.ts
+- push/service.ts
+- DiskMediaStorage
 - Тесты входа и приглашения
 - auth.ts
 - Настройки приложения Expo
 - Структура кода приложения
-- Тесты анонимности и хранилище фото
-- rooms/api.ts
+- client.ts
+- moderation/service.ts
 - Настройки TypeScript
 - Жёсткие правила и анонимность
 - Модули соцсети
-- Клиент API постов
+- request
 - Аккаунт и коды приглашения
 - Персона комнат и ник
 - Общий пакет типов
 - Админка и журнал
-- Аккаунт и мост identity
+- StoryViewer.tsx
 - Автопроверка GitHub
 - Форматы профиля
 - Звук в браузере (LiveKit)
-- Запросы входа и профиля
+- lib/api.test.ts
 - Корневой пакет
 - Уведомления в браузере
 - Три личности человека
 - Текущий этап и документы
-- Время поста
+- moderation.ts
 - Вход по коду из письма
 - Навык дизайна Apple
 - Ядро и модули
 - Форматы уведомлений
 - TypeScript приложения
-- react
-- Отправка уведомлений
+- RoomEntry.tsx
+- FeedList.tsx
 - Правила Expo
 - Хранение фото и траты
 - Модерация комнат
@@ -70,36 +70,43 @@
 - Сервер звука при разработке
 - session.tsx
 - call.tsx
-- ApiError
+- stories/api.ts
 - schema/index.ts
 - config.ts
 - components.tsx
-- app.ts
-- Body
-- auth/service.ts
-- Button
-- stories.test.ts
+- rooms/routes.ts
+- schema/index.ts
+- create.tsx
+- react
+- mobile/package.json
 - Ночной план (22 ноября 2026)
 - media.ts
 - shared/src/core/errors.ts
-- Mailer
-- push/service.ts
-- feed/api.ts
+- app.ts
+- relativeTime.ts
+- devDependencies
 - Отчёт за ночь 22 ноября 2026
+- scripts
+- expo@~58.0.26
+- expo-glass-effect
+- livekit-client
+- react-dom@19.3.0
 
 ## God Nodes (most connected - your core abstractions)
-1. `useColors()` - 46 edges
-2. `Body()` - 43 edges
-3. `Button()` - 43 edges
-4. `useSignedIn()` - 41 edges
-5. `ApiError` - 39 edges
-6. `request()` - 36 edges
-7. `react` - 33 edges
+1. `useColors()` - 53 edges
+2. `useSignedIn()` - 51 edges
+3. `ApiError` - 47 edges
+4. `Body()` - 47 edges
+5. `Button()` - 47 edges
+6. `request()` - 42 edges
+7. `react` - 38 edges
 8. `useSession()` - 32 edges
-9. `Card()` - 30 edges
-10. `Title()` - 29 edges
+9. `Card()` - 32 edges
+10. `ErrorText()` - 31 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Состояние` --references--> `FakeVoice`  [INFERRED]
+  docs/NIGHT_PLAN.md → apps/server/src/testing.ts
 - `Как защищена анонимность` --semantically_similar_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED] [semantically similar]
   docs/PROGRESS.md → CLAUDE.md
 - `F10: статус «в сети» и риск деанонимизации` --conceptually_related_to--> `Ник комнат нельзя связать с аккаунтом и профилем`  [INFERRED]
@@ -108,8 +115,6 @@
   docs/OPEN_QUESTIONS.md → CLAUDE.md
 - `Часть 2: посты, лайки, комментарии` --implements--> `Модуль «Посты»`  [EXTRACTED]
   docs/ROADMAP.md → CLAUDE.md
-- `API: роли и отказы 403 forbidden` --implements--> `Роли: студент, преподаватель, гость`  [EXTRACTED]
-  docs/API.md → CLAUDE.md
 
 ## Import Cycles
 - None detected.
@@ -121,23 +126,23 @@
 - **Три личности человека в системе** — claude_account, claude_social_profile, claude_rooms_persona [EXTRACTED 1.00]
 - **Механизмы защиты анонимности персоны** — claude_core_identity, claude_persona_links, claude_anonymity_test, claude_rule_anonymity [INFERRED 0.85]
 
-## Communities (71 total, 12 thin omitted)
+## Communities (76 total, 14 thin omitted)
 
 ### Community 0 - "useColors"
-Cohesion: 0.10
-Nodes (40): LoadState, FeedList(), FeedListProps, Row, styles, mergeFirstPage(), Feed, FeedState (+32 more)
+Cohesion: 0.08
+Nodes (47): LikeButton(), PostCardProps, styles, heightFor(), PostPhotos(), styles, MicButton(), MicIcon() (+39 more)
 
 ### Community 1 - "Сервер постов и таблицы"
-Cohesion: 0.07
-Nodes (52): FeedPage, cursorQuery, idParam, PostsDeps, registerPostsRoutes(), addComment(), CommentRow, createPost() (+44 more)
+Cohesion: 0.06
+Nodes (56): getFeed(), post, FeedPage, mergeFirstPage(), Feed, FeedState, useFeed(), cursorQuery (+48 more)
 
 ### Community 2 - "core/routes.ts"
-Cohesion: 0.16
-Nodes (28): Config, AccountStanding, deleteAccount(), forbidden(), getAccountStanding(), requireCapability(), AuthDeps, endSession() (+20 more)
-
-### Community 3 - "Зависимости приложения"
 Cohesion: 0.05
-Nodes (51): dependencies, @app/shared@workspace:*, expo@~58.0.26, expo-blur@~58.0.6, expo-constants@~58.0.16, expo-glass-effect@~58.0.5, expo-image-picker@~58.0.10, expo-linear-gradient@~58.0.4 (+43 more)
+Nodes (80): AccountStanding, deleteAccount(), forbidden(), getAccountStanding(), requireCapability(), AuthDeps, authenticate(), endSession() (+72 more)
+
+### Community 3 - "dependencies"
+Cohesion: 0.12
+Nodes (16): dependencies, expo-blur@~58.0.6, expo-image-picker@~58.0.10, expo-linear-gradient@~58.0.4, expo-router@~58.0.32, expo-secure-store@~58.0.3, expo-status-bar@~58.0.5, react@19.3.0 (+8 more)
 
 ### Community 4 - "Зависимости сервера"
 Cohesion: 0.06
@@ -145,23 +150,19 @@ Nodes (44): dependencies, @app/shared@workspace:*, drizzle-orm@^0.45.4, @electri
 
 ### Community 5 - "entry/service.ts"
 Cohesion: 0.10
-Nodes (19): VoiceConfig, isBanned(), roomParticipations, rooms, NOW, START, joinSlot(), pickRoom() (+11 more)
+Nodes (8): pickRoom(), Room, RoomDeps, VoiceGateway, JoinRoomResponse, joinRoomResponseSchema, ROOM_CAPACITY, ROOM_JOIN_EARLY_MINUTES
 
-### Community 6 - "reminders.test.ts"
-Cohesion: 0.16
-Nodes (11): buildApp(), errorBody(), broadcastPush(), pushSubscriptions, slotReminders, keys, NOW, START (+3 more)
-
-### Community 7 - "main.ts"
-Cohesion: 0.14
-Nodes (8): DiskMediaStorage, MemoryMediaStorage, createWebPushGateway(), generateVapidKeys(), config, loadDevVapid(), mailer, vapid
+### Community 6 - "push/service.ts"
+Cohesion: 0.15
+Nodes (14): isBanned(), ALLOWED_PUSH_HOSTS, BroadcastDeps, broadcastPush(), createWebPushGateway(), generateVapidKeys(), isAllowedPushEndpoint(), removeSubscription() (+6 more)
 
 ### Community 8 - "Тесты входа и приглашения"
-Cohesion: 0.16
-Nodes (14): loadConfig(), createInviteCode(), createDb(), inviteCodes, CapturingMailer, createTestContext(), TEST_INVITE, TEST_INVITE_BY_ROLE (+6 more)
+Cohesion: 0.11
+Nodes (17): loadConfig(), createInviteCode(), MemoryMediaStorage, PushGateway, PushTarget, inviteCodes, storyViews, NOW (+9 more)
 
 ### Community 9 - "auth.ts"
 Cohesion: 0.14
-Nodes (12): AccountResponse, accountResponseSchema, AuthStartRequest, authStartRequestSchema, AuthStartResponse, authStartResponseSchema, AuthVerifyRequest, authVerifyRequestSchema (+4 more)
+Nodes (15): API_URL, RequestOptions, AccountResponse, accountResponseSchema, AuthStartRequest, authStartRequestSchema, AuthStartResponse, authStartResponseSchema (+7 more)
 
 ### Community 10 - "Настройки приложения Expo"
 Cohesion: 0.08
@@ -171,13 +172,13 @@ Nodes (24): backgroundColor, backgroundImage, foregroundImage, monochromeImage, 
 Cohesion: 0.10
 Nodes (15): Структура кода приложения: lib, ui, features, Экраны-исключения, подключающие модули, Разделение на ядро и модули, Главный экран: истории, кнопка войса, лента, Модуль «Лента», Orb и RoomEntry (круглая кнопка входа в комнату), Студенческая соцсеть (проект), Стек: pnpm, PostgreSQL + Drizzle, LiveKit (+7 more)
 
-### Community 12 - "Тесты анонимности и хранилище фото"
-Cohesion: 0.16
-Nodes (5): sourceFiles(), serverDir, decryptEmail(), sessions, slots
+### Community 12 - "client.ts"
+Cohesion: 0.10
+Nodes (7): sourceFiles(), serverDir, decryptEmail(), createDb(), DbHandle, migrationsFolder, Tx
 
-### Community 13 - "rooms/api.ts"
-Cohesion: 0.39
-Nodes (5): getPersona(), getSlots(), joinRoom(), leaveRoom(), okResponseSchema
+### Community 13 - "moderation/service.ts"
+Cohesion: 0.14
+Nodes (16): Member, NOW, applyPassedVote(), blockedUntil(), castBallot(), countBallots(), expireDueVotes(), getRoomState() (+8 more)
 
 ### Community 14 - "Настройки TypeScript"
 Cohesion: 0.10
@@ -191,17 +192,17 @@ Nodes (14): Автотест анонимности (anonymity.test.ts), Жёс�
 Cohesion: 0.12
 Nodes (14): Модуль «Посты», Модуль «Голосовые комнаты», requireCapability (core/account.ts), requireProfile (core/profile/service.ts), Роль Гость, Роль Студент, Роль Преподаватель, Роли: студент, преподаватель, гость (+6 more)
 
-### Community 17 - "Клиент API постов"
-Cohesion: 0.23
-Nodes (15): addComment(), createPost(), deleteComment(), deletePost(), getComments(), getPost(), getProfilePosts(), likePost() (+7 more)
+### Community 17 - "request"
+Cohesion: 0.13
+Nodes (29): MyProfileScreen(), addComment(), createPost(), deleteComment(), deletePost(), getComments(), getPost(), getProfilePosts() (+21 more)
 
 ### Community 18 - "Аккаунт и коды приглашения"
 Cohesion: 0.13
 Nodes (16): Тестовые коды приглашения (TEST/TEACHER/GUEST-2026), Аккаунт: /v1/account, Коды ошибок API, Запрос ленты GET /v1/feed, Фото: /v1/media, API: общие правила, Запросы модуля Посты: посты, лайки, комментарии, жалобы, Профиль: /v1/profile, /v1/profiles/:id (+8 more)
 
 ### Community 19 - "Персона комнат и ник"
-Cohesion: 0.16
-Nodes (19): changeAvailableAt(), getPersona(), loadPersona(), nicknameTaken(), setNickname(), toResponse(), checkNickname(), NICKNAME_CHANGE_INTERVAL_DAYS (+11 more)
+Cohesion: 0.22
+Nodes (16): isUniqueViolation(), changeAvailableAt(), getPersona(), loadPersona(), nicknameTaken(), setNickname(), toResponse(), checkNickname() (+8 more)
 
 ### Community 20 - "Общий пакет типов"
 Cohesion: 0.13
@@ -211,25 +212,25 @@ Nodes (17): dependencies, zod@^4.0.0, devDependencies, typescript@~6.0.3, vitest
 Cohesion: 0.12
 Nodes (14): Админка /v1/admin, Таблицы admins и admin_audit_log, Будущие модули: друзья, сообщения, группы, новости, Модерация записей соцсети не решена, B8: согласовывать соцсеть или пилот комнат, D4: аккаунт разработчика Apple, F6: бан из комнат — только комнаты или вся соцсеть, G10: модерация постов и комментариев (+6 more)
 
-### Community 22 - "Аккаунт и мост identity"
-Cohesion: 0.23
-Nodes (8): deletePersonaOfAccount(), findPersonaId(), getOrCreatePersonaId(), DbHandle, DbOrTx, isUniqueViolation(), migrationsFolder, Tx
+### Community 22 - "StoryViewer.tsx"
+Cohesion: 0.19
+Nodes (17): LoadState, StoriesScreen(), deleteStory(), getStories(), getStoryViewers(), markStoryViewed(), StoryViewer(), styles (+9 more)
 
 ### Community 23 - "Автопроверка GitHub"
 Cohesion: 0.12
 Nodes (15): runs-on, steps, timeout-minutes, jobs, check, name, on, pull_request (+7 more)
 
 ### Community 24 - "Форматы профиля"
-Cohesion: 0.16
-Nodes (11): MyProfileResponse, myProfileResponseSchema, PROFILE_ABOUT_MAX, PROFILE_COURSE_MAX, PROFILE_FACULTY_MAX, PROFILE_NAME_MAX, profileSchema, UpdateProfileRequest (+3 more)
+Cohesion: 0.13
+Nodes (16): FIELD_TEXT, FieldErrors, ProfileFormProps, styles, MyProfileResponse, myProfileResponseSchema, Profile, PROFILE_ABOUT_MAX (+8 more)
 
 ### Community 25 - "Звук в браузере (LiveKit)"
 Cohesion: 0.21
 Nodes (10): call, voiceSupported, listParticipants(), ROOM_EVENTS, toParticipant(), useCall(), voiceSupported, Call (+2 more)
 
-### Community 26 - "Запросы входа и профиля"
-Cohesion: 0.18
-Nodes (13): API_URL, authVerify(), deleteAccount(), fetchHealth(), getAccount(), getProfile(), getProfileById(), logout() (+5 more)
+### Community 26 - "lib/api.test.ts"
+Cohesion: 0.25
+Nodes (7): ApiError, authVerify(), fetchHealth(), getProfileById(), networkError(), profile, updateProfile()
 
 ### Community 27 - "Корневой пакет"
 Cohesion: 0.14
@@ -247,9 +248,9 @@ Nodes (9): Аккаунт (закрытый), core/identity (единствен�
 Cohesion: 0.18
 Nodes (12): Где мы сейчас: части 0-4, Документация — источник правды, Модуль «Истории», Запросы Историй: просмотры, 24 часа, Таблицы историй: stories, story_views, E9: живой звук между людьми не проверен, G20: неиспользованные фото не удаляются, Сводка прогресса на 22 ноября 2026 (+4 more)
 
-### Community 31 - "Время поста"
-Cohesion: 0.29
-Nodes (7): calendarDaysBetween(), dateFormat, dateYearFormat, formatPostTime(), plural(), startOfDay(), now
+### Community 31 - "moderation.ts"
+Cohesion: 0.11
+Nodes (21): startVote(), ActiveVote, activeVoteSchema, AUTOBAN_DAYS, AUTOBAN_KICKS, AUTOBAN_WINDOW_DAYS, KICK_BLOCK_HOURS, KICK_MIN_VOTES (+13 more)
 
 ### Community 32 - "Вход по коду из письма"
 Cohesion: 0.20
@@ -271,13 +272,13 @@ Nodes (7): PushConfigResponse, pushConfigResponseSchema, pushMessageSchema, Push
 Cohesion: 0.29
 Nodes (6): compilerOptions, noUncheckedIndexedAccess, strict, extends, include, expo/tsconfig.base
 
-### Community 37 - "react"
-Cohesion: 0.12
-Nodes (27): MicButton(), MicIcon(), Props, styles, createStyles(), Orb(), OrbProps, useLoop() (+19 more)
+### Community 37 - "RoomEntry.tsx"
+Cohesion: 0.09
+Nodes (22): getPersona(), getSlots(), joinRoom(), leaveRoom(), styles, describeRooms(), RoomsStatus, now (+14 more)
 
-### Community 38 - "Отправка уведомлений"
-Cohesion: 0.47
-Nodes (4): PushGateway, PushTarget, CapturingPush, PushMessage
+### Community 38 - "FeedList.tsx"
+Cohesion: 0.16
+Nodes (16): RootLayout(), FeedScreen(), FeedList(), FeedListProps, Row, styles, Circle(), CircleProps (+8 more)
 
 ### Community 39 - "Правила Expo"
 Cohesion: 0.40
@@ -300,64 +301,80 @@ Cohesion: 0.50
 Nodes (3): Уведомления: /v1/push/*, Безопасность и данные, Вопросы к юристу (C1-C12)
 
 ### Community 53 - "session.tsx"
-Cohesion: 0.13
-Nodes (27): PostScreen(), ProfileEditScreen(), ProfileSetupScreen(), CreateScreen(), Picked, styles, checkPhoto(), readPhoto() (+19 more)
+Cohesion: 0.24
+Nodes (12): getAccount(), getProfile(), logout(), PendingLogin, SessionContext, SessionContextValue, SessionProvider(), SessionState (+4 more)
 
 ### Community 54 - "call.tsx"
-Cohesion: 0.17
-Nodes (26): Navigation(), RootLayout(), LoginScreen(), Mode, JoinState, NicknameGate(), Room(), RoomScreen() (+18 more)
+Cohesion: 0.19
+Nodes (35): Navigation(), LoginScreen(), Mode, LoadState, PostScreen(), ProfileEditScreen(), ProfileSetupScreen(), LoadState (+27 more)
 
-### Community 55 - "ApiError"
-Cohesion: 0.12
-Nodes (28): ApiError, storyViews, registerStoriesRoutes(), createStory(), deleteStory(), isActive(), listStories(), listViewers() (+20 more)
+### Community 55 - "stories/api.ts"
+Cohesion: 0.09
+Nodes (14): author, story, okResponseSchema, authorSchema, postPhotoSchema, CreateStoryRequest, createStoryRequestSchema, storiesResponseSchema (+6 more)
 
 ### Community 56 - "schema/index.ts"
-Cohesion: 0.18
-Nodes (18): personaLinks, id(), time(), accounts, emailLoginCodes, mediaFiles, profiles, postComments (+10 more)
+Cohesion: 0.16
+Nodes (19): id(), time(), emailLoginCodes, mediaFiles, profiles, sessions, postComments, postLikes (+11 more)
 
 ### Community 57 - "config.ts"
-Cohesion: 0.12
-Nodes (20): DEV_EMAIL_ENCRYPTION_KEY, envSchema, flag, ScheduleConfig, VapidConfig, DbOptions, closeFinishedRooms(), JobDeps (+12 more)
+Cohesion: 0.19
+Nodes (15): ScheduleConfig, closeFinishedRooms(), JobDeps, startBackgroundJobs(), liftExpiredMutes(), runReminderTick(), NOW, schedule (+7 more)
 
 ### Community 58 - "components.tsx"
-Cohesion: 0.13
-Nodes (20): FeedScreen(), TabsLayout(), ButtonProps, FieldProps, GlassProps, liquidGlass, ListScreen(), ScreenFrame() (+12 more)
+Cohesion: 0.14
+Nodes (17): TabsLayout(), ButtonProps, FieldProps, GlassProps, liquidGlass, styles, TAB_BAR, TabBarSpaceContext (+9 more)
 
-### Community 59 - "app.ts"
-Cohesion: 0.17
-Nodes (15): AppDeps, authenticate(), MediaStorage, findProfileId(), Db, cursorQuery, registerFeedRoutes(), leaveRoom() (+7 more)
+### Community 59 - "rooms/routes.ts"
+Cohesion: 0.16
+Nodes (9): leaveRoom(), reportToAdmins(), setPersonalMute(), idParam, registerRoomsRoutes(), RoomsDeps, roomReportRequestSchema, RoomState (+1 more)
 
-### Community 60 - "Body"
-Cohesion: 0.19
-Nodes (16): VoiceScreen(), RoomEntry(), SlotList(), SlotRow(), styles, calendarDaysBetween(), dateFormat, formatSlotStart() (+8 more)
+### Community 60 - "schema/index.ts"
+Cohesion: 0.15
+Nodes (15): accounts, personas, roomParticipations, roomPersonalMutes, roomReports, rooms, roomSanctions, roomVoteBallots (+7 more)
 
-### Community 61 - "auth/service.ts"
+### Community 61 - "create.tsx"
+Cohesion: 0.20
+Nodes (13): CreateScreen(), Kind, KINDS, Picked, styles, createStory(), Picked, StoryComposer() (+5 more)
+
+### Community 62 - "react"
 Cohesion: 0.26
-Nodes (16): findUsableInviteId(), inviteIsUsable(), Session, startLogin(), verifyLogin(), encryptEmail(), generateLoginCode(), generateSessionToken() (+8 more)
+Nodes (10): PersonaState, usePersona(), dateFormat, disablePush(), enablePush(), getPushStatus(), PushStatus, PushCard() (+2 more)
 
-### Community 62 - "Button"
-Cohesion: 0.33
-Nodes (13): LoadState, ProfileByIdScreen(), MyProfileScreen(), ProfilePosts(), disablePush(), enablePush(), getPushStatus(), PushStatus (+5 more)
-
-### Community 63 - "stories.test.ts"
-Cohesion: 0.33
-Nodes (8): deleteMedia(), stories, purgeUnusedMedia(), runMaintenance(), startMaintenance(), purgeExpiredStories(), NOW, sharp
+### Community 63 - "mobile/package.json"
+Cohesion: 0.15
+Nodes (12): @app/shared@workspace:*, expo-constants@~58.0.16, expo-linking@~58.0.17, react-native-screens@~4.30.1, @app/shared, main, name, private (+4 more)
 
 ### Community 64 - "Ночной план (22 ноября 2026)"
-Cohesion: 0.18
-Nodes (10): Как делается каждая часть, Ночной план (22 ноября 2026), Одна сессия за раз, Очередь, После части 5 — остановиться, Правила на эту ночь, Состояние, Часть 3. Лента и главный экран — в работе (+2 more)
+Cohesion: 0.11
+Nodes (11): FakeVoice, Как делается каждая часть, Ночной план (22 ноября 2026), Одна сессия за раз, Очередь, После части 5 — остановиться, Правила на эту ночь, Состояние (+3 more)
 
 ### Community 65 - "media.ts"
 Cohesion: 0.24
 Nodes (7): MEDIA_MAX_BYTES, MEDIA_PURPOSES, MEDIA_TYPES, MediaPurpose, mediaPurposeSchema, UploadMediaResponse, uploadMediaResponseSchema
 
 ### Community 66 - "shared/src/core/errors.ts"
-Cohesion: 0.29
-Nodes (4): ERROR_CODES, ErrorCode, ErrorResponse, errorResponseSchema
+Cohesion: 0.17
+Nodes (7): ERROR_CODES, ErrorCode, ErrorResponse, errorResponseSchema, API_PREFIX, HealthResponse, healthResponseSchema
 
-### Community 68 - "push/service.ts"
+### Community 67 - "app.ts"
+Cohesion: 0.12
+Nodes (17): AppDeps, buildApp(), errorBody(), Config, DEV_EMAIL_ENCRYPTION_KEY, envSchema, flag, VapidConfig (+9 more)
+
+### Community 68 - "relativeTime.ts"
+Cohesion: 0.25
+Nodes (6): calendarDaysBetween(), dateFormat, dateYearFormat, plural(), startOfDay(), now
+
+### Community 69 - "devDependencies"
+Cohesion: 0.29
+Nodes (7): devDependencies, @types/react@~19.3.0, typescript@~6.0.3, vitest@^4.0.0, typescript, vitest, @types/react
+
+### Community 70 - "Отчёт за ночь 22 ноября 2026"
 Cohesion: 0.40
-Nodes (5): ALLOWED_PUSH_HOSTS, BroadcastDeps, isAllowedPushEndpoint(), saveSubscription(), Capability
+Nodes (4): Остановка: закончился лимит использования (около 06:35), Отчёт за ночь 22 ноября 2026, Часть 3. Лента и главный экран — готово, Часть 4. Истории — готово (после возобновления, около 15:00)
+
+### Community 71 - "scripts"
+Cohesion: 0.29
+Nodes (7): scripts, android, ios, start, test, typecheck, web
 
 ## Ambiguous Edges - Review These
 - `Модуль «Посты»` → `Модуль «Голосовые комнаты»`  [AMBIGUOUS]
@@ -365,24 +382,24 @@ Nodes (5): ALLOWED_PUSH_HOSTS, BroadcastDeps, isAllowedPushEndpoint(), saveSubsc
 
 ## Knowledge Gaps
 - **49 isolated node(s):** `expo/tsconfig.base`, `F1: название соцсети не выбрано`, `apps/server (Node.js + Fastify)`, `packages/shared (общие типы)`, `pnpm check (типы и автотесты)` (+44 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 348 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 424 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `drizzle-orm` connect `schema/index.ts` to `Сервер постов и таблицы`, `core/routes.ts`, `Зависимости сервера`, `push/service.ts`, `entry/service.ts`, `reminders.test.ts`, `Тесты входа и приглашения`, `Персона комнат и ник`, `Аккаунт и мост identity`, `ApiError`, `config.ts`, `auth/service.ts`, `stories.test.ts`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `drizzle-orm` connect `schema/index.ts` to `Сервер постов и таблицы`, `core/routes.ts`, `Зависимости сервера`, `entry/service.ts`, `push/service.ts`, `Тесты входа и приглашения`, `client.ts`, `moderation/service.ts`, `Персона комнат и ник`, `config.ts`, `schema/index.ts`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **What connects `expo/tsconfig.base`, `F1: название соцсети не выбрано`, `apps/server (Node.js + Fastify)` to the rest of the system?**
   _49 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useColors` be split into smaller, more focused modules?**
-  _Cohesion score 0.09653092006033183 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `react` to `useColors`, `Зависимости приложения`, `session.tsx`, `call.tsx`, `Звук в браузере (LiveKit)`, `components.tsx`, `Body`, `Button`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _Cohesion score 0.07966101694915254 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `react` to `useColors`, `Сервер постов и таблицы`, `dependencies`, `RoomEntry.tsx`, `FeedList.tsx`, `request`, `session.tsx`, `StoryViewer.tsx`, `call.tsx`, `Форматы профиля`, `Звук в браузере (LiveKit)`, `components.tsx`, `create.tsx`, `mobile/package.json`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Should `Сервер постов и таблицы` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
-- **Why does `react-native` connect `useColors` to `Зависимости приложения`, `react`, `session.tsx`, `call.tsx`, `components.tsx`, `Body`, `Button`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
+- **Why does `FakeVoice` connect `Ночной план (22 ноября 2026)` to `Тесты входа и приглашения`, `entry/service.ts`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

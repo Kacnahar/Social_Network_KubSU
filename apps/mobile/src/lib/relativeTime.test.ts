@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPostTime } from './postTime';
+import { formatPostTime } from './relativeTime';
 
 const now = new Date(2026, 10, 22, 15, 0);
 const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000);

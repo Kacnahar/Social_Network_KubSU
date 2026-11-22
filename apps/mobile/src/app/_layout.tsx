@@ -36,6 +36,7 @@ function Navigation() {
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="profiles/[profileId]" />
         <Stack.Screen name="posts/[postId]" />
+        <Stack.Screen name="stories/[profileId]" />
       </Stack.Protected>
       <Stack.Protected guard={hasProfile && canUseRooms}>
         <Stack.Screen name="rooms/nickname" />

@@ -6,6 +6,8 @@ import { useSignedIn } from '../../lib/session';
 import { Button, Card, CardTitle, ErrorText, useTabBarSpace } from '../../ui/components';
 import { type, useColors } from '../../ui/theme';
 import { PostCard } from '../posts/PostCard';
+import { StoriesRow } from '../stories/StoriesRow';
+import { useStories } from '../stories/useStories';
 import { useFeed } from './useFeed';
 
 type Row = { key: string; kind: 'pinned' } | { key: string; kind: 'post'; post: Post };
@@ -23,12 +25,20 @@ export function FeedList({ header, pinned }: FeedListProps) {
   const space = useTabBarSpace();
   const { account } = useSignedIn();
   const feed = useFeed();
+  const stories = useStories();
+  const { reload: reloadStories } = stories;
   const { state } = feed;
 
   const rows: Row[] = [
     ...(pinned ? [{ key: 'pinned', kind: 'pinned' } as const] : []),
     ...(state.status === 'ready' ? state.posts.map((post) => ({ key: post.postId, kind: 'post', post }) as const) : []),
   ];
+
+  // «Потянуть, чтобы обновить» обновляет и ленту, и истории
+  const refresh = () => {
+    feed.refresh();
+    void reloadStories();
+  };
 
   const footer = (
     <View style={styles.footer}>
@@ -78,12 +88,18 @@ export function FeedList({ header, pinned }: FeedListProps) {
           </View>
         )
       }
-      ListHeaderComponent={<View style={styles.header}>{header}</View>}
+      ListHeaderComponent={
+        // Истории — выше закреплённой строки, поэтому строка остаётся элементом с индексом 1
+        <View style={styles.header}>
+          {header}
+          <StoriesRow groups={stories.groups} />
+        </View>
+      }
       ListFooterComponent={footer}
       stickyHeaderIndices={pinned ? [1] : undefined}
       onEndReached={feed.loadMore}
       onEndReachedThreshold={0.6}
-      refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} tintColor={colors.accent} />}
+      refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={refresh} tintColor={colors.accent} />}
       contentContainerStyle={[styles.content, { paddingBottom: space || 28 }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}

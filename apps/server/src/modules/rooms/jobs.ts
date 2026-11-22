@@ -3,6 +3,7 @@ import type { Db } from '../../db/client';
 import type { PushGateway } from '../../core/push/service';
 import { runReminderTick } from './reminders/service';
 import { closeFinishedRooms } from './entry/service';
+import { liftExpiredMutes } from './moderation/service';
 import type { VoiceGateway } from './voice/gateway';
 import { generateSlots } from './schedule/service';
 
@@ -32,6 +33,7 @@ export async function startBackgroundJobs({ db, schedule, push, voice, onError }
     Promise.all([
       push ? runReminderTick({ db, push, onError }, now).catch(onError) : undefined,
       closeFinishedRooms({ db, voice, onError }, now).catch(onError),
+      liftExpiredMutes({ db, voice, onError }, now).catch(onError),
     ])
       .finally(() => {
         ticking = false;

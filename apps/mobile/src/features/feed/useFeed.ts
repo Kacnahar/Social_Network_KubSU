@@ -2,7 +2,7 @@ import type { Post } from '@app/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useSignedIn } from '../../lib/session';
-import { useFail } from '../posts/useFail';
+import { useFail } from '../../lib/useFail';
 import { getFeed } from './api';
 import { mergeFirstPage } from './mergeFirstPage';
 

@@ -68,6 +68,13 @@ describe('анонимность', () => {
       .values({ title: 'Комната', startsAt: new Date(Date.now() - 60_000), durationMinutes: 45, createdAt: new Date() })
       .returning();
     const joined = await t.app.inject({ method: 'POST', url: `/v1/rooms/slots/${slot!.id}/join`, headers });
+    // Модерация комнат
+    const joinedRoomId = joined.json().roomId as string;
+    await t.app.inject({ method: 'GET', url: `/v1/rooms/${joinedRoomId}/state`, headers });
+    await t.app.inject({ method: 'POST', url: `/v1/rooms/${joinedRoomId}/votes`, headers, payload: { type: 'mute', targetPersonaId: joinedRoomId } });
+    await t.app.inject({ method: 'POST', url: `/v1/rooms/votes/${joinedRoomId}/ballot`, headers });
+    await t.app.inject({ method: 'PUT', url: `/v1/rooms/me/mutes/${joinedRoomId}`, headers });
+    await t.app.inject({ method: 'POST', url: '/v1/rooms/reports', headers, payload: { text: 'жалоба' } });
     await t.app.inject({ method: 'POST', url: `/v1/rooms/${joined.json().roomId}/leave`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/rooms/slots/not-an-id/join', headers });
     await t.app.inject({ method: 'GET', url: '/v1/push/config' });

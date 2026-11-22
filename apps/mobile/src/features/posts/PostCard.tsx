@@ -8,8 +8,8 @@ import { Body, Button, Card, ErrorText, Separator } from '../../ui/components';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
 import { deletePost, likePost, reportPost, unlikePost } from './api';
 import { PostPhotos } from './PostPhotos';
-import { formatPostTime } from './postTime';
-import { useFail } from './useFail';
+import { formatPostTime } from '../../lib/relativeTime';
+import { useFail } from '../../lib/useFail';
 
 const COLLAPSE_AFTER = 600;
 

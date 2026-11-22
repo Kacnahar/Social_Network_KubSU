@@ -5,6 +5,7 @@ import { isUniqueViolation, type Db } from '../../../db/client';
 import { personas, roomParticipations, rooms, slots } from '../../../db/schema';
 import { getAccountStanding, isBanned } from '../../../core/account';
 import { ApiError, unauthorized } from '../../../core/errors';
+import { blockedUntil, mutedUntil } from '../moderation/service';
 import { isJoinable, slotEndsAt } from '../schedule/service';
 import type { VoiceGateway } from '../voice/gateway';
 
@@ -87,6 +88,10 @@ export async function joinSlot(
   const [slot] = await db.select().from(slots).where(eq(slots.id, slotId));
   if (!slot) throw new ApiError(404, 'not_found', 'Такой комнаты нет');
   if (!isJoinable(slot, now)) throw roomNotOpen();
+  // Выгнали или автобан: вход во все комнаты закрыт до конца срока
+  if (await blockedUntil(db, who.personaId, now)) {
+    throw new ApiError(403, 'room_blocked', 'Вход в комнаты для вас временно закрыт по решению участников');
+  }
   if (!voice) throw voiceUnavailable();
 
   const endsAt = slotEndsAt(slot);
@@ -99,6 +104,8 @@ export async function joinSlot(
       identity: who.personaId,
       name: persona.nickname,
       ttlSeconds: (endsAt.getTime() - now.getTime()) / 1000 + TOKEN_GRACE_SECONDS,
+      // Перезаход не возвращает микрофон, выключенный голосованием
+      canPublish: (await mutedUntil(db, who.personaId, room.id, now)) === null,
     });
   } catch (error) {
     if (error instanceof ApiError) throw error;

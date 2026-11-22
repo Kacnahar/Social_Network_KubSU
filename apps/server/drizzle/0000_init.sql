@@ -141,6 +141,55 @@ CREATE TABLE "room_participations" (
 	"left_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "room_personal_mutes" (
+	"persona_id" uuid NOT NULL,
+	"muted_persona_id" uuid NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "room_personal_mutes_persona_id_muted_persona_id_pk" PRIMARY KEY("persona_id","muted_persona_id")
+);
+--> statement-breakpoint
+CREATE TABLE "room_reports" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"reporter_persona_id" uuid,
+	"target_persona_id" uuid,
+	"room_id" uuid,
+	"text" text NOT NULL,
+	"status" text DEFAULT 'new' NOT NULL,
+	"created_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "room_sanctions" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"persona_id" uuid NOT NULL,
+	"type" text NOT NULL,
+	"room_id" uuid,
+	"source" text NOT NULL,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"lifted_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE "room_vote_ballots" (
+	"vote_id" uuid NOT NULL,
+	"voter_persona_id" uuid NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "room_vote_ballots_vote_id_voter_persona_id_pk" PRIMARY KEY("vote_id","voter_persona_id")
+);
+--> statement-breakpoint
+CREATE TABLE "room_votes" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"room_id" uuid NOT NULL,
+	"type" text NOT NULL,
+	"target_persona_id" uuid NOT NULL,
+	"initiator_persona_id" uuid,
+	"participants_at_start" integer NOT NULL,
+	"votes_needed" integer NOT NULL,
+	"result" text DEFAULT 'pending' NOT NULL,
+	"started_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"resolved_at" timestamp with time zone
+);
+--> statement-breakpoint
 CREATE TABLE "rooms" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"slot_id" uuid NOT NULL,
@@ -205,6 +254,18 @@ ALTER TABLE "post_reports" ADD CONSTRAINT "post_reports_reporter_profile_id_prof
 ALTER TABLE "posts" ADD CONSTRAINT "posts_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_personal_mutes" ADD CONSTRAINT "room_personal_mutes_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_personal_mutes" ADD CONSTRAINT "room_personal_mutes_muted_persona_id_room_personas_id_fk" FOREIGN KEY ("muted_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_reports" ADD CONSTRAINT "room_reports_reporter_persona_id_room_personas_id_fk" FOREIGN KEY ("reporter_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_reports" ADD CONSTRAINT "room_reports_target_persona_id_room_personas_id_fk" FOREIGN KEY ("target_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_reports" ADD CONSTRAINT "room_reports_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_sanctions" ADD CONSTRAINT "room_sanctions_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_sanctions" ADD CONSTRAINT "room_sanctions_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_vote_ballots" ADD CONSTRAINT "room_vote_ballots_vote_id_room_votes_id_fk" FOREIGN KEY ("vote_id") REFERENCES "public"."room_votes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_vote_ballots" ADD CONSTRAINT "room_vote_ballots_voter_persona_id_room_personas_id_fk" FOREIGN KEY ("voter_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_votes" ADD CONSTRAINT "room_votes_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_votes" ADD CONSTRAINT "room_votes_target_persona_id_room_personas_id_fk" FOREIGN KEY ("target_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_votes" ADD CONSTRAINT "room_votes_initiator_persona_id_room_personas_id_fk" FOREIGN KEY ("initiator_persona_id") REFERENCES "public"."room_personas"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rooms" ADD CONSTRAINT "rooms_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_slot_reminders" ADD CONSTRAINT "room_slot_reminders_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stories" ADD CONSTRAINT "stories_author_profile_id_profiles_id_fk" FOREIGN KEY ("author_profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

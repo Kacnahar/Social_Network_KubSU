@@ -1,22 +1,32 @@
 import { POST_PHOTOS_MAX, POST_TEXT_MAX } from '@app/shared';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { uploadMedia } from '../../lib/api';
 import { checkPhoto, readPhoto } from '../../lib/photo';
 import { useSignedIn } from '../../lib/session';
 import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../../ui/components';
+import { Segmented } from '../../ui/Segmented';
 import { radius, useColors } from '../../ui/theme';
 import { createPost } from '../../features/posts/api';
-import { useFail } from '../../features/posts/useFail';
+import { StoryComposer } from '../../features/stories/StoryComposer';
+import { useFail } from '../../lib/useFail';
 
 type Picked = { key: number; uri: string; blob: Blob };
+type Kind = 'post' | 'story';
+
+const KINDS = [
+  { value: 'post', label: 'Пост' },
+  { value: 'story', label: 'История' },
+] as const;
 
 export default function CreateScreen() {
   const router = useRouter();
   const colors = useColors();
   const fail = useFail();
+  const params = useLocalSearchParams<{ kind?: string }>();
+  const [kind, setKind] = useState<Kind>('post');
   const { token } = useSignedIn();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<Picked[]>([]);
@@ -28,6 +38,16 @@ export default function CreateScreen() {
   const nextKey = useRef(0);
   // Уже загруженные фото: при повторной попытке после ошибки заново их не отправляем
   const uploaded = useRef(new Map<number, string>());
+
+  // Кружок «Добавить» открывает сразу историю; параметр сбрасываем, чтобы он не держал выбор насовсем
+  useFocusEffect(
+    useCallback(() => {
+      if (params.kind === 'story') {
+        setKind('story');
+        router.setParams({ kind: undefined });
+      }
+    }, [params.kind, router]),
+  );
 
   const busy = picking || publishing;
   const empty = text.trim() === '' && photos.length === 0;
@@ -110,60 +130,71 @@ export default function CreateScreen() {
 
   return (
     <Screen align="top">
-      <Title>Новый пост</Title>
+      <Title>Создать</Title>
+      <Segmented options={KINDS} value={kind} onChange={setKind} />
 
-      <Card>
-        <Field
-          label="Текст"
-          value={text}
-          onChangeText={setText}
-          maxLength={POST_TEXT_MAX}
-          autoCapitalize="sentences"
-          autoCorrect
-          multiline
-          numberOfLines={6}
-          textAlignVertical="top"
-          style={styles.text}
-          hint={`${text.length} из ${POST_TEXT_MAX}`}
-          editable={!publishing}
-        />
+      {kind === 'post' ? (
+        <>
+          <Card>
+            <Field
+              label="Текст"
+              value={text}
+              onChangeText={setText}
+              maxLength={POST_TEXT_MAX}
+              autoCapitalize="sentences"
+              autoCorrect
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              style={styles.text}
+              hint={`${text.length} из ${POST_TEXT_MAX}`}
+              editable={!publishing}
+            />
 
-        {photos.length > 0 ? (
-          <View style={styles.grid}>
-            {photos.map((photo, index) => (
-              <View key={photo.key} style={styles.item}>
-                <Image
-                  source={{ uri: photo.uri }}
-                  accessibilityLabel={`Фото ${index + 1} из ${photos.length}`}
-                  style={[styles.thumb, { backgroundColor: colors.fill }]}
-                />
-                <Button variant="plain" title="Убрать" onPress={() => removePhoto(photo.key)} disabled={publishing} />
+            {photos.length > 0 ? (
+              <View style={styles.grid}>
+                {photos.map((photo, index) => (
+                  <View key={photo.key} style={styles.item}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      accessibilityLabel={`Фото ${index + 1} из ${photos.length}`}
+                      style={[styles.thumb, { backgroundColor: colors.fill }]}
+                    />
+                    <Button variant="plain" title="Убрать" onPress={() => removePhoto(photo.key)} disabled={publishing} />
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        ) : null}
-        <Body muted>
-          Фото: {photos.length} из {POST_PHOTOS_MAX}
-        </Body>
-        <ErrorText>{photoError}</ErrorText>
-        <Button
-          variant="secondary"
-          title="Добавить фото"
-          onPress={() => void pickPhotos()}
-          loading={picking}
-          disabled={publishing || photos.length >= POST_PHOTOS_MAX}
-        />
-      </Card>
+            ) : null}
+            <Body muted>
+              Фото: {photos.length} из {POST_PHOTOS_MAX}
+            </Body>
+            <ErrorText>{photoError}</ErrorText>
+            <Button
+              variant="secondary"
+              title="Добавить фото"
+              onPress={() => void pickPhotos()}
+              loading={picking}
+              disabled={publishing || photos.length >= POST_PHOTOS_MAX}
+            />
+          </Card>
 
-      {progress ? <Body muted>{progress}</Body> : null}
-      <ErrorText>{error}</ErrorText>
-      <Button title="Опубликовать" onPress={() => void publish()} loading={publishing} disabled={empty || picking} />
-      <Button variant="plain" title="Отмена" onPress={cancel} disabled={busy} />
+          {progress ? <Body muted>{progress}</Body> : null}
+          <ErrorText>{error}</ErrorText>
+          <Button title="Опубликовать" onPress={() => void publish()} loading={publishing} disabled={empty || picking} />
+          <Button variant="plain" title="Отмена" onPress={cancel} disabled={busy} />
+        </>
+      ) : null}
+      {/* Форма истории остаётся в памяти при переключении, чтобы не терять выбранное фото */}
+      <View style={kind === 'story' ? styles.story : styles.hidden}>
+        <StoryComposer />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: 'none' },
+  story: { gap: 16 },
   text: { minHeight: 140 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   item: { alignItems: 'center', gap: 2 },

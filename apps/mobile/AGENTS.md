@@ -43,11 +43,11 @@ Docs: https://docs.expo.dev/eas/index.md
 ## Структура кода
 
 - `src/lib` и `src/ui` — ядро соцсети (API-клиент, сессия, общие компоненты, тема, нижняя панель вкладок `ui/TabBar.tsx`).
-- `src/features/<модуль>` — модули соцсети: `rooms` (голосовые комнаты), `posts` (посты, лайки, комментарии), `feed` (лента всех постов).
+- `src/features/<модуль>` — модули соцсети: `rooms` (голосовые комнаты), `posts` (посты, лайки, комментарии), `feed` (лента всех постов), `stories` (истории).
 - Модуль может импортировать из ядра, ядро из модулей — нет. Персону комнат грузит сам модуль (`features/rooms/usePersona`), сессия её не знает.
-- Модули друг из друга ничего не импортируют. Единственное разрешённое обращение модуля к модулю: `feed` берёт из `posts` карточку поста и хук ошибок (лента показывает посты). `posts` и `rooms` не знают ни про `feed`, ни друг про друга.
+- Модули друг из друга ничего не импортируют. Единственное разрешённое обращение модуля к модулю: `feed` берёт из `posts` карточку поста (лента показывает посты), а из `stories` — ряд кружков и хук историй (лента собирает главный экран). Общие вещи (`useFail`, `formatPostTime` в `lib/relativeTime.ts`) живут в ядре `src/lib`. `posts` и `rooms` не знают ни про `feed`, ни друг про друга.
 - Экраны в `src/app` подключают модули (это не нарушение): ленту и строку войса — `(tabs)/index.tsx`, меню войса — `(tabs)/voice.tsx`, посты под профилем — `(tabs)/profile.tsx` и `profiles/[profileId].tsx`.
 - Нижнее меню — группа `src/app/(tabs)/` на `Tabs` из expo-router со своей панелью `ui/TabBar.tsx`: `index` (Лента, `/`), `voice` (Войс, `/voice`, только право `rooms`), `create` (Создать, `/create`, только право `publish`), `profile` (Профиль, `/profile`). Недоступные роли вкладки скрыты через `Tabs.Protected` в `(tabs)/_layout.tsx`, прямой адрес ведёт на ленту. Панель плавает над содержимым; экраны (`Screen`, `ListScreen`) сами оставляют под ней место через `TabBarSpaceProvider`.
-- Вне вкладок (на весь экран, без панели): `login`, `verify`, `profile/setup`, `profile/edit`, `profiles/[profileId]`, `posts/[postId]`, `rooms/nickname`, `rooms/call`. Доступ к ним задаётся группами `Stack.Protected` в `app/_layout.tsx`.
+- Вне вкладок (на весь экран, без панели): `login`, `verify`, `profile/setup`, `profile/edit`, `profiles/[profileId]`, `posts/[postId]`, `rooms/nickname`, `rooms/call`, `stories/[profileId]` (просмотр историй автора, чёрный фон). Доступ к ним задаётся группами `Stack.Protected` в `app/_layout.tsx`.
 - Экраны модуля, не входящие во вкладки, лежат в `src/app/<модуль>/` (например, `src/app/rooms/`).
 - Запросы модуля живут в его `api.ts` и пользуются `request` из `src/lib/api.ts`.
