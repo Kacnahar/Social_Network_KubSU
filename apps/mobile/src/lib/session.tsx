@@ -1,6 +1,7 @@
-import type { MeResponse } from '@rooms/shared';
+import type { RoomPersonaResponse } from '@app/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ApiError, getMe, logout } from './api';
+import { getPersona } from '../features/rooms/api';
+import { ApiError, logout } from './api';
 import { disablePush } from './push';
 import { clearToken, loadToken, saveToken } from './tokenStorage';
 
@@ -8,7 +9,7 @@ type SessionState =
   | { status: 'loading' }
   | { status: 'signedOut' }
   | { status: 'offline' }
-  | { status: 'signedIn'; token: string; me: MeResponse };
+  | { status: 'signedIn'; token: string; persona: RoomPersonaResponse };
 
 // Почта, на которую отправлен код: живёт только в памяти, между экранами входа
 export type PendingLogin = { email: string; inviteCode?: string; devCode?: string };
@@ -21,7 +22,7 @@ type SessionContextValue = {
   signOut: () => Promise<void>;
   // Сервер сказал, что сессия недействительна (или аккаунт удалён) — забываем её локально
   forgetSession: () => Promise<void>;
-  setMe: (me: MeResponse) => void;
+  setPersona: (persona: RoomPersonaResponse) => void;
   retry: () => void;
 };
 
@@ -39,7 +40,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const loadSession = useCallback(
     async (token: string) => {
       try {
-        setState({ status: 'signedIn', token, me: await getMe(token) });
+        // Навигации нужно знать, выбран ли ник комнат; когда появится профиль соцсети, сессия будет держать его, а персону — модуль комнат
+        setState({ status: 'signedIn', token, persona: await getPersona(token) });
       } catch (error) {
         if (error instanceof ApiError && error.code === 'unauthorized') await forgetSession();
         else setState({ status: 'offline' });
@@ -78,7 +80,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
         await forgetSession();
       },
-      setMe: (me) => setState((current) => (current.status === 'signedIn' ? { ...current, me } : current)),
+      setPersona: (persona) => setState((current) => (current.status === 'signedIn' ? { ...current, persona } : current)),
       retry: () => void restore(),
     }),
     [state, pendingLogin, forgetSession, loadSession, restore],
@@ -93,7 +95,7 @@ export function useSession(): SessionContextValue {
   return value;
 }
 
-export function useSignedIn(): { token: string; me: MeResponse } {
+export function useSignedIn(): { token: string; persona: RoomPersonaResponse } {
   const { state } = useSession();
   if (state.status !== 'signedIn') throw new Error('Экран доступен только после входа');
   return state;

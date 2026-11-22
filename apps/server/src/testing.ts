@@ -2,11 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app';
 import { loadConfig, type Config } from './config';
 import { createDb, type Db } from './db/client';
-import { createInviteCode } from './invites';
-import type { Mailer } from './mailer';
-import type { PushGateway, PushTarget } from './push/service';
-import type { PushMessage } from '@rooms/shared';
-import type { VoiceGateway } from './voice/gateway';
+import { createInviteCode } from './core/invites';
+import type { Mailer } from './core/mailer';
+import type { PushGateway, PushTarget } from './core/push/service';
+import type { PushMessage } from '@app/shared';
+import type { VoiceGateway } from './modules/rooms/voice/gateway';
 
 export class CapturingMailer implements Mailer {
   readonly sent: { email: string; code: string }[] = [];

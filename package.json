@@ -1,5 +1,5 @@
 {
-  "name": "rooms",
+  "name": "social-network",
   "private": true,
   "version": "0.0.0",
   "packageManager": "pnpm@12.18.0",
@@ -7,9 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev:server": "pnpm --filter @rooms/server dev",
-    "dev:web": "pnpm --filter @rooms/mobile web",
-    "dev:mobile": "pnpm --filter @rooms/mobile start",
+    "dev:server": "pnpm --filter @app/server dev",
+    "dev:web": "pnpm --filter @app/mobile web",
+    "dev:mobile": "pnpm --filter @app/mobile start",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "check": "pnpm typecheck && pnpm test"

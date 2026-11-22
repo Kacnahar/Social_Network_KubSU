@@ -1,3 +1,9 @@
+CREATE TABLE "persona_links" (
+	"account_id" uuid PRIMARY KEY NOT NULL,
+	"persona_id" uuid NOT NULL,
+	CONSTRAINT "persona_links_persona_id_unique" UNIQUE("persona_id")
+);
+--> statement-breakpoint
 CREATE TABLE "accounts" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"email_encrypted" text NOT NULL,
@@ -30,19 +36,15 @@ CREATE TABLE "invite_codes" (
 	CONSTRAINT "invite_codes_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "persona_links" (
-	"account_id" uuid PRIMARY KEY NOT NULL,
-	"persona_id" uuid NOT NULL,
-	CONSTRAINT "persona_links_persona_id_unique" UNIQUE("persona_id")
-);
---> statement-breakpoint
-CREATE TABLE "personas" (
+CREATE TABLE "push_subscriptions" (
 	"id" uuid PRIMARY KEY NOT NULL,
-	"nickname" text,
-	"nickname_key" text,
-	"nickname_changed_at" timestamp with time zone,
+	"account_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"endpoint" text NOT NULL,
+	"p256dh" text NOT NULL,
+	"auth" text NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "personas_nickname_key_unique" UNIQUE("nickname_key")
+	CONSTRAINT "push_subscriptions_endpoint_unique" UNIQUE("endpoint")
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -54,8 +56,58 @@ CREATE TABLE "sessions" (
 	CONSTRAINT "sessions_token_hash_unique" UNIQUE("token_hash")
 );
 --> statement-breakpoint
+CREATE TABLE "room_personas" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"nickname" text,
+	"nickname_key" text,
+	"nickname_changed_at" timestamp with time zone,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "room_personas_nickname_key_unique" UNIQUE("nickname_key")
+);
+--> statement-breakpoint
+CREATE TABLE "room_participations" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"room_id" uuid NOT NULL,
+	"persona_id" uuid NOT NULL,
+	"joined_at" timestamp with time zone NOT NULL,
+	"left_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE "rooms" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"slot_id" uuid NOT NULL,
+	"index" integer NOT NULL,
+	"voice_room_name" text NOT NULL,
+	"opened_at" timestamp with time zone NOT NULL,
+	"closed_at" timestamp with time zone,
+	CONSTRAINT "rooms_voice_room_name_unique" UNIQUE("voice_room_name"),
+	CONSTRAINT "rooms_slot_id_index_unique" UNIQUE("slot_id","index")
+);
+--> statement-breakpoint
+CREATE TABLE "room_slot_reminders" (
+	"slot_id" uuid NOT NULL,
+	"minutes_before" integer NOT NULL,
+	"sent_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "room_slot_reminders_slot_id_minutes_before_pk" PRIMARY KEY("slot_id","minutes_before")
+);
+--> statement-breakpoint
+CREATE TABLE "room_slots" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"starts_at" timestamp with time zone NOT NULL,
+	"duration_minutes" integer NOT NULL,
+	"status" text DEFAULT 'scheduled' NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "room_slots_starts_at_unique" UNIQUE("starts_at")
+);
+--> statement-breakpoint
+ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_login_codes" ADD CONSTRAINT "email_login_codes_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_persona_id_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "rooms" ADD CONSTRAINT "rooms_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "room_slot_reminders" ADD CONSTRAINT "room_slot_reminders_slot_id_room_slots_id_fk" FOREIGN KEY ("slot_id") REFERENCES "public"."room_slots"("id") ON DELETE cascade ON UPDATE no action;

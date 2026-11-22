@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1795306304356,
+      "when": 1795309830313,
       "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1795307362106,
-      "tag": "0001_schedule_and_push",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1795308819907,
-      "tag": "0002_rooms",
       "breakpoints": true
     }
   ]

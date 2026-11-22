@@ -3,18 +3,18 @@ import { useState } from 'react';
 import { deleteAccount } from '../lib/api';
 import { disablePush } from '../lib/push';
 import { useSession, useSignedIn } from '../lib/session';
-import { useSlots } from '../lib/useSlots';
 import { Body, Button, Card, CardTitle, ErrorText, Screen, Title } from '../ui/components';
 import { PushCard } from '../ui/PushCard';
-import { RoomEntry } from '../ui/RoomEntry';
-import { SlotList } from '../ui/SlotList';
+import { RoomEntry } from '../features/rooms/RoomEntry';
+import { SlotList } from '../features/rooms/SlotList';
+import { useSlots } from '../features/rooms/useSlots';
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
 export default function HomeScreen() {
   const router = useRouter();
   const { signOut, forgetSession } = useSession();
-  const { token, me } = useSignedIn();
+  const { token, persona } = useSignedIn();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function HomeScreen() {
 
   return (
     <Screen align="top">
-      <Title>Привет, {me.nickname}</Title>
+      <Title>Привет, {persona.nickname}</Title>
 
       <RoomEntry state={slots} />
 
@@ -53,10 +53,10 @@ export default function HomeScreen() {
 
       <Card>
         <CardTitle>Ник</CardTitle>
-        {me.nicknameChangeAvailableAt ? (
-          <Body muted>Сменить можно будет {dateFormat.format(new Date(me.nicknameChangeAvailableAt))}.</Body>
+        {persona.nicknameChangeAvailableAt ? (
+          <Body muted>Сменить можно будет {dateFormat.format(new Date(persona.nicknameChangeAvailableAt))}.</Body>
         ) : (
-          <Button variant="secondary" title="Сменить ник" onPress={() => router.push('/nickname')} disabled={busy !== null} />
+          <Button variant="secondary" title="Сменить ник" onPress={() => router.push('/rooms/nickname')} disabled={busy !== null} />
         )}
       </Card>
 

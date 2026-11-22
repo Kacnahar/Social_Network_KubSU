@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { decryptEmail } from './crypto';
+import { decryptEmail } from './core/crypto';
 import { accounts, sessions, slots } from './db/schema';
 import { createTestContext, type TestContext } from './testing';
 
@@ -21,26 +21,26 @@ describe('анонимность', () => {
     const headers = t.authed(token);
 
     // Проходим все адреса сервера, включая ошибки
-    await t.app.inject({ method: 'PUT', url: '/v1/me/nickname', headers, payload: { nickname: NICKNAME } });
-    await t.app.inject({ method: 'PUT', url: '/v1/me/nickname', headers, payload: { nickname: 'Другой' } });
-    await t.app.inject({ method: 'PUT', url: '/v1/me/nickname', headers, payload: { nickname: '!' } });
-    await t.app.inject({ method: 'GET', url: '/v1/me', headers });
+    await t.app.inject({ method: 'PUT', url: '/v1/rooms/me/nickname', headers, payload: { nickname: NICKNAME } });
+    await t.app.inject({ method: 'PUT', url: '/v1/rooms/me/nickname', headers, payload: { nickname: 'Другой' } });
+    await t.app.inject({ method: 'PUT', url: '/v1/rooms/me/nickname', headers, payload: { nickname: '!' } });
+    await t.app.inject({ method: 'GET', url: '/v1/rooms/me', headers });
     await t.app.inject({ method: 'GET', url: '/v1/account', headers });
     await t.app.inject({ method: 'GET', url: '/v1/health' });
-    await t.app.inject({ method: 'GET', url: '/v1/me' });
+    await t.app.inject({ method: 'GET', url: '/v1/rooms/me' });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL, inviteCode: 'NOPE' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: 'плохо', code: '1' } });
     await t.app.inject({ method: 'GET', url: `/v1/nope?email=${EMAIL}` });
-    await t.app.inject({ method: 'GET', url: '/v1/slots', headers });
+    await t.app.inject({ method: 'GET', url: '/v1/rooms/slots', headers });
     const [slot] = await t.db
       .insert(slots)
       .values({ title: 'Комната', startsAt: new Date(Date.now() - 60_000), durationMinutes: 45, createdAt: new Date() })
       .returning();
-    const joined = await t.app.inject({ method: 'POST', url: `/v1/slots/${slot!.id}/join`, headers });
+    const joined = await t.app.inject({ method: 'POST', url: `/v1/rooms/slots/${slot!.id}/join`, headers });
     await t.app.inject({ method: 'POST', url: `/v1/rooms/${joined.json().roomId}/leave`, headers });
-    await t.app.inject({ method: 'POST', url: '/v1/slots/not-an-id/join', headers });
+    await t.app.inject({ method: 'POST', url: '/v1/rooms/slots/not-an-id/join', headers });
     await t.app.inject({ method: 'GET', url: '/v1/push/config' });
     const subscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/device-1', keys: { p256dh: 'k', auth: 'a' } };
     await t.app.inject({ method: 'POST', url: '/v1/push/subscriptions', headers, payload: subscription });
@@ -75,7 +75,7 @@ describe('анонимность', () => {
   });
 
   it('данные аккаунта и данные персоны не встречаются в одном ответе', async () => {
-    const me = t.responses.findLast((item) => item.url === '/v1/me' && item.body.includes('personaId'))!;
+    const me = t.responses.findLast((item) => item.url === '/v1/rooms/me' && item.body.includes('personaId'))!;
     const personaId = JSON.parse(me.body).personaId as string;
 
     const account = t.responses.find((item) => item.url === '/v1/account')!;
@@ -110,7 +110,7 @@ describe('устройство кода', () => {
   }
 
   it('таблицу связи «аккаунт ↔ персона» использует только модуль identity', () => {
-    const allowed = ['db/schema.ts', 'identity/index.ts', 'anonymity.test.ts'];
+    const allowed = ['db/schema/bridge.ts', 'core/identity/index.ts', 'anonymity.test.ts'];
     const offenders = sourceFiles(srcDir)
       .map((path) => relative(srcDir, path))
       .filter((path) => !allowed.includes(path))

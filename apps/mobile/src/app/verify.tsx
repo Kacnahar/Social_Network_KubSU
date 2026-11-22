@@ -1,4 +1,4 @@
-import { LOGIN_CODE_LENGTH } from '@rooms/shared';
+import { LOGIN_CODE_LENGTH } from '@app/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';

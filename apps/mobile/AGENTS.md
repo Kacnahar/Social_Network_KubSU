@@ -39,3 +39,11 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## Структура кода
+
+- `src/lib` и `src/ui` — ядро соцсети (API-клиент, сессия, общие компоненты и тема).
+- `src/features/<модуль>` — модули соцсети; сейчас только `rooms` (голосовые комнаты).
+- Модуль может импортировать из ядра, ядро из модулей — нет. Единственное исключение сейчас — загрузка персоны комнат в `src/lib/session.tsx`.
+- Экраны модуля лежат в `src/app/<модуль>/` (например, `src/app/rooms/`), экраны ядра — прямо в `src/app/`.
+- Запросы модуля живут в его `api.ts` и пользуются `request` из `src/lib/api.ts`.

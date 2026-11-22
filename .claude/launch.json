@@ -6,7 +6,7 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "--filter",
-        "@rooms/server",
+        "@app/server",
         "dev"
       ],
       "port": 3000
@@ -16,7 +16,7 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "--filter",
-        "@rooms/mobile",
+        "@app/mobile",
         "exec",
         "expo",
         "start",

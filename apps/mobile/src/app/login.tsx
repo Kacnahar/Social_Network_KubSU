@@ -1,4 +1,4 @@
-import { authStartRequestSchema } from '@rooms/shared';
+import { authStartRequestSchema } from '@app/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { authStart } from '../lib/api';
@@ -47,10 +47,10 @@ export default function LoginScreen() {
 
   return (
     <Screen>
-      <Title>Комнаты</Title>
+      <Title>{mode === 'register' ? 'Регистрация' : 'Вход'}</Title>
       <Body muted>
         {mode === 'register'
-          ? 'Анонимные голосовые комнаты для знакомства. Вход по коду приглашения.'
+          ? 'Студенческая соцсеть. Регистрация — по коду приглашения.'
           : 'Введите почту, с которой вы регистрировались.'}
       </Body>
 
@@ -73,7 +73,7 @@ export default function LoginScreen() {
           autoComplete="email"
           inputMode="email"
           placeholder="name@mail.ru"
-          hint="На неё придёт код для входа. Собеседники почту не увидят."
+          hint="На неё придёт код для входа. Другие пользователи почту не увидят."
           returnKeyType="go"
           onSubmitEditing={submit}
         />

@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const KEY = 'rooms.session';
+const KEY = 'app.session';
 
 // На телефоне токен лежит в защищённом хранилище системы, в браузере — в localStorage
 export async function loadToken(): Promise<string | null> {

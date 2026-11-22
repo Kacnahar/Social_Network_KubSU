@@ -1,3 +1,4 @@
+// Ядро соцсети: общий клиент API и запросы входа, аккаунта и уведомлений
 import {
   API_PREFIX,
   accountResponseSchema,
@@ -5,22 +6,16 @@ import {
   authVerifyResponseSchema,
   errorResponseSchema,
   healthResponseSchema,
-  joinRoomResponseSchema,
-  meResponseSchema,
   okResponseSchema,
   pushConfigResponseSchema,
-  slotsResponseSchema,
   type AccountResponse,
   type AuthStartRequest,
   type AuthStartResponse,
   type ErrorCode,
   type HealthResponse,
-  type JoinRoomResponse,
-  type MeResponse,
   type PushConfigResponse,
   type PushSubscribeRequest,
-  type SlotsResponse,
-} from '@rooms/shared';
+} from '@app/shared';
 import type { z } from 'zod';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -45,7 +40,7 @@ type RequestOptions = {
   baseUrl?: string;
 };
 
-async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers['content-type'] = 'application/json';
   if (options.token) headers.authorization = `Bearer ${options.token}`;
@@ -86,17 +81,10 @@ export const authVerify = (email: string, code: string): Promise<string> =>
 
 export const logout = (token: string) => request('/auth/logout', okResponseSchema, { method: 'POST', token });
 
-export const getMe = (token: string): Promise<MeResponse> => request('/me', meResponseSchema, { token });
-
-export const setNickname = (token: string, nickname: string): Promise<MeResponse> =>
-  request('/me/nickname', meResponseSchema, { method: 'PUT', token, body: { nickname } });
-
 export const getAccount = (token: string): Promise<AccountResponse> =>
   request('/account', accountResponseSchema, { token });
 
 export const deleteAccount = (token: string) => request('/account', okResponseSchema, { method: 'DELETE', token });
-
-export const getSlots = (token: string): Promise<SlotsResponse> => request('/slots', slotsResponseSchema, { token });
 
 export const getPushConfig = (): Promise<PushConfigResponse> => request('/push/config', pushConfigResponseSchema);
 
@@ -105,9 +93,3 @@ export const subscribePush = (token: string, body: PushSubscribeRequest) =>
 
 export const unsubscribePush = (token: string, endpoint: string) =>
   request('/push/subscriptions', okResponseSchema, { method: 'DELETE', token, body: { endpoint } });
-
-export const joinRoom = (token: string, slotId: string): Promise<JoinRoomResponse> =>
-  request(`/slots/${encodeURIComponent(slotId)}/join`, joinRoomResponseSchema, { method: 'POST', token });
-
-export const leaveRoom = (token: string, roomId: string) =>
-  request(`/rooms/${encodeURIComponent(roomId)}/leave`, okResponseSchema, { method: 'POST', token });

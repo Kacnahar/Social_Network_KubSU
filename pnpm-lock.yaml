@@ -168,7 +168,7 @@ importers:
 
   apps/mobile:
     dependencies:
-      '@rooms/shared':
+      '@app/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       expo:
@@ -232,6 +232,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@app/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@electric-sql/pglite':
         specifier: ^0.5.17
         version: 0.5.17
@@ -241,9 +244,6 @@ importers:
       '@fastify/rate-limit':
         specifier: ^11.3.0
         version: 11.3.0
-      '@rooms/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@electric-sql/pglite@0.5.17)(@types/pg@8.23.1)(pg@8.23.1)

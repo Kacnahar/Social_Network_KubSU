@@ -3,12 +3,12 @@ import { dirname, join } from 'node:path';
 import { buildApp } from './app';
 import { loadConfig, type Config, type VapidConfig } from './config';
 import { createDb } from './db/client';
-import { createInviteCode } from './invites';
-import { startBackgroundJobs } from './jobs';
-import { ConsoleMailer } from './mailer';
-import { createWebPushGateway, generateVapidKeys } from './push/service';
-import { ensureDevLiveSlot } from './schedule/service';
-import { createLiveKitGateway } from './voice/gateway';
+import { createInviteCode } from './core/invites';
+import { startBackgroundJobs } from './modules/rooms/jobs';
+import { ConsoleMailer } from './core/mailer';
+import { createWebPushGateway, generateVapidKeys } from './core/push/service';
+import { ensureDevLiveSlot } from './modules/rooms/schedule/service';
+import { createLiveKitGateway } from './modules/rooms/voice/gateway';
 
 const config = loadConfig();
 

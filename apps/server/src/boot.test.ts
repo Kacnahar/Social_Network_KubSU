@@ -73,7 +73,7 @@ describe('настоящий запуск сервера', () => {
       body: JSON.stringify({ email: 'boot@example.com', code: devCode }),
     });
     const { token } = (await verify.json()) as { token: string };
-    const slots = (await (await fetch(`${base}/slots`, { headers: { authorization: `Bearer ${token}` } })).json()) as {
+    const slots = (await (await fetch(`${base}/rooms/slots`, { headers: { authorization: `Bearer ${token}` } })).json()) as {
       slots: unknown[];
     };
     expect(slots.slots.length).toBeGreaterThan(0);

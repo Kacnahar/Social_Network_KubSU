@@ -1,4 +1,4 @@
-import { healthResponseSchema } from '@rooms/shared';
+import { healthResponseSchema } from '@app/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from './config';
 import { createTestContext, type TestContext } from './testing';

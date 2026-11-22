@@ -18,16 +18,16 @@ function Navigation() {
   }
 
   const signedIn = state.status === 'signedIn';
-  const hasNickname = signedIn && state.me.nickname !== null;
+  const hasNickname = signedIn && state.persona.nickname !== null;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={hasNickname}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="room" />
+        <Stack.Screen name="rooms/call" />
       </Stack.Protected>
       <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="nickname" />
+        <Stack.Screen name="rooms/nickname" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" />
