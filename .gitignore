@@ -14,3 +14,14 @@ graphify-out/cache/
 
 # Отметка работающей ночной сессии
 .claude/night-heartbeat
+
+# Временные файлы сборки карты проекта
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_extract.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_uncached.txt
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_partial.txt
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_chunk_*.json
