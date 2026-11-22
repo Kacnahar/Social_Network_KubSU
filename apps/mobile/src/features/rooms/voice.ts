@@ -17,6 +17,7 @@ const call: Call = {
   needsAudioUnlock: false,
   toggleMic: noop,
   unlockAudio: noop,
+  setLocallyMuted: noop,
   hangUp: noop,
 };
 

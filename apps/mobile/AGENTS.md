@@ -51,3 +51,4 @@ Docs: https://docs.expo.dev/eas/index.md
 - Вне вкладок (на весь экран, без панели): `login`, `verify`, `profile/setup`, `profile/edit`, `profiles/[profileId]`, `posts/[postId]`, `rooms/nickname`, `rooms/call`, `stories/[profileId]` (просмотр историй автора, чёрный фон). Доступ к ним задаётся группами `Stack.Protected` в `app/_layout.tsx`.
 - Экраны модуля, не входящие во вкладки, лежат в `src/app/<модуль>/` (например, `src/app/rooms/`).
 - Запросы модуля живут в его `api.ts` и пользуются `request` из `src/lib/api.ts`.
+- Комната (`rooms/call`): состояние (голосование, мои запреты, личные заглушки) опрашивает `useRoomState` каждые 2,5 с, пока звонок подключён и экран открыт; действия участника — `ParticipantActions`, баннер — `VoteBanner`, тексты и расчёты — `moderation.ts`. «Заглушить для себя» глушит звук только у меня через `Call.setLocallyMuted` (громкость участника в LiveKit); остальные слышат его как обычно.

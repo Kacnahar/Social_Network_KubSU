@@ -15,9 +15,10 @@ function MicIcon({ color }: { color: string }) {
   );
 }
 
-type Props = { enabled: boolean; busy: boolean; onPress: () => void };
+// disabled — микрофон выключили голосованием; note заменяет подпись под кнопкой
+type Props = { enabled: boolean; busy: boolean; onPress: () => void; disabled?: boolean; note?: string | null };
 
-export function MicButton({ enabled, busy, onPress }: Props) {
+export function MicButton({ enabled, busy, onPress, disabled = false, note = null }: Props) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
   const scale = useRef(new Animated.Value(1)).current;
@@ -42,19 +43,20 @@ export function MicButton({ enabled, busy, onPress }: Props) {
         <Pressable
           accessibilityRole="switch"
           accessibilityLabel="Микрофон"
-          accessibilityState={{ checked: enabled, busy }}
+          accessibilityState={{ checked: enabled, busy, disabled }}
+          disabled={disabled}
           onPress={onPress}
           onPressIn={() => press(true)}
           onPressOut={() => press(false)}
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: enabled ? colors.accent : colors.fill, opacity: busy ? 0.6 : pressed ? 0.85 : 1 },
+            { backgroundColor: enabled ? colors.accent : colors.fill, opacity: disabled ? 0.45 : busy ? 0.6 : pressed ? 0.85 : 1 },
           ]}
         >
           <MicIcon color={iconColor} />
         </Pressable>
       </Animated.View>
-      <Text style={[type.subhead, styles.caption, { color: colors.muted }]}>{label}</Text>
+      <Text style={[type.subhead, styles.caption, { color: colors.muted }]}>{note ?? label}</Text>
     </View>
   );
 }

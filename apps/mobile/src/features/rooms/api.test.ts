@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getPersona, getSlots, joinRoom, leaveRoom } from './api';
+import { castBallot, getPersona, getRoomState, getSlots, joinRoom, leaveRoom, reportToAdmins, setPersonalMute, startVote } from './api';
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -53,5 +53,58 @@ describe('клиент API комнат', () => {
     await leaveRoom('tok', 'r1');
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/r1\/leave$/);
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('getRoomState читает состояние комнаты с токеном', async () => {
+    const fetchMock = mockFetch(200, {
+      roomId: 'r1',
+      vote: null,
+      lastResult: null,
+      mutedUntil: null,
+      blockedUntil: null,
+      personalMutes: ['p2'],
+    });
+    const state = await getRoomState('tok', 'r1');
+    expect(state.personalMutes).toEqual(['p2']);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/r1\/state$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ authorization: 'Bearer tok' });
+  });
+
+  it('startVote отправляет тип и цель', async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    await startVote('tok', 'r1', 'kick', 'p9');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/r1\/votes$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ type: 'kick', targetPersonaId: 'p9' });
+  });
+
+  it('startVote передаёт текст ошибки сервера', async () => {
+    mockFetch(409, { error: { code: 'vote_in_progress', message: 'Голосование уже идёт' } });
+    await expect(startVote('tok', 'r1', 'mute', 'p9')).rejects.toMatchObject({ code: 'vote_in_progress', message: 'Голосование уже идёт' });
+  });
+
+  it('castBallot голосует POST-ом без тела', async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    await castBallot('tok', 'v1');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/votes\/v1\/ballot$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined();
+  });
+
+  it('setPersonalMute включает заглушку PUT, а снимает DELETE', async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    await setPersonalMute('tok', 'p2', true);
+    await setPersonalMute('tok', 'p2', false);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/me\/mutes\/p2$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('PUT');
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe('DELETE');
+  });
+
+  it('reportToAdmins отправляет жалобу с текстом', async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    await reportToAdmins('tok', { targetPersonaId: 'p2', roomId: 'r1', text: 'Грубит' });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/reports$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ targetPersonaId: 'p2', roomId: 'r1', text: 'Грубит' });
   });
 });

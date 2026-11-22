@@ -1,11 +1,14 @@
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { JoinRoomResponse } from '@app/shared';
-import { joinRoom, leaveRoom } from '../../features/rooms/api';
+import { getRoomState, joinRoom, leaveRoom } from '../../features/rooms/api';
 import { MicButton } from '../../features/rooms/MicButton';
+import { formatBlockedUntil, isInFuture, minutesLeft, voteResultText } from '../../features/rooms/moderation';
 import { ParticipantList } from '../../features/rooms/ParticipantList';
 import { formatMinutesLeft } from '../../features/rooms/slotTime';
+import { useRoomState } from '../../features/rooms/useRoomState';
+import { VoteBanner } from '../../features/rooms/VoteBanner';
 import { usePersona } from '../../features/rooms/usePersona';
 import { useCall, voiceSupported } from '../../features/rooms/voice';
 import { ApiError } from '../../lib/api';
@@ -69,6 +72,9 @@ function Room({ slotId }: { slotId: string }) {
   const [joinState, setJoinState] = useState<JoinState>({ status: 'joining' });
   const [now, setNow] = useState(() => Date.now());
   const [timeUp, setTimeUp] = useState(false);
+  const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
+  const focused = useIsFocused();
+  const names = useRef(new Map<string, string>());
   const leftRef = useRef(false);
   const forgetRef = useRef(forgetSession);
   forgetRef.current = forgetSession;
@@ -126,6 +132,44 @@ function Room({ slotId }: { slotId: string }) {
     };
   }, [endsAt]);
 
+  const onUnauthorized = useCallback(() => void forgetRef.current(), []);
+  const { state, refresh } = useRoomState(
+    token,
+    roomId ?? null,
+    focused && call.status === 'connected' && blockedUntil === null,
+    onUnauthorized,
+  );
+
+  // Ники помним, чтобы итог голосования назвал и того, кто уже вышел
+  for (const participant of call.participants) names.current.set(participant.id, participant.name);
+  const nameOf = (personaId: string) => names.current.get(personaId) ?? null;
+
+  // Меня выгнали: рвём соединение (повторный вызов безопасен) и показываем объяснение
+  const kickedUntil = state?.blockedUntil ?? null;
+  useEffect(() => {
+    if (kickedUntil === null) return;
+    setBlockedUntil(kickedUntil);
+    leave(false);
+  }, [kickedUntil, leave]);
+
+  const { setLocallyMuted } = call;
+  const mutesKey = state?.personalMutes.join(',');
+  const personalMutes = state?.personalMutes;
+  useEffect(() => {
+    if (personalMutes) setLocallyMuted(personalMutes);
+    // Список меняется по содержимому, а не по ссылке: опрос каждый раз отдаёт новый массив
+  }, [mutesKey, setLocallyMuted]);
+
+  // Срок запрета на микрофон истёк — кнопка должна ожить сразу, а не при следующем тике
+  const mutedUntil = state?.mutedUntil ?? null;
+  useEffect(() => {
+    if (!mutedUntil) return;
+    const delay = new Date(mutedUntil).getTime() - Date.now();
+    if (delay <= 0) return;
+    const timer = setTimeout(() => setNow(Date.now()), delay + 50);
+    return () => clearTimeout(timer);
+  }, [mutedUntil]);
+
   useEffect(() => {
     if (timeUp) leave(false);
   }, [timeUp, leave]);
@@ -133,6 +177,22 @@ function Room({ slotId }: { slotId: string }) {
   useEffect(() => {
     if (call.status === 'ended') leave(false);
   }, [call.status, leave]);
+
+  // Сервер звука отключает выгнанного раньше, чем придёт очередной опрос: спрашиваем причину отдельно
+  const callOver = call.status === 'ended' || call.status === 'error';
+  useEffect(() => {
+    if (!callOver || !roomId) return;
+    let cancelled = false;
+    getRoomState(token, roomId).then(
+      (next) => {
+        if (!cancelled && next.blockedUntil) setBlockedUntil(next.blockedUntil);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [callOver, roomId, token]);
 
   // Закрытие вкладки или уход с экрана: просим сервер отметить выход, соединение рвёт сам хук
   useEffect(() => {
@@ -143,6 +203,17 @@ function Room({ slotId }: { slotId: string }) {
       }
     };
   }, [roomId, token]);
+
+  if (blockedUntil !== null) {
+    return (
+      <Screen>
+        <Title>Вас попросили выйти</Title>
+        <Body>Участники комнаты проголосовали за это. Вход в комнаты снова откроется {formatBlockedUntil(blockedUntil)}.</Body>
+        <Body muted>Если считаете это ошибкой, напишите организаторам</Body>
+        <Button title="На главную" onPress={() => router.dismissTo('/')} />
+      </Screen>
+    );
+  }
 
   if (joinState.status === 'failed') {
     return (
@@ -185,6 +256,14 @@ function Room({ slotId }: { slotId: string }) {
     );
   }
 
+  const vote = state?.vote ?? null;
+  const result = state?.lastResult ?? null;
+  const micBlocked = isInFuture(state?.mutedUntil ?? null, Date.now());
+  const micNote =
+    micBlocked && state?.mutedUntil
+      ? `Участники выключили вам микрофон. Он вернётся через ${Math.max(1, minutesLeft(state.mutedUntil, Date.now()))} мин`
+      : null;
+
   return (
     <Screen align="top">
       <View style={styles.header}>
@@ -194,20 +273,44 @@ function Room({ slotId }: { slotId: string }) {
         </Body>
       </View>
 
+      {!vote && result ? (
+        <Text accessibilityLiveRegion="polite" style={[type.subhead, { color: colors.muted }]}>
+          {voteResultText(result, nameOf(result.targetPersonaId))}
+        </Text>
+      ) : null}
+
       {call.status === 'reconnecting' ? (
         <Text accessibilityLiveRegion="polite" style={[type.headline, { color: colors.danger }]}>
           Связь пропала, подключаемся заново…
         </Text>
       ) : null}
 
+      {vote && roomId ? (
+        <VoteBanner
+          vote={vote}
+          targetName={nameOf(vote.targetPersonaId)}
+          token={token}
+          onChanged={refresh}
+          onUnauthorized={onUnauthorized}
+        />
+      ) : null}
+
       <Card>
-        <ParticipantList participants={call.participants} />
+        <ParticipantList
+          participants={call.participants}
+          roomId={join.roomId}
+          token={token}
+          voteActive={vote !== null}
+          onChanged={refresh}
+          onUnauthorized={onUnauthorized}
+        />
       </Card>
 
-      {call.needsAudioUnlock ? <Button title="Включить звук" onPress={call.unlockAudio} /> : null}
+      {/* При голосовании единственная primary-кнопка экрана — «Поддержать» */}
+      {call.needsAudioUnlock ? <Button variant={vote ? 'secondary' : 'primary'} title="Включить звук" onPress={call.unlockAudio} /> : null}
 
       <View style={styles.mic}>
-        <MicButton enabled={call.micEnabled} busy={call.micBusy} onPress={call.toggleMic} />
+        <MicButton enabled={call.micEnabled} busy={call.micBusy} onPress={call.toggleMic} disabled={micBlocked} note={micNote} />
         <ErrorText>{call.micError}</ErrorText>
       </View>
 

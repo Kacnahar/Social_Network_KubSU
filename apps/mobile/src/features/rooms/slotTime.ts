@@ -15,7 +15,7 @@ export function formatSlotStart(startsAt: Date, now: Date): string {
   return `${dateFormat.format(startsAt)} в ${time}`;
 }
 
-function plural(count: number, one: string, few: string, many: string): string {
+export function plural(count: number, one: string, few: string, many: string): string {
   const lastTwo = count % 100;
   const last = count % 10;
   if (lastTwo >= 11 && lastTwo <= 14) return many;

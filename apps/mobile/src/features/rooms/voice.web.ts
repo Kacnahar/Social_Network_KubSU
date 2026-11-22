@@ -1,4 +1,4 @@
-import { Room, RoomEvent, Track, type Participant, type RemoteTrack } from 'livekit-client';
+import { Room, RoomEvent, Track, type Participant, type RemoteParticipant, type RemoteTrack } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Call, CallParticipant, CallStatus } from './voiceTypes';
 
@@ -10,17 +10,18 @@ const MIC_DENIED = 'Нет доступа к микрофону. Разреши�
 const MIC_MISSING = 'Микрофон не найден';
 const MIC_FAILED = 'Не получилось включить микрофон';
 
-const toParticipant = (participant: Participant, isMe: boolean): CallParticipant => ({
+const toParticipant = (participant: Participant, isMe: boolean, locallyMuted: ReadonlySet<string>): CallParticipant => ({
   id: participant.identity,
   name: participant.name || 'Без ника',
   isMe,
   isSpeaking: participant.isSpeaking,
   isMuted: !participant.isMicrophoneEnabled,
+  isLocallyMuted: !isMe && locallyMuted.has(participant.identity),
 });
 
-function listParticipants(room: Room): CallParticipant[] {
-  const me = toParticipant(room.localParticipant, true);
-  const others = Array.from(room.remoteParticipants.values(), (participant) => toParticipant(participant, false));
+function listParticipants(room: Room, locallyMuted: ReadonlySet<string>): CallParticipant[] {
+  const me = toParticipant(room.localParticipant, true, locallyMuted);
+  const others = Array.from(room.remoteParticipants.values(), (participant) => toParticipant(participant, false, locallyMuted));
   others.sort((a, b) => Number(b.isSpeaking) - Number(a.isSpeaking) || a.name.localeCompare(b.name, 'ru'));
   return [me, ...others];
 }
@@ -48,6 +49,8 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
   const roomRef = useRef<Room | null>(null);
   const teardownRef = useRef<(() => void) | null>(null);
   const micBusyRef = useRef(false);
+  const locallyMutedRef = useRef<ReadonlySet<string>>(new Set());
+  const syncMutedRef = useRef<(() => void) | null>(null);
 
   const voiceUrl = connection?.voiceUrl;
   const voiceToken = connection?.voiceToken;
@@ -61,13 +64,24 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
     let closed = false;
     const audioElements = new Set<HTMLMediaElement>();
 
+    // Громкость хранится у самого участника, поэтому новый собеседник тоже получает нужное значение
+    const applyVolume = (participant: RemoteParticipant) =>
+      participant.setVolume(locallyMutedRef.current.has(participant.identity) ? 0 : 1);
+
     const refresh = () => {
       if (closed) return;
-      setParticipants(listParticipants(room));
+      setParticipants(listParticipants(room, locallyMutedRef.current));
       setMicEnabled(room.localParticipant.isMicrophoneEnabled);
     };
 
-    const handleSubscribed = (track: RemoteTrack) => {
+    syncMutedRef.current = () => {
+      if (closed) return;
+      for (const participant of room.remoteParticipants.values()) applyVolume(participant);
+      refresh();
+    };
+
+    const handleSubscribed = (track: RemoteTrack, _publication: unknown, participant: RemoteParticipant) => {
+      applyVolume(participant);
       if (track.kind !== Track.Kind.Audio) return;
       const element = track.attach();
       element.style.display = 'none';
@@ -95,6 +109,7 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
       .on(RoomEvent.Reconnecting, () => !closed && setStatus('reconnecting'))
       .on(RoomEvent.Reconnected, () => !closed && setStatus('connected'))
       .on(RoomEvent.Disconnected, handleDisconnected);
+    room.on(RoomEvent.ParticipantConnected, applyVolume);
     for (const event of ROOM_EVENTS) room.on(event, refresh);
 
     const teardown = () => {
@@ -105,6 +120,7 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
       for (const element of audioElements) element.remove();
       audioElements.clear();
       if (roomRef.current === room) roomRef.current = null;
+      syncMutedRef.current = null;
     };
     teardownRef.current = teardown;
 
@@ -114,7 +130,7 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
       () => {
         if (closed) return;
         setStatus('connected');
-        refresh();
+        syncMutedRef.current?.();
       },
       () => {
         if (closed) return;
@@ -132,6 +148,8 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
   const toggleMic = useCallback(() => {
     const room = roomRef.current;
     if (!room || micBusyRef.current) return;
+    // Нас заглушили голосованием: право говорить снял сервер, ошибку не показываем
+    if (room.localParticipant.permissions?.canPublish === false) return;
     micBusyRef.current = true;
     setMicBusy(true);
     setMicError(null);
@@ -151,12 +169,20 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
         if (roomRef.current !== room) return;
         setMicBusy(false);
         setMicEnabled(room.localParticipant.isMicrophoneEnabled);
-        setParticipants(listParticipants(room));
+        setParticipants(listParticipants(room, locallyMutedRef.current));
       });
   }, []);
 
   const unlockAudio = useCallback(() => {
     void roomRef.current?.startAudio();
+  }, []);
+
+  const setLocallyMuted = useCallback((participantIds: string[]) => {
+    const next = new Set(participantIds);
+    const current = locallyMutedRef.current;
+    if (next.size === current.size && [...next].every((id) => current.has(id))) return;
+    locallyMutedRef.current = next;
+    syncMutedRef.current?.();
   }, []);
 
   const hangUp = useCallback(() => {
@@ -165,5 +191,17 @@ export function useCall(connection: { voiceUrl: string; voiceToken: string } | n
     setStatus('ended');
   }, []);
 
-  return { status, error, participants, micEnabled, micBusy, micError, needsAudioUnlock, toggleMic, unlockAudio, hangUp };
+  return {
+    status,
+    error,
+    participants,
+    micEnabled,
+    micBusy,
+    micError,
+    needsAudioUnlock,
+    toggleMic,
+    unlockAudio,
+    setLocallyMuted,
+    hangUp,
+  };
 }
