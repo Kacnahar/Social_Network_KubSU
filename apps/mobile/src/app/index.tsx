@@ -1,104 +1,66 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchHealth } from '../lib/api';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { deleteAccount } from '../lib/api';
+import { useSession, useSignedIn } from '../lib/session';
+import { Body, Button, Card, ErrorText, Screen, Title } from '../ui/components';
 
-type ServerState =
-  | { kind: 'checking' }
-  | { kind: 'online'; version: string }
-  | { kind: 'offline' };
-
-const palette = {
-  light: { background: '#F6F5F2', text: '#1B1B1F', muted: '#6B6B76', card: '#FFFFFF', accent: '#3D5AFE' },
-  dark: { background: '#121216', text: '#F2F2F5', muted: '#9A9AA6', card: '#1D1D24', accent: '#8C9EFF' },
-};
-
-const STATUS_COLOR = { online: '#2E9E5B', offline: '#D64545' };
+const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
 export default function HomeScreen() {
-  const colors = palette[useColorScheme() === 'dark' ? 'dark' : 'light'];
-  const [server, setServer] = useState<ServerState>({ kind: 'checking' });
+  const router = useRouter();
+  const { signOut, forgetSession } = useSession();
+  const { token, me } = useSignedIn();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const check = useCallback(async () => {
-    setServer({ kind: 'checking' });
+  const handleSignOut = async () => {
+    setBusy('signOut');
+    await signOut();
+  };
+
+  const handleDelete = async () => {
+    setError(null);
+    setBusy('delete');
     try {
-      const health = await fetchHealth();
-      setServer({ kind: 'online', version: health.version });
-    } catch {
-      setServer({ kind: 'offline' });
+      await deleteAccount(token);
+      await forgetSession();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
+      setBusy(null);
     }
-  }, []);
-
-  useEffect(() => {
-    void check();
-  }, [check]);
+  };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>Комнаты</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>
-          Каркас приложения. Здесь появятся вход и расписание комнат.
-        </Text>
+    <Screen>
+      <Title>Привет, {me.nickname}</Title>
 
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          {server.kind === 'checking' ? (
-            <View style={styles.row}>
-              <ActivityIndicator color={colors.accent} />
-              <Text style={[styles.status, { color: colors.text }]}>Проверяем связь с сервером…</Text>
-            </View>
-          ) : (
-            <View style={styles.row}>
-              <View style={[styles.dot, { backgroundColor: STATUS_COLOR[server.kind] }]} />
-              <Text style={[styles.status, { color: colors.text }]}>
-                {server.kind === 'online'
-                  ? `Сервер на связи (версия ${server.version})`
-                  : 'Нет связи с сервером'}
-              </Text>
-            </View>
-          )}
+      <Card>
+        <Body>Расписание комнат</Body>
+        <Body muted>Скоро здесь появятся ближайшие комнаты и напоминания о них.</Body>
+      </Card>
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={server.kind === 'checking'}
-            onPress={check}
-            style={({ pressed }) => [
-              styles.button,
-              { backgroundColor: colors.accent, opacity: pressed || server.kind === 'checking' ? 0.6 : 1 },
-            ]}
-          >
-            <Text style={styles.buttonText}>Проверить ещё раз</Text>
-          </Pressable>
-        </View>
-      </View>
-    </SafeAreaView>
+      <Card>
+        <Body>Ник</Body>
+        {me.nicknameChangeAvailableAt ? (
+          <Body muted>Сменить можно будет {dateFormat.format(new Date(me.nicknameChangeAvailableAt))}.</Body>
+        ) : (
+          <Button variant="secondary" title="Сменить ник" onPress={() => router.push('/nickname')} disabled={busy !== null} />
+        )}
+      </Card>
+
+      <Button variant="secondary" title="Выйти" onPress={handleSignOut} loading={busy === 'signOut'} disabled={busy === 'delete'} />
+
+      {confirmingDelete ? (
+        <Card>
+          <Body>Удалить аккаунт? Ник и все данные исчезнут навсегда, отменить это нельзя.</Body>
+          <ErrorText>{error}</ErrorText>
+          <Button variant="danger" title="Да, удалить навсегда" onPress={handleDelete} loading={busy === 'delete'} />
+          <Button variant="secondary" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
+        </Card>
+      ) : (
+        <Button variant="danger" title="Удалить аккаунт" onPress={() => setConfirmingDelete(true)} disabled={busy !== null} />
+      )}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  content: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 480,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  title: { fontSize: 34, fontWeight: '700' },
-  subtitle: { fontSize: 16, lineHeight: 22 },
-  card: { marginTop: 16, padding: 20, borderRadius: 16, gap: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  status: { fontSize: 16, flexShrink: 1 },
-  button: { paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-});

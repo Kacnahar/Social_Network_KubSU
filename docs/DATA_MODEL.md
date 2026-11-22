@@ -2,6 +2,8 @@
 
 Какие таблицы будут в базе (PostgreSQL) и что в них хранится. Названия полей — рабочие, уточняются при написании кода.
 
+Уже созданы (этап 1): `accounts`, `invite_codes`, `email_login_codes`, `sessions`, `persona_links`, `personas`. Точное описание — в `apps/server/src/db/schema.ts`. Остальные таблицы появятся на своих этапах.
+
 Правило: таблицы делятся на **зону аккаунта** (знает, кто человек) и **зону персоны** (знает только ник). Мост между ними один — `persona_links`.
 
 ## Зона аккаунта (не видна никому, кроме сервера и админов)
@@ -27,7 +29,7 @@
 | created_by_admin_id | кто создал |
 
 ### email_login_codes — одноразовые коды входа
-email_hash, code_hash, expires_at (10 минут), attempts (не больше 5).
+email_hash, code_hash, invite_code_id (если это регистрация), deliverable (отправлялось ли письмо), expires_at (10 минут), attempts (не больше 5), created_at. Одна запись на почту: новый код заменяет старый.
 
 ### sessions — сессии входа
 id, token_hash, account_id, expires_at, created_at. Токен непрозрачный (случайная строка), в нём нет данных об аккаунте.
@@ -53,7 +55,8 @@ account_id, platform (ios / android / web), token, created_at.
 | Поле | Что это |
 |---|---|
 | id | публичный случайный идентификатор (`personaId`) |
-| nickname | ник, уникальный |
+| nickname | ник; пустой, пока человек его не выбрал |
+| nickname_key | ник в нижнем регистре с «ё»→«е» — по нему проверяется уникальность |
 | nickname_changed_at | когда менялся (смена не чаще раза в 30 дней) |
 | created_at | когда создана |
 
