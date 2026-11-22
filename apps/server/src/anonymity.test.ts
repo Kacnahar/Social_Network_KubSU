@@ -143,7 +143,7 @@ describe('анонимность', () => {
     const account = t.responses.find((item) => item.url === '/v1/account')!;
     expect(account.body).not.toContain(personaId);
     expect(account.body).not.toContain(NICKNAME);
-    expect(Object.keys(JSON.parse(account.body)).sort()).toEqual(['bannedUntil', 'role', 'status']);
+    expect(Object.keys(JSON.parse(account.body)).sort()).toEqual(['bannedUntil', 'isAdmin', 'role', 'status']);
     expect(Object.keys(JSON.parse(me.body)).sort()).toEqual(['nickname', 'nicknameChangeAvailableAt', 'personaId']);
   });
 

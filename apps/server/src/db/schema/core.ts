@@ -2,7 +2,7 @@
 // Открытый профиль соцсети появится здесь же (см. docs/DATA_MODEL.md).
 
 import { boolean, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { MEDIA_PURPOSES, ROLES } from '@app/shared';
+import { ADMIN_ACTIONS, MEDIA_PURPOSES, ROLES } from '@app/shared';
 import { id, time } from './columns';
 
 // ---------- Зона аккаунта: наружу не выходит ----------
@@ -101,4 +101,19 @@ export const profiles = pgTable('profiles', {
   about: text('about'),
   createdAt: time('created_at').notNull(),
   updatedAt: time('updated_at').notNull(),
+});
+
+// ---------- Журнал действий админов: записи не редактируются ----------
+
+export const adminAuditLog = pgTable('admin_audit_log', {
+  id: id(),
+  // Аккаунт админа; наружу не отдаётся
+  adminAccountId: uuid('admin_account_id').references(() => accounts.id, { onDelete: 'set null' }),
+  // «Админ 1», «Админ 2» — подпись на момент действия
+  adminLabel: text('admin_label').notNull(),
+  action: text('action', { enum: ADMIN_ACTIONS }).notNull(),
+  // К чему относится действие: идентификатор жалобы, записи или персоны комнат
+  targetId: uuid('target_id'),
+  note: text('note'),
+  createdAt: time('created_at').notNull(),
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hashEmail } from './core/crypto';
 import type { DbOptions } from './db/client';
 
 // Ключи только для разработки и тестов. В продакшене обязательны свои.
@@ -38,6 +39,8 @@ const envSchema = z.object({
   LIVEKIT_API_KEY: z.string().optional(),
   LIVEKIT_API_SECRET: z.string().optional(),
   DEV_LIVE_SLOT: flag.optional(),
+  // Почты админов через запятую; порядок задаёт подписи «Админ 1», «Админ 2» в журнале
+  ADMIN_EMAILS: z.string().optional(),
 });
 
 // url — адрес для приложений; apiUrl — адрес, по которому к серверу звука ходит наш сервер
@@ -78,6 +81,8 @@ export type Config = {
   voice: VoiceConfig | null;
   // При разработке всегда держать одну открытую «Тестовую комнату»
   devLiveSlot: boolean;
+  // Отпечатки почт админов, по порядку. Пусто — админов нет
+  adminEmailHashes: string[];
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -126,7 +131,17 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
         ? { url: voiceUrl, apiUrl: voiceApiUrl, apiKey: 'devkey', apiSecret: 'secret' }
         : null;
 
+  const emailHashKey = parsed.EMAIL_HASH_KEY ?? DEV_EMAIL_HASH_KEY;
+  // При разработке админ — admin@example.com; в продакшене список задаётся только явно
+  const adminEmails = parsed.ADMIN_EMAILS ?? (parsed.NODE_ENV === 'development' ? 'admin@example.com' : '');
+  const adminEmailHashes = adminEmails
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.length > 0)
+    .map((email) => hashEmail(email, emailHashKey));
+
   return {
+    adminEmailHashes,
     mediaDir: parsed.MEDIA_DIR ?? (parsed.NODE_ENV === 'test' ? null : '.data/media'),
     voice,
     devLiveSlot: parsed.DEV_LIVE_SLOT ?? parsed.NODE_ENV === 'development',

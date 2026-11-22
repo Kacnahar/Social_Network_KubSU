@@ -10,7 +10,7 @@ import { ProfilePosts } from '../../features/posts/ProfilePosts';
 export default function MyProfileScreen() {
   const router = useRouter();
   const { signOut, forgetSession } = useSession();
-  const { token, profile } = useSignedIn();
+  const { token, profile, account } = useSignedIn();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,7 @@ export default function MyProfileScreen() {
     <Screen align="top">
       <ProfileView profile={profile} />
       <Button variant="secondary" title="Редактировать" onPress={() => router.push('/profile/edit')} disabled={busy !== null} />
+      {account.isAdmin ? <Button variant="secondary" title="Админка" onPress={() => router.push('/admin')} disabled={busy !== null} /> : null}
       <ProfilePosts profileId={profile.profileId} />
 
       <Card>

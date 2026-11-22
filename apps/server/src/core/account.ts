@@ -6,11 +6,11 @@ import { ApiError, unauthorized } from './errors';
 import { deletePersonaOfAccount } from './identity';
 import type { MediaStorage } from './media/storage';
 
-export type AccountStanding = { role: Role; status: 'active' | 'banned'; bannedUntil: Date | null };
+export type AccountStanding = { role: Role; status: 'active' | 'banned'; bannedUntil: Date | null; emailHash: string };
 
 export async function getAccountStanding(db: DbOrTx, accountId: string): Promise<AccountStanding | null> {
   const [account] = await db
-    .select({ role: accounts.role, status: accounts.status, bannedUntil: accounts.bannedUntil })
+    .select({ role: accounts.role, status: accounts.status, bannedUntil: accounts.bannedUntil, emailHash: accounts.emailHash })
     .from(accounts)
     .where(eq(accounts.id, accountId));
   return account ?? null;

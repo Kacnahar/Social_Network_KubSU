@@ -115,7 +115,7 @@ export const roomSanctions = pgTable('room_sanctions', {
     .references(() => personas.id, { onDelete: 'cascade' }),
   type: text('type', { enum: ['mute', 'room_block', 'rooms_ban'] }).notNull(),
   roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'set null' }),
-  source: text('source', { enum: ['vote', 'auto'] }).notNull(),
+  source: text('source', { enum: ['vote', 'auto', 'admin'] }).notNull(),
   startsAt: time('starts_at').notNull(),
   endsAt: time('ends_at').notNull(),
   // Для mute: когда микрофон вернули на сервере звука
@@ -145,5 +145,6 @@ export const roomReports = pgTable('room_reports', {
   status: text('status', { enum: ['new', 'closed'] })
     .notNull()
     .default('new'),
+  resolvedAt: time('resolved_at'),
   createdAt: time('created_at').notNull(),
 });

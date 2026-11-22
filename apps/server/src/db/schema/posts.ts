@@ -65,5 +65,8 @@ export const postReports = pgTable('post_reports', {
   status: text('status', { enum: ['new', 'closed'] })
     .notNull()
     .default('new'),
+  // Чем закончился разбор: запись удалена админом или жалоба отклонена
+  resolution: text('resolution', { enum: ['removed', 'dismissed'] }),
+  resolvedAt: time('resolved_at'),
   createdAt: time('created_at').notNull(),
 });

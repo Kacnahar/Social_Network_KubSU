@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import type { ErrorCode, ErrorResponse } from '@app/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
+import { registerAdminRoutes } from './admin/routes';
 import type { Config } from './config';
 import { ApiError } from './core/errors';
 import type { Mailer } from './core/mailer';
@@ -86,6 +87,7 @@ export async function buildApp({ config, db, mailer, push, voice, media, onRoute
   registerPostsRoutes(app, { db, media });
   registerFeedRoutes(app, { db });
   registerStoriesRoutes(app, { db, media });
+  registerAdminRoutes(app, { config, db, media, voice });
 
   return app;
 }

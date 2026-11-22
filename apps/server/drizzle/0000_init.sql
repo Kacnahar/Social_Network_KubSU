@@ -16,6 +16,16 @@ CREATE TABLE "accounts" (
 	CONSTRAINT "accounts_email_hash_unique" UNIQUE("email_hash")
 );
 --> statement-breakpoint
+CREATE TABLE "admin_audit_log" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"admin_account_id" uuid,
+	"admin_label" text NOT NULL,
+	"action" text NOT NULL,
+	"target_id" uuid,
+	"note" text,
+	"created_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "email_login_codes" (
 	"email_hash" text PRIMARY KEY NOT NULL,
 	"code_hash" text NOT NULL,
@@ -114,6 +124,8 @@ CREATE TABLE "post_reports" (
 	"target_id" uuid NOT NULL,
 	"reason" text NOT NULL,
 	"status" text DEFAULT 'new' NOT NULL,
+	"resolution" text,
+	"resolved_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
@@ -155,6 +167,7 @@ CREATE TABLE "room_reports" (
 	"room_id" uuid,
 	"text" text NOT NULL,
 	"status" text DEFAULT 'new' NOT NULL,
+	"resolved_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
@@ -238,6 +251,7 @@ CREATE TABLE "story_views" (
 ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admin_audit_log" ADD CONSTRAINT "admin_audit_log_admin_account_id_accounts_id_fk" FOREIGN KEY ("admin_account_id") REFERENCES "public"."accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_login_codes" ADD CONSTRAINT "email_login_codes_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "media_files" ADD CONSTRAINT "media_files_owner_account_id_accounts_id_fk" FOREIGN KEY ("owner_account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

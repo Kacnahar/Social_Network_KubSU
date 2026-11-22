@@ -45,5 +45,7 @@ export const accountResponseSchema = z.object({
   role: roleSchema,
   status: z.enum(['active', 'banned']),
   bannedUntil: z.iso.datetime().nullable(),
+  // Показывать ли раздел «Админка»; права всё равно проверяет сервер
+  isAdmin: z.boolean(),
 });
 export type AccountResponse = z.infer<typeof accountResponseSchema>;

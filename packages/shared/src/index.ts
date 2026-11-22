@@ -17,5 +17,8 @@ export * from './rooms/schedule';
 // Модуль «Посты»
 export * from './posts/posts';
 
+// Админка
+export * from './admin/admin';
+
 // Модуль «Истории»
 export * from './stories/stories';

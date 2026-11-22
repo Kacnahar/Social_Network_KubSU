@@ -81,7 +81,12 @@ export function registerCoreRoutes(app: FastifyInstance, { config, db, mailer, p
     const session = await authenticate(db, request.headers.authorization);
     const account = await getAccountStanding(db, session.accountId);
     if (!account) throw unauthorized();
-    return { role: account.role, status: account.status, bannedUntil: account.bannedUntil?.toISOString() ?? null };
+    return {
+      role: account.role,
+      status: account.status,
+      bannedUntil: account.bannedUntil?.toISOString() ?? null,
+      isAdmin: config.adminEmailHashes.includes(account.emailHash),
+    };
   });
 
   app.delete(`${API_PREFIX}/account`, async (request): Promise<OkResponse> => {
