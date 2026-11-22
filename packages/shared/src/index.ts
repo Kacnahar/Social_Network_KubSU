@@ -2,7 +2,10 @@
 export * from './core/auth';
 export * from './core/errors';
 export * from './core/health';
+export * from './core/media';
+export * from './core/profile';
 export * from './core/push';
+export * from './core/roles';
 
 // Модуль «Голосовые комнаты»
 export * from './rooms/nickname';

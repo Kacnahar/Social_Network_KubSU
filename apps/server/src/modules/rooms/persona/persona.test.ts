@@ -102,7 +102,7 @@ describe('ник и аккаунт', () => {
     it('показывает статус без ника и идентификаторов', async () => {
       await setNickname('Ночной_кот');
       const response = await t.app.inject({ method: 'GET', url: '/v1/account', headers: t.authed(token) });
-      expect(response.json()).toEqual({ status: 'active', bannedUntil: null });
+      expect(response.json()).toEqual({ role: 'student', status: 'active', bannedUntil: null });
     });
 
     it('удаляется вместе с ником; почту и ник потом можно занять заново', async () => {

@@ -4,26 +4,51 @@ import {
   NICKNAME_MIN_LENGTH,
   NICKNAME_PROBLEM_TEXT,
   checkNickname,
+  type RoomPersonaResponse,
 } from '@app/shared';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { setNickname } from '../../features/rooms/api';
+import { usePersona } from '../../features/rooms/usePersona';
 import { ApiError } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
-import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../../ui/components';
+import { Body, Button, Card, ErrorText, Field, LoadingScreen, Screen, Title } from '../../ui/components';
 
 export default function NicknameScreen() {
-  const router = useRouter();
-  const { setPersona, forgetSession, signOut } = useSession();
-  const { token, persona } = useSignedIn();
+  const { forgetSession } = useSession();
+  const { token } = useSignedIn();
+  const { status, persona, reload, setPersona } = usePersona(token, () => void forgetSession());
 
-  const [nickname, setNicknameText] = useState(persona.nickname ?? '');
+  if (status === 'loading') return <LoadingScreen />;
+  if (status === 'error' || !persona) {
+    return (
+      <Screen>
+        <Title>Ник комнат</Title>
+        <Body muted>Не получилось загрузить данные. Проверьте интернет и попробуйте ещё раз.</Body>
+        <Button title="Попробовать ещё раз" onPress={reload} />
+      </Screen>
+    );
+  }
+  return <NicknameForm token={token} nicknameNow={persona.nickname} setPersona={setPersona} />;
+}
+
+function NicknameForm({
+  token,
+  nicknameNow,
+  setPersona,
+}: {
+  token: string;
+  nicknameNow: string | null;
+  setPersona: (persona: RoomPersonaResponse) => void;
+}) {
+  const router = useRouter();
+  const { forgetSession } = useSession();
+
+  const [nickname, setNicknameText] = useState(nicknameNow ?? '');
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // Главный экран открывается только когда ник уже записан в сессию, поэтому уходим через Redirect
-  const [saved, setSaved] = useState(false);
-  const [isChange] = useState(persona.nickname !== null);
+  const [isChange] = useState(nicknameNow !== null);
 
   const problem = checkNickname(nickname);
   // «Занято» для служебных имён говорит сервер, чтобы не раскрывать их список
@@ -36,7 +61,7 @@ export default function NicknameScreen() {
     setLoading(true);
     try {
       setPersona(await setNickname(token, nickname));
-      setSaved(true);
+      router.replace('/');
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') {
         await forgetSession();
@@ -47,14 +72,11 @@ export default function NicknameScreen() {
     }
   };
 
-  if (saved && persona.nickname !== null) return <Redirect href="/" />;
-
   return (
     <Screen>
       <Title>{isChange ? 'Новый ник' : 'Придумайте ник'}</Title>
-      <Body muted>
-        Под этим ником вас будут видеть в комнатах. Настоящее имя и почту собеседники не узнают.
-      </Body>
+      <Body muted>Под этим ником вас будут видеть в комнатах. Имя, фото и профиль собеседники не узнают.</Body>
+      <Body muted>Знакомые могут узнать вас по голосу.</Body>
 
       <Card>
         <Field
@@ -81,7 +103,7 @@ export default function NicknameScreen() {
       {isChange ? (
         <Button variant="plain" title="Отмена" onPress={() => router.replace('/')} disabled={loading} />
       ) : (
-        <Button variant="plain" title="Выйти" onPress={signOut} disabled={loading} />
+        <Button variant="plain" title="Назад" onPress={() => router.replace('/')} disabled={loading} />
       )}
     </Screen>
   );

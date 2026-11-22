@@ -12,7 +12,8 @@ import {
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth/service';
-import { getPersonaIdForAccount } from '../../core/identity';
+import { requireCapability } from '../../core/account';
+import { getOrCreatePersonaId } from '../../core/identity';
 import type { Db } from '../../db/client';
 import { joinSlot, leaveRoom } from './entry/service';
 import { getPersona, setNickname } from './persona/service';
@@ -29,10 +30,12 @@ export type RoomsDeps = {
 };
 
 export function registerRoomsRoutes(app: FastifyInstance, { db, voice }: RoomsDeps): void {
-  // Вошедший пользователь соцсети → его анонимная персона комнат
+  // Вошедший пользователь соцсети → проверка роли → его анонимная персона комнат.
+  // Через эту функцию проходит каждый запрос модуля: комнаты доступны только тем, у кого есть право rooms
   const whoIs = async (request: FastifyRequest) => {
     const session = await authenticate(db, request.headers.authorization);
-    return { accountId: session.accountId, personaId: await getPersonaIdForAccount(db, session.accountId) };
+    await requireCapability(db, session.accountId, 'rooms');
+    return { accountId: session.accountId, personaId: await getOrCreatePersonaId(db, session.accountId, new Date()) };
   };
 
   // ---------- Персона: ник комнат ----------
@@ -50,7 +53,7 @@ export function registerRoomsRoutes(app: FastifyInstance, { db, voice }: RoomsDe
   // ---------- Расписание ----------
 
   app.get(`${ROOMS_PREFIX}/slots`, async (request): Promise<SlotsResponse> => {
-    await authenticate(db, request.headers.authorization);
+    await whoIs(request);
     return { slots: await listUpcomingSlots(db, new Date()) };
   });
 

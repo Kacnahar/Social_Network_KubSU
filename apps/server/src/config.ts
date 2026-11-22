@@ -14,6 +14,8 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().default('http://localhost:8081'),
   DATABASE_URL: z.string().optional(),
   EMBEDDED_DB_DIR: z.string().default('.data/pglite'),
+  // Папка для фото при разработке; не задана в тестах — фото хранятся в памяти
+  MEDIA_DIR: z.string().optional(),
   EMAIL_HASH_KEY: z.string().min(16).optional(),
   EMAIL_ENCRYPTION_KEY: z.string().optional(),
   DEV_EXPOSE_LOGIN_CODES: flag.optional(),
@@ -70,6 +72,8 @@ export type Config = {
   // null — ключи не заданы: в разработке создаются автоматически, в продакшене напоминания выключены
   vapid: VapidConfig | null;
   vapidSubject: string;
+  // null — хранить фото в памяти (тесты)
+  mediaDir: string | null;
   // null — сервер звука не настроен, вход в комнаты выключен
   voice: VoiceConfig | null;
   // При разработке всегда держать одну открытую «Тестовую комнату»
@@ -123,6 +127,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
         : null;
 
   return {
+    mediaDir: parsed.MEDIA_DIR ?? (parsed.NODE_ENV === 'test' ? null : '.data/media'),
     voice,
     devLiveSlot: parsed.DEV_LIVE_SLOT ?? parsed.NODE_ENV === 'development',
     schedule: {

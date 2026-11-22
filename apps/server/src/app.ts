@@ -9,6 +9,7 @@ import { ZodError } from 'zod';
 import type { Config } from './config';
 import { ApiError } from './core/errors';
 import type { Mailer } from './core/mailer';
+import type { MediaStorage } from './core/media/storage';
 import type { PushGateway } from './core/push/service';
 import { registerCoreRoutes } from './core/routes';
 import type { Db } from './db/client';
@@ -23,12 +24,22 @@ export type AppDeps = {
   push: PushGateway | null;
   // null — сервер звука не настроен, войти в комнату нельзя
   voice: VoiceGateway | null;
+  // Где хранятся фото
+  media: MediaStorage;
+  // Сообщает о каждом зарегистрированном адресе — для автотестов, которые проверяют все адреса сразу
+  onRoute?: (route: { method: string; url: string }) => void;
 };
 
 const errorBody = (code: ErrorCode, message: string): ErrorResponse => ({ error: { code, message } });
 
-export async function buildApp({ config, db, mailer, push, voice }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ config, db, mailer, push, voice, media, onRoute }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: config.env !== 'test' });
+
+  if (onRoute) {
+    app.addHook('onRoute', (route) => {
+      for (const method of [route.method].flat()) onRoute({ method, url: route.url });
+    });
+  }
 
   await app.register(cors, {
     origin: config.corsOrigins,
@@ -47,6 +58,12 @@ export async function buildApp({ config, db, mailer, push, voice }: AppDeps): Pr
       return reply.status(400).send(errorBody('validation_error', 'Проверьте введённые данные'));
     }
     const statusCode = (error as { statusCode?: number }).statusCode;
+    if (statusCode === 413) {
+      return reply.status(413).send(errorBody('media_too_large', 'Файл слишком большой'));
+    }
+    if (statusCode === 415) {
+      return reply.status(415).send(errorBody('media_invalid', 'Такой тип файла не подходит'));
+    }
     if (statusCode === 429) {
       return reply.status(429).send(errorBody('too_many_requests', 'Слишком много запросов. Подождите минуту'));
     }
@@ -61,7 +78,7 @@ export async function buildApp({ config, db, mailer, push, voice }: AppDeps): Pr
     reply.status(404).send(errorBody('not_found', 'Такого адреса нет')),
   );
 
-  registerCoreRoutes(app, { config, db, mailer, push });
+  registerCoreRoutes(app, { config, db, mailer, push, media });
   registerRoomsRoutes(app, { db, voice });
 
   return app;

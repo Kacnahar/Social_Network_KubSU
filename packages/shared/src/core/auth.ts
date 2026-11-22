@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { roleSchema } from './roles';
 
 export const LOGIN_CODE_LENGTH = 6;
 
@@ -41,6 +42,7 @@ export const okResponseSchema = z.object({ ok: z.literal(true) });
 export type OkResponse = z.infer<typeof okResponseSchema>;
 
 export const accountResponseSchema = z.object({
+  role: roleSchema,
   status: z.enum(['active', 'banned']),
   bannedUntil: z.iso.datetime().nullable(),
 });

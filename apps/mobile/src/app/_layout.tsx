@@ -1,3 +1,4 @@
+import { can } from '@app/shared';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider, useSession } from '../lib/session';
@@ -18,20 +19,27 @@ function Navigation() {
   }
 
   const signedIn = state.status === 'signedIn';
-  const hasNickname = signedIn && state.persona.nickname !== null;
+  const hasProfile = signedIn && state.profile !== null;
+  const canUseRooms = signedIn && can(state.account.role, 'rooms');
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={hasNickname}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="rooms/call" />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="rooms/nickname" />
-      </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" />
         <Stack.Screen name="verify" />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && !hasProfile}>
+        <Stack.Screen name="profile/setup" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasProfile}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="profile/index" />
+        <Stack.Screen name="profile/edit" />
+        <Stack.Screen name="profiles/[profileId]" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasProfile && canUseRooms}>
+        <Stack.Screen name="rooms/nickname" />
+        <Stack.Screen name="rooms/call" />
       </Stack.Protected>
     </Stack>
   );

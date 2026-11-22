@@ -10,6 +10,7 @@ import { createTestContext, type TestContext } from './testing';
 
 const EMAIL = 'secret.student@example.com';
 const NICKNAME = 'Ночной_кот';
+const DISPLAY_NAME = 'Анна Секретова';
 
 describe('анонимность', () => {
   let t: TestContext;
@@ -28,6 +29,14 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'GET', url: '/v1/account', headers });
     await t.app.inject({ method: 'GET', url: '/v1/health' });
     await t.app.inject({ method: 'GET', url: '/v1/rooms/me' });
+    // Профиль соцсети — открытая личность того же человека
+    await t.app.inject({ method: 'GET', url: '/v1/profile', headers });
+    const saved = await t.app.inject({ method: 'PUT', url: '/v1/profile', headers, payload: { displayName: DISPLAY_NAME, faculty: 'ФКТиПМ', course: 2 } });
+    await t.app.inject({ method: 'GET', url: '/v1/profile', headers });
+    await t.app.inject({ method: 'GET', url: `/v1/profiles/${saved.json().profile.profileId}`, headers });
+    await t.app.inject({ method: 'GET', url: '/v1/profiles/not-an-id', headers });
+    await t.app.inject({ method: 'PUT', url: '/v1/profile', headers, payload: { displayName: '' } });
+    await t.app.inject({ method: 'POST', url: '/v1/media?purpose=avatar', headers: { ...headers, 'content-type': 'image/jpeg' }, payload: Buffer.from('не фото') });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL, inviteCode: 'NOPE' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });
@@ -74,6 +83,32 @@ describe('анонимность', () => {
     for (const secret of [EMAIL, account!.id, account!.emailHash]) expect(issued).not.toContain(secret);
   });
 
+  it('ни один ответ не связывает профиль соцсети с ником комнат', async () => {
+    const persona = JSON.parse(t.responses.findLast((item) => item.url === '/v1/rooms/me' && item.body.includes('personaId'))!.body);
+    const profile = JSON.parse(t.responses.findLast((item) => item.url === '/v1/profile' && item.body.includes('profileId'))!.body).profile;
+    expect(persona.nickname).toBe(NICKNAME);
+    expect(profile.displayName).toBe(DISPLAY_NAME);
+
+    const profileMarks = [profile.profileId, DISPLAY_NAME, 'profileId', 'displayName', 'avatarUrl'];
+    const personaMarks = [persona.personaId, NICKNAME, 'personaId', 'nickname'];
+    let withProfile = 0;
+    let withPersona = 0;
+    for (const { url, body } of t.responses) {
+      const hasProfile = profileMarks.some((mark) => body.includes(mark));
+      const hasPersona = personaMarks.some((mark) => body.includes(mark));
+      withProfile += Number(hasProfile);
+      withPersona += Number(hasPersona);
+      expect(hasProfile && hasPersona, `ответ ${url} содержит и профиль, и персону комнат`).toBe(false);
+    }
+    // Проверка не пустая: оба вида ответов в прогоне действительно были
+    expect(withProfile).toBeGreaterThan(0);
+    expect(withPersona).toBeGreaterThan(0);
+  });
+
+  it('пропуск на сервер звука не содержит данных профиля', () => {
+    expect(JSON.stringify(t.voice.tokens)).not.toContain(DISPLAY_NAME);
+  });
+
   it('данные аккаунта и данные персоны не встречаются в одном ответе', async () => {
     const me = t.responses.findLast((item) => item.url === '/v1/rooms/me' && item.body.includes('personaId'))!;
     const personaId = JSON.parse(me.body).personaId as string;
@@ -81,7 +116,7 @@ describe('анонимность', () => {
     const account = t.responses.find((item) => item.url === '/v1/account')!;
     expect(account.body).not.toContain(personaId);
     expect(account.body).not.toContain(NICKNAME);
-    expect(Object.keys(JSON.parse(account.body)).sort()).toEqual(['bannedUntil', 'status']);
+    expect(Object.keys(JSON.parse(account.body)).sort()).toEqual(['bannedUntil', 'role', 'status']);
     expect(Object.keys(JSON.parse(me.body)).sort()).toEqual(['nickname', 'nicknameChangeAvailableAt', 'personaId']);
   });
 

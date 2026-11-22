@@ -1,3 +1,4 @@
+import type { RoomPersonaResponse } from '@app/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,7 +10,7 @@ import { type, useColors } from '../../ui/theme';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Вход в комнату одной кнопкой: ничего вводить не нужно, человек уже вошёл в приложение под своим ником
-export function RoomEntry({ state }: { state: SlotsState }) {
+export function RoomEntry({ state, persona }: { state: SlotsState; persona: RoomPersonaResponse | null }) {
   const colors = useColors();
   const router = useRouter();
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,7 +36,9 @@ export function RoomEntry({ state }: { state: SlotsState }) {
 
   const handlePress = () => {
     if (joinable && next) {
-      router.push({ pathname: '/rooms/call', params: { slotId: next.id } });
+      // Ника ещё нет — сначала экран ника; пока персона не загрузилась, экран комнаты проверит сам
+      if (persona && persona.nickname === null) router.push('/rooms/nickname');
+      else router.push({ pathname: '/rooms/call', params: { slotId: next.id } });
     } else if (next && state.status === 'ready') {
       setNotice(`Комната откроется ${formatSlotStart(new Date(next.startsAt), state.now)}`);
     } else setNotice('Сейчас войти некуда');

@@ -39,6 +39,6 @@ export async function runReminderTick(deps: ReminderDeps, now: Date): Promise<vo
       .returning({ slotId: slotReminders.slotId });
     if (!claimed) continue;
 
-    await broadcastPush(deps, { title: slot.title, body: reminder.body, url: '/' }, minutesLeft * 60, now);
+    await broadcastPush(deps, { title: slot.title, body: reminder.body, url: '/' }, minutesLeft * 60, now, 'rooms');
   }
 }

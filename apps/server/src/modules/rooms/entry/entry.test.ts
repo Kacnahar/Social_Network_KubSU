@@ -118,7 +118,7 @@ describe('комнаты', () => {
       expect(down.statusCode).toBe(503);
       expect(down.json().error.code).toBe('voice_unavailable');
 
-      const app = await buildApp({ config: t.config, db: t.db, mailer: t.mailer, push: null, voice: null });
+      const app = await buildApp({ config: t.config, db: t.db, mailer: t.mailer, push: null, voice: null, media: t.media });
       const missing = await app.inject({ method: 'POST', url: `/v1/rooms/slots/${slotId}/join`, headers: t.authed(token) });
       expect(missing.json().error.code).toBe('voice_unavailable');
       await app.close();

@@ -9,6 +9,7 @@ CREATE TABLE "accounts" (
 	"email_encrypted" text NOT NULL,
 	"email_hash" text NOT NULL,
 	"invite_code_id" uuid NOT NULL,
+	"role" text NOT NULL,
 	"status" text DEFAULT 'active' NOT NULL,
 	"banned_until" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL,
@@ -31,9 +32,36 @@ CREATE TABLE "invite_codes" (
 	"label" text NOT NULL,
 	"max_uses" integer NOT NULL,
 	"used_count" integer DEFAULT 0 NOT NULL,
+	"role" text DEFAULT 'student' NOT NULL,
 	"expires_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "invite_codes_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "media_files" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"owner_account_id" uuid NOT NULL,
+	"purpose" text NOT NULL,
+	"storage_key" text NOT NULL,
+	"mime" text NOT NULL,
+	"width" integer NOT NULL,
+	"height" integer NOT NULL,
+	"bytes" integer NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "media_files_storage_key_unique" UNIQUE("storage_key")
+);
+--> statement-breakpoint
+CREATE TABLE "profiles" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"account_id" uuid NOT NULL,
+	"display_name" text NOT NULL,
+	"avatar_media_id" uuid,
+	"faculty" text,
+	"course" integer,
+	"about" text,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "profiles_account_id_unique" UNIQUE("account_id")
 );
 --> statement-breakpoint
 CREATE TABLE "push_subscriptions" (
@@ -105,6 +133,9 @@ ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_account_id_accounts_id
 ALTER TABLE "persona_links" ADD CONSTRAINT "persona_links_persona_id_room_personas_id_fk" FOREIGN KEY ("persona_id") REFERENCES "public"."room_personas"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_login_codes" ADD CONSTRAINT "email_login_codes_invite_code_id_invite_codes_id_fk" FOREIGN KEY ("invite_code_id") REFERENCES "public"."invite_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "media_files" ADD CONSTRAINT "media_files_owner_account_id_accounts_id_fk" FOREIGN KEY ("owner_account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiles" ADD CONSTRAINT "profiles_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiles" ADD CONSTRAINT "profiles_avatar_media_id_media_files_id_fk" FOREIGN KEY ("avatar_media_id") REFERENCES "public"."media_files"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "room_participations" ADD CONSTRAINT "room_participations_room_id_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

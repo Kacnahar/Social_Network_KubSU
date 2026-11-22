@@ -6,21 +6,31 @@ import {
   authVerifyResponseSchema,
   errorResponseSchema,
   healthResponseSchema,
+  myProfileResponseSchema,
   okResponseSchema,
+  profileSchema,
   pushConfigResponseSchema,
+  uploadMediaResponseSchema,
   type AccountResponse,
   type AuthStartRequest,
   type AuthStartResponse,
   type ErrorCode,
   type HealthResponse,
+  type MediaPurpose,
+  type MyProfileResponse,
+  type Profile,
   type PushConfigResponse,
   type PushSubscribeRequest,
+  type UpdateProfileRequest,
+  type UploadMediaResponse,
 } from '@app/shared';
 import type { z } from 'zod';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 const REQUEST_TIMEOUT_MS = 8000;
+// Фото весит заметно больше обычного запроса
+const UPLOAD_TIMEOUT_MS = 60_000;
 
 export class ApiError extends Error {
   constructor(
@@ -36,13 +46,17 @@ const networkError = () => new ApiError('network_error', 'Нет связи с �
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
+  // Готовые байты с собственным Content-Type (например, фото); вместо JSON-тела
+  rawBody?: { data: Blob; contentType: string };
   token?: string;
   baseUrl?: string;
+  timeoutMs?: number;
 };
 
 export async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers['content-type'] = 'application/json';
+  if (options.rawBody) headers['content-type'] = options.rawBody.contentType;
+  else if (options.body !== undefined) headers['content-type'] = 'application/json';
   if (options.token) headers.authorization = `Bearer ${options.token}`;
 
   let response: Response;
@@ -50,8 +64,8 @@ export async function request<T>(path: string, schema: z.ZodType<T>, options: Re
     response = await fetch(`${options.baseUrl ?? API_URL}${API_PREFIX}${path}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      body: options.rawBody ? options.rawBody.data : options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw networkError();
@@ -83,6 +97,29 @@ export const logout = (token: string) => request('/auth/logout', okResponseSchem
 
 export const getAccount = (token: string): Promise<AccountResponse> =>
   request('/account', accountResponseSchema, { token });
+
+export const getProfile = (token: string): Promise<Profile | null> =>
+  request('/profile', myProfileResponseSchema, { token }).then((response: MyProfileResponse) => response.profile);
+
+export const updateProfile = (token: string, body: UpdateProfileRequest): Promise<Profile> =>
+  request('/profile', myProfileResponseSchema, { method: 'PUT', token, body }).then((response) => {
+    if (!response.profile) throw new ApiError('internal_error', 'Сервер ответил непонятно. Попробуйте позже');
+    return response.profile;
+  });
+
+export const getProfileById = (token: string, profileId: string): Promise<Profile> =>
+  request(`/profiles/${encodeURIComponent(profileId)}`, profileSchema, { token });
+
+export const uploadMedia = (token: string, purpose: MediaPurpose, blob: Blob): Promise<UploadMediaResponse> =>
+  request(`/media?purpose=${purpose}`, uploadMediaResponseSchema, {
+    method: 'POST',
+    token,
+    rawBody: { data: blob, contentType: blob.type },
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+  });
+
+// Картинки отдаются без токена; путь уже содержит /v1, поэтому склеиваем только с адресом сервера
+export const mediaUrl = (path: string | null): string | null => (path ? `${API_URL}${path}` : null);
 
 export const deleteAccount = (token: string) => request('/account', okResponseSchema, { method: 'DELETE', token });
 

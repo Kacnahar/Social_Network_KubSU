@@ -1,7 +1,6 @@
-import type { RoomPersonaResponse } from '@app/shared';
+import { type AccountResponse, type Profile, type Role } from '@app/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { getPersona } from '../features/rooms/api';
-import { ApiError, logout } from './api';
+import { ApiError, getAccount, getProfile, logout } from './api';
 import { disablePush } from './push';
 import { clearToken, loadToken, saveToken } from './tokenStorage';
 
@@ -9,7 +8,7 @@ type SessionState =
   | { status: 'loading' }
   | { status: 'signedOut' }
   | { status: 'offline' }
-  | { status: 'signedIn'; token: string; persona: RoomPersonaResponse };
+  | { status: 'signedIn'; token: string; account: AccountResponse; profile: Profile | null };
 
 // Почта, на которую отправлен код: живёт только в памяти, между экранами входа
 export type PendingLogin = { email: string; inviteCode?: string; devCode?: string };
@@ -22,7 +21,7 @@ type SessionContextValue = {
   signOut: () => Promise<void>;
   // Сервер сказал, что сессия недействительна (или аккаунт удалён) — забываем её локально
   forgetSession: () => Promise<void>;
-  setPersona: (persona: RoomPersonaResponse) => void;
+  setProfile: (profile: Profile) => void;
   retry: () => void;
 };
 
@@ -40,8 +39,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const loadSession = useCallback(
     async (token: string) => {
       try {
-        // Навигации нужно знать, выбран ли ник комнат; когда появится профиль соцсети, сессия будет держать его, а персону — модуль комнат
-        setState({ status: 'signedIn', token, persona: await getPersona(token) });
+        // Навигации нужно знать роль и есть ли профиль; персону комнат грузит сам модуль комнат
+        const [account, profile] = await Promise.all([getAccount(token), getProfile(token)]);
+        setState({ status: 'signedIn', token, account, profile });
       } catch (error) {
         if (error instanceof ApiError && error.code === 'unauthorized') await forgetSession();
         else setState({ status: 'offline' });
@@ -80,7 +80,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
         await forgetSession();
       },
-      setPersona: (persona) => setState((current) => (current.status === 'signedIn' ? { ...current, persona } : current)),
+      setProfile: (profile) => setState((current) => (current.status === 'signedIn' ? { ...current, profile } : current)),
       retry: () => void restore(),
     }),
     [state, pendingLogin, forgetSession, loadSession, restore],
@@ -95,8 +95,12 @@ export function useSession(): SessionContextValue {
   return value;
 }
 
-export function useSignedIn(): { token: string; persona: RoomPersonaResponse } {
+export function useSignedIn(): { token: string; account: AccountResponse; profile: Profile | null } {
   const { state } = useSession();
   if (state.status !== 'signedIn') throw new Error('Экран доступен только после входа');
   return state;
+}
+
+export function useRole(): Role {
+  return useSignedIn().account.role;
 }

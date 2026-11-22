@@ -6,10 +6,11 @@ import { joinRoom, leaveRoom } from '../../features/rooms/api';
 import { MicButton } from '../../features/rooms/MicButton';
 import { ParticipantList } from '../../features/rooms/ParticipantList';
 import { formatMinutesLeft } from '../../features/rooms/slotTime';
+import { usePersona } from '../../features/rooms/usePersona';
 import { useCall, voiceSupported } from '../../features/rooms/voice';
 import { ApiError } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
-import { Body, Button, Card, ErrorText, Screen, Title } from '../../ui/components';
+import { Body, Button, Card, ErrorText, LoadingScreen, Screen, Title } from '../../ui/components';
 import { type, useColors } from '../../ui/theme';
 
 const TICK_MS = 30_000;
@@ -23,6 +24,28 @@ export default function RoomScreen() {
   const { slotId } = useLocalSearchParams<{ slotId?: string }>();
   if (!slotId) return <Redirect href="/" />;
   if (!voiceSupported) return <Unsupported />;
+  return <NicknameGate slotId={slotId} />;
+}
+
+// В комнату без ника не пускаем: сначала просим придумать его
+function NicknameGate({ slotId }: { slotId: string }) {
+  const router = useRouter();
+  const { forgetSession } = useSession();
+  const { token } = useSignedIn();
+  const { status, persona, reload } = usePersona(token, () => void forgetSession());
+
+  if (status === 'loading') return <LoadingScreen />;
+  if (status === 'error' || !persona) {
+    return (
+      <Screen>
+        <Title>Комната</Title>
+        <Body muted>Не получилось загрузить данные. Проверьте интернет и попробуйте ещё раз.</Body>
+        <Button title="Попробовать ещё раз" onPress={reload} />
+        <Button variant="plain" title="На главную" onPress={() => router.replace('/')} />
+      </Screen>
+    );
+  }
+  if (persona.nickname === null) return <Redirect href="/rooms/nickname" />;
   return <Room slotId={slotId} />;
 }
 

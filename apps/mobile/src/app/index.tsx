@@ -1,24 +1,23 @@
+import { can } from '@app/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { deleteAccount } from '../lib/api';
 import { disablePush } from '../lib/push';
 import { useSession, useSignedIn } from '../lib/session';
-import { Body, Button, Card, CardTitle, ErrorText, Screen, Title } from '../ui/components';
-import { PushCard } from '../ui/PushCard';
-import { RoomEntry } from '../features/rooms/RoomEntry';
-import { SlotList } from '../features/rooms/SlotList';
-import { useSlots } from '../features/rooms/useSlots';
-
-const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
+import { Avatar } from '../ui/Avatar';
+import { Body, Button, Card, CardTitle, ErrorText, Screen } from '../ui/components';
+import { type, useColors } from '../ui/theme';
+import { RoomsHomeSection } from '../features/rooms/RoomsHomeSection';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { signOut, forgetSession } = useSession();
-  const { token, persona } = useSignedIn();
+  const { token, account, profile } = useSignedIn();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState<'signOut' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { state: slots, reload } = useSlots(token, () => void forgetSession());
 
   const handleSignOut = async () => {
     setBusy('signOut');
@@ -38,33 +37,36 @@ export default function HomeScreen() {
     }
   };
 
+  const name = profile?.displayName ?? '';
+
   return (
     <Screen align="top">
-      <Title>Привет, {persona.nickname}</Title>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Открыть мой профиль"
+        onPress={() => router.push('/profile')}
+        style={({ pressed }) => [styles.greeting, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Avatar avatarUrl={profile?.avatarUrl ?? null} name={name} size={44} />
+        <Text numberOfLines={1} style={[type.title, styles.greetingText, { color: colors.text }]}>
+          Привет, {name}
+        </Text>
+      </Pressable>
 
-      <RoomEntry state={slots} />
-
-      <Card>
-        <CardTitle>Расписание</CardTitle>
-        <SlotList state={slots} onRetry={reload} />
-      </Card>
-
-      <PushCard token={token} disabled={busy !== null} />
-
-      <Card>
-        <CardTitle>Ник</CardTitle>
-        {persona.nicknameChangeAvailableAt ? (
-          <Body muted>Сменить можно будет {dateFormat.format(new Date(persona.nicknameChangeAvailableAt))}.</Body>
-        ) : (
-          <Button variant="secondary" title="Сменить ник" onPress={() => router.push('/rooms/nickname')} disabled={busy !== null} />
-        )}
-      </Card>
+      {can(account.role, 'rooms') ? (
+        <RoomsHomeSection disabled={busy !== null} />
+      ) : (
+        <Card>
+          <CardTitle>Лента появится скоро</CardTitle>
+          <Body muted>Здесь будут посты и истории</Body>
+        </Card>
+      )}
 
       <Button variant="secondary" title="Выйти" onPress={handleSignOut} loading={busy === 'signOut'} disabled={busy === 'delete'} />
 
       {confirmingDelete ? (
         <Card>
-          <Body>Удалить аккаунт? Ник и все данные исчезнут навсегда, отменить это нельзя.</Body>
+          <Body>Удалить аккаунт? Профиль, фото и все данные исчезнут навсегда, отменить это нельзя.</Body>
           <ErrorText>{error}</ErrorText>
           <Button variant="danger" title="Да, удалить навсегда" onPress={handleDelete} loading={busy === 'delete'} />
           <Button variant="secondary" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
@@ -75,3 +77,8 @@ export default function HomeScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  greeting: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  greetingText: { flexShrink: 1 },
+});

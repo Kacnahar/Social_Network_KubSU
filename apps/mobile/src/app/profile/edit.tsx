@@ -1,0 +1,20 @@
+import { useRouter } from 'expo-router';
+import { useSession, useSignedIn } from '../../lib/session';
+import { ProfileForm } from '../../ui/ProfileForm';
+
+export default function ProfileEditScreen() {
+  const router = useRouter();
+  const { setProfile } = useSession();
+  const { profile } = useSignedIn();
+  return (
+    <ProfileForm
+      title="Ваш профиль"
+      initial={profile}
+      onSaved={(next) => {
+        setProfile(next);
+        router.replace('/profile');
+      }}
+      footer={{ title: 'Отмена', onPress: () => (router.canGoBack() ? router.back() : router.replace('/profile')) }}
+    />
+  );
+}

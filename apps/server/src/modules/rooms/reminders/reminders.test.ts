@@ -230,7 +230,7 @@ describe('напоминания выключены на сервере', () => 
     const { buildApp } = await import('../../../app');
     const t = await createTestContext();
     const token = await t.register('student@example.com');
-    const app = await buildApp({ config: t.config, db: t.db, mailer: t.mailer, push: null, voice: null });
+    const app = await buildApp({ config: t.config, db: t.db, mailer: t.mailer, push: null, voice: null, media: t.media });
 
     expect((await app.inject({ method: 'GET', url: '/v1/push/config' })).json()).toEqual({ vapidPublicKey: null });
     const response = await app.inject({

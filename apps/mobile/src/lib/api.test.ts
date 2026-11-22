@@ -1,5 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, authVerify, fetchHealth, getPushConfig, logout, subscribePush, unsubscribePush } from './api';
+import {
+  ApiError,
+  authVerify,
+  fetchHealth,
+  getProfile,
+  getProfileById,
+  getPushConfig,
+  logout,
+  mediaUrl,
+  subscribePush,
+  unsubscribePush,
+  updateProfile,
+  uploadMedia,
+} from './api';
+
+const profile = {
+  profileId: 'p1',
+  displayName: 'Аня',
+  avatarUrl: null,
+  faculty: null,
+  course: null,
+  about: null,
+  role: 'student',
+};
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -72,5 +95,40 @@ describe('клиент API', () => {
     await unsubscribePush('tok', 'https://push.example/abc');
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE');
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ endpoint: 'https://push.example/abc' }));
+  });
+
+  it('getProfile возвращает профиль или null', async () => {
+    const fetchMock = mockFetch(200, { profile: null });
+    expect(await getProfile('tok')).toBeNull();
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/profile$/);
+  });
+
+  it('updateProfile отправляет PUT и возвращает профиль', async () => {
+    const fetchMock = mockFetch(200, { profile });
+    const result = await updateProfile('tok', { displayName: 'Аня' });
+    expect(result.displayName).toBe('Аня');
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('PUT');
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ displayName: 'Аня' }));
+  });
+
+  it('getProfileById просит профиль по id', async () => {
+    const fetchMock = mockFetch(200, profile);
+    expect((await getProfileById('tok', 'p 1')).profileId).toBe('p1');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/profiles\/p%201$/);
+  });
+
+  it('uploadMedia шлёт байты с типом картинки', async () => {
+    const fetchMock = mockFetch(200, { mediaId: 'm1', url: '/v1/media/m1' });
+    const blob = new Blob(['x'], { type: 'image/png' });
+    expect((await uploadMedia('tok', 'avatar', blob)).mediaId).toBe('m1');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/media\?purpose=avatar$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ 'content-type': 'image/png', authorization: 'Bearer tok' });
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(blob);
+  });
+
+  it('mediaUrl склеивает адрес сервера и путь', () => {
+    expect(mediaUrl(null)).toBeNull();
+    expect(mediaUrl('/v1/media/m1')).toMatch(/^https?:\/\/.+\/v1\/media\/m1$/);
+    expect(mediaUrl('/v1/media/m1')).not.toContain('/v1/v1');
   });
 });

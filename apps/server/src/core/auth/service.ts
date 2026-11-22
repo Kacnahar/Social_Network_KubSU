@@ -13,7 +13,7 @@ import {
 import type { Db, DbOrTx } from '../../db/client';
 import { emailLoginCodes, inviteCodes, sessions } from '../../db/schema';
 import { ApiError, invalidCode, invalidInvite, unauthorized } from '../errors';
-import { createAccountWithPersona, findAccountIdByEmailHash } from '../identity';
+import { createAccount, findAccountIdByEmailHash } from '../identity';
 import type { Mailer } from '../mailer';
 
 const LOGIN_CODE_TTL_MS = 10 * 60 * 1000;
@@ -113,12 +113,13 @@ export async function verifyLogin(deps: AuthDeps, input: AuthVerifyRequest): Pro
         .update(inviteCodes)
         .set({ usedCount: sql`${inviteCodes.usedCount} + 1` })
         .where(and(eq(inviteCodes.id, row.inviteCodeId), inviteIsUsable(now)))
-        .returning({ id: inviteCodes.id });
+        .returning({ id: inviteCodes.id, role: inviteCodes.role });
       if (!consumed) throw invalidInvite();
-      accountId = await createAccountWithPersona(tx, {
+      accountId = await createAccount(tx, {
         emailHash,
         emailEncrypted: encryptEmail(input.email, config.emailEncryptionKey),
         inviteCodeId: consumed.id,
+        role: consumed.role,
         now,
       });
     }

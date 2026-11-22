@@ -1,4 +1,4 @@
-import type { PushMessage, PushSubscribeRequest } from '@app/shared';
+import { can, type Capability, type PushMessage, type PushSubscribeRequest } from '@app/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { generateVAPIDKeys, sendNotification } from 'web-push';
 import type { VapidConfig } from '../../config';
@@ -88,7 +88,14 @@ const SEND_BATCH_SIZE = 20;
 export type BroadcastDeps = { db: Db; push: PushGateway; onError: (error: unknown) => void };
 
 // Разослать уведомление всем подписанным, кроме забаненных. Отозванные подписки удаляются.
-export async function broadcastPush(deps: BroadcastDeps, message: PushMessage, ttlSeconds: number, now: Date): Promise<void> {
+export async function broadcastPush(
+  deps: BroadcastDeps,
+  message: PushMessage,
+  ttlSeconds: number,
+  now: Date,
+  // Если задано — только тем, чья роль это позволяет (о комнатах преподаватель и гость узнавать не должны)
+  onlyWith?: Capability,
+): Promise<void> {
   const rows = await deps.db
     .select({
       endpoint: pushSubscriptions.endpoint,
@@ -96,11 +103,12 @@ export async function broadcastPush(deps: BroadcastDeps, message: PushMessage, t
       auth: pushSubscriptions.auth,
       status: accounts.status,
       bannedUntil: accounts.bannedUntil,
+      role: accounts.role,
     })
     .from(pushSubscriptions)
     .innerJoin(accounts, eq(accounts.id, pushSubscriptions.accountId));
   // Здесь бан без срока тоже считается действующим
-  const targets = rows.filter((row) => !isBanned(row, now));
+  const targets = rows.filter((row) => !isBanned(row, now) && (!onlyWith || can(row.role, onlyWith)));
 
   const gone: string[] = [];
   for (let index = 0; index < targets.length; index += SEND_BATCH_SIZE) {

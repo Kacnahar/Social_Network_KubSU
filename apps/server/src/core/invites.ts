@@ -1,10 +1,10 @@
-import { normalizeInviteCode } from '@app/shared';
+import { normalizeInviteCode, type Role } from '@app/shared';
 import type { Db } from '../db/client';
 import { inviteCodes } from '../db/schema';
 
 export async function createInviteCode(
   db: Db,
-  input: { code: string; label: string; maxUses: number; expiresAt?: Date },
+  input: { code: string; label: string; maxUses: number; role?: Role; expiresAt?: Date },
 ): Promise<void> {
   await db
     .insert(inviteCodes)
@@ -12,6 +12,7 @@ export async function createInviteCode(
       code: normalizeInviteCode(input.code),
       label: input.label,
       maxUses: input.maxUses,
+      role: input.role ?? 'student',
       expiresAt: input.expiresAt ?? null,
       createdAt: new Date(),
     })

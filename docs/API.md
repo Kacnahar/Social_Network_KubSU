@@ -92,29 +92,29 @@
 
 Уведомления — общая служба: сейчас ею пользуются напоминания о комнатах, позже — сообщения и лента. В тексте уведомления нет личных данных. Адрес подписки принимается только от известных push-сервисов браузеров.
 
-### Роль ⏳ часть 1
+### Роль ✅
 
 `GET /v1/account` дополнительно отдаёт `role` (student / teacher / guest) — по ней приложение решает, какие кнопки показывать.
 
-### Профиль соцсети ⏳ часть 1
+### Профиль соцсети ✅
 
 | Запрос | Что делает |
 |---|---|
-| `GET /v1/profile` | Свой профиль; если ещё не заполнен — приложение ведёт на экран заполнения |
+| `GET /v1/profile` | Свой профиль: `{ profile }`; `null`, если ещё не заполнен — приложение ведёт на экран заполнения |
 | `PUT /v1/profile` | Создать или изменить свой профиль: имя, факультет, курс, «о себе», аватар |
 | `GET /v1/profiles/:profileId` | Чужой профиль: имя, аватар, факультет, курс, «о себе», роль |
 | `GET /v1/profiles/:profileId/posts` | Посты этого человека (часть 2) |
 
 В ответах профиля никогда нет `personaId` и ника комнат.
 
-### Фото ⏳ часть 1
+### Фото ✅
 
 | Запрос | Что делает |
 |---|---|
-| `POST /v1/media` | Загрузить фото. Сервер уменьшает его, стирает служебные данные и возвращает идентификатор |
-| `GET /v1/media/:mediaId` | Получить фото |
+| `POST /v1/media?purpose=avatar` | Загрузить фото: тело запроса — сами байты картинки. Сервер проверяет, что это картинка, уменьшает, стирает служебные данные и возвращает идентификатор. `purpose` — `avatar`, `post` или `story`; гостю разрешён только `avatar` |
+| `GET /v1/media/:mediaId` | Получить фото. Без входа: адрес содержит случайный идентификатор |
 
-Ограничения — вопрос G14.
+До 10 МБ; JPEG, PNG, WebP. Отказы: `media_invalid`, `media_too_large`.
 
 ---
 
@@ -154,7 +154,7 @@
 
 ## Модуль «Голосовые комнаты» — `/v1/rooms`
 
-Доступен только студентам: преподаватель и гость получают отказ на каждом запросе этого раздела (⏳ проверка роли — часть 1).
+Доступен только студентам: преподаватель и гость получают отказ `forbidden` на каждом запросе этого раздела. Анонимная персона создаётся при первом обращении студента к комнатам.
 
 ### Персона ✅
 
@@ -215,4 +215,4 @@
 
 ## Коды ошибок
 
-`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. ⏳ С части 1 — `forbidden` (роль не позволяет) и `profile_required` (сначала заполните профиль).
+`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. `forbidden` (роль не позволяет), `media_invalid`, `media_too_large`. ⏳ С части 2 — `profile_required` (сначала заполните профиль).

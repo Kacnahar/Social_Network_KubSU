@@ -4,6 +4,8 @@ import { loadConfig, type Config } from './config';
 import { createDb, type Db } from './db/client';
 import { createInviteCode } from './core/invites';
 import type { Mailer } from './core/mailer';
+import { MemoryMediaStorage } from './core/media/storage';
+import type { Role } from '@app/shared';
 import type { PushGateway, PushTarget } from './core/push/service';
 import type { PushMessage } from '@app/shared';
 import type { VoiceGateway } from './modules/rooms/voice/gateway';
@@ -61,6 +63,11 @@ export class FakeVoice implements VoiceGateway {
 }
 
 export const TEST_INVITE = 'TEST-INVITE';
+export const TEST_INVITE_BY_ROLE: Record<Role, string> = {
+  student: TEST_INVITE,
+  teacher: 'TEST-TEACHER',
+  guest: 'TEST-GUEST',
+};
 
 export type TestContext = {
   app: FastifyInstance;
@@ -69,6 +76,10 @@ export type TestContext = {
   mailer: CapturingMailer;
   push: CapturingPush;
   voice: FakeVoice;
+  media: MemoryMediaStorage;
+  // Все адреса сервера — чтобы тесты могли пройти по каждому
+  routes: { method: string; url: string }[];
+  registerAs: (role: Role, email: string) => Promise<string>;
   // Тела всех ответов сервера за время теста — для проверки анонимности
   responses: { url: string; body: string }[];
   close: () => Promise<void>;
@@ -86,11 +97,15 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     ...env,
   });
   const { db, close: closeDb } = await createDb(config.database);
-  await createInviteCode(db, { code: TEST_INVITE, label: 'тест', maxUses: 100 });
+  for (const [role, code] of Object.entries(TEST_INVITE_BY_ROLE)) {
+    await createInviteCode(db, { code, label: `тест: ${role}`, maxUses: 100, role: role as Role });
+  }
   const mailer = new CapturingMailer();
   const push = new CapturingPush();
   const voice = new FakeVoice();
-  const app = await buildApp({ config, db, mailer, push, voice });
+  const media = new MemoryMediaStorage();
+  const routes: TestContext['routes'] = [];
+  const app = await buildApp({ config, db, mailer, push, voice, media, onRoute: (route) => routes.push(route) });
 
   const responses: TestContext['responses'] = [];
   app.addHook('onSend', async (request, _reply, payload) => {
@@ -117,6 +132,9 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     mailer,
     push,
     voice,
+    media,
+    routes,
+    registerAs: (role, email) => register(email, TEST_INVITE_BY_ROLE[role]),
     responses,
     register,
     authed: (token) => ({ authorization: `Bearer ${token}` }),
