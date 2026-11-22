@@ -3,23 +3,19 @@ import { useRouter } from 'expo-router';
 import { Fragment, type ReactNode } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
-import { Button, Card, CardTitle, ErrorText, useTabBarSpace } from '../../ui/components';
+import { Button, ErrorText, useTabBarSpace } from '../../ui/components';
 import { type, useColors } from '../../ui/theme';
 import { PostCard } from '../posts/PostCard';
 import { StoriesRow } from '../stories/StoriesRow';
 import { useStories } from '../stories/useStories';
 import { useFeed } from './useFeed';
 
-type Row = { key: string; kind: 'pinned' } | { key: string; kind: 'post'; post: Post };
-
 type FeedListProps = {
-  // Над списком, прокручивается вместе с ним (заголовок, истории)
+  // Над списком, прокручивается вместе с ним (шапка); под ней идут истории
   header: ReactNode;
-  // Строка, которая при прокрутке остаётся вверху экрана
-  pinned?: ReactNode;
 };
 
-export function FeedList({ header, pinned }: FeedListProps) {
+export function FeedList({ header }: FeedListProps) {
   const router = useRouter();
   const colors = useColors();
   const space = useTabBarSpace();
@@ -29,10 +25,7 @@ export function FeedList({ header, pinned }: FeedListProps) {
   const { reload: reloadStories } = stories;
   const { state } = feed;
 
-  const rows: Row[] = [
-    ...(pinned ? [{ key: 'pinned', kind: 'pinned' } as const] : []),
-    ...(state.status === 'ready' ? state.posts.map((post) => ({ key: post.postId, kind: 'post', post }) as const) : []),
-  ];
+  const posts: Post[] = state.status === 'ready' ? state.posts : [];
 
   // «Потянуть, чтобы обновить» обновляет и ленту, и истории
   const refresh = () => {
@@ -45,18 +38,20 @@ export function FeedList({ header, pinned }: FeedListProps) {
       {state.status === 'loading' ? <ActivityIndicator color={colors.accent} size="large" style={styles.spinner} /> : null}
 
       {state.status === 'error' ? (
-        <Card>
-          <CardTitle>Не получилось загрузить ленту</CardTitle>
+        <View style={styles.notice}>
+          <Text style={[type.headline, styles.center, { color: colors.text }]}>Не получилось загрузить ленту</Text>
           <ErrorText>{state.message}</ErrorText>
           <Button variant="secondary" title="Повторить" onPress={feed.retry} />
-        </Card>
+        </View>
       ) : null}
 
       {state.status === 'ready' && state.posts.length === 0 ? (
-        <Card>
-          <CardTitle>Пока никто ничего не написал</CardTitle>
-          {can(account.role, 'publish') ? <Button title="Написать первый пост" onPress={() => router.navigate('/create')} /> : null}
-        </Card>
+        <View style={styles.notice}>
+          <Text style={[type.headline, styles.center, { color: colors.text }]}>Пока никто ничего не написал</Text>
+          {can(account.role, 'publish') ? (
+            <Button variant="secondary" title="Написать первый пост" onPress={() => router.push('/compose')} />
+          ) : null}
+        </View>
       ) : null}
 
       {feed.moreError ? (
@@ -76,27 +71,17 @@ export function FeedList({ header, pinned }: FeedListProps) {
 
   return (
     <FlatList
-      data={rows}
-      keyExtractor={(row) => row.key}
-      renderItem={({ item }) =>
-        item.kind === 'pinned' ? (
-          // Сплошная подложка: посты, уходящие под строку, не должны просвечивать сквозь стекло
-          <View style={[styles.pinned, { backgroundColor: colors.background }]}>{pinned}</View>
-        ) : (
-          <View style={styles.item}>
-            <PostCard post={item.post} now={feed.now} onChanged={feed.replace} onDeleted={feed.remove} />
-          </View>
-        )
-      }
+      data={posts}
+      keyExtractor={(post) => post.postId}
+      renderItem={({ item }) => <PostCard post={item} now={feed.now} onChanged={feed.replace} onDeleted={feed.remove} />}
       ListHeaderComponent={
-        // Истории — выше закреплённой строки, поэтому строка остаётся элементом с индексом 1
         <View style={styles.header}>
           {header}
           <StoriesRow groups={stories.groups} />
+          <View style={[styles.rule, { backgroundColor: colors.border }]} />
         </View>
       }
       ListFooterComponent={footer}
-      stickyHeaderIndices={pinned ? [1] : undefined}
       onEndReached={feed.loadMore}
       onEndReachedThreshold={0.6}
       refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={refresh} tintColor={colors.accent} />}
@@ -108,11 +93,13 @@ export function FeedList({ header, pinned }: FeedListProps) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 28 },
-  header: { gap: 16, paddingBottom: 16 },
-  pinned: { paddingBottom: 12 },
-  item: { paddingBottom: 16 },
-  footer: { gap: 16 },
+  content: { paddingTop: 20 },
+  header: { gap: 16 },
+  // Тонкая линия под историями — на всю ширину экрана, как разделители между постами
+  rule: { height: StyleSheet.hairlineWidth, marginHorizontal: -20 },
+  footer: { gap: 16, paddingTop: 16 },
+  notice: { alignItems: 'center', gap: 12, paddingVertical: 32 },
+  center: { textAlign: 'center' },
   spinner: { paddingVertical: 24 },
   end: { textAlign: 'center', paddingVertical: 8 },
 });

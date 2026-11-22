@@ -60,7 +60,7 @@ export function VoiceBar() {
             </Text>
             <Text
               numberOfLines={1}
-              style={[type.subhead, joinable && styles.live, { color: joinable ? colors.success : colors.muted }]}
+              style={[type.subhead, joinable && styles.live, { color: joinable ? colors.live : colors.muted }]}
             >
               {status}
             </Text>

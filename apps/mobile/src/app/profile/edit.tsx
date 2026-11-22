@@ -8,7 +8,8 @@ export default function ProfileEditScreen() {
   const { profile } = useSignedIn();
   return (
     <ProfileForm
-      title="Ваш профиль"
+      title="Редактировать профиль"
+      onBack={() => (router.canGoBack() ? router.back() : router.dismissTo('/profile'))}
       initial={profile}
       onSaved={(next) => {
         setProfile(next);

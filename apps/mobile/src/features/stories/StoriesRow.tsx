@@ -4,10 +4,11 @@ import { useRef, type ReactNode } from 'react';
 import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
+import { PlusIcon } from '../../ui/icons';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
 
 const AVATAR = 64;
-const RING = 3;
+const RING = 2.5;
 const GAP = 3;
 const OUTER = AVATAR + 2 * (RING + GAP);
 const ITEM_WIDTH = OUTER + 8;
@@ -36,7 +37,7 @@ function Circle({ label, accessibilityLabel, onPress, children }: CircleProps) {
         style={styles.item}
       >
         {children}
-        <Text numberOfLines={1} style={[type.footnote, styles.label, { color: colors.text }]}>
+        <Text numberOfLines={1} style={[type.caption, styles.label, { color: colors.muted }]}>
           {label}
         </Text>
       </Pressable>
@@ -66,16 +67,16 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
       {canPublish ? (
         mine && mine.stories.length > 0 ? (
           <Circle label="Ваша история" accessibilityLabel="Ваша история" onPress={() => open(mine.author.profileId)}>
-            <Ring color={mine.hasUnseen ? colors.accent : colors.border}>
+            <Ring color={mine.hasUnseen ? colors.highlight : colors.border}>
               <Avatar avatarUrl={mine.author.avatarUrl} name={mine.author.displayName} size={AVATAR} />
             </Ring>
           </Circle>
         ) : (
-          <Circle label="Добавить" accessibilityLabel="Добавить историю" onPress={() => router.navigate({ pathname: '/create', params: { kind: 'story' } })}>
+          <Circle label="Ваша история" accessibilityLabel="Ваша история. Добавить" onPress={() => router.navigate({ pathname: '/create', params: { kind: 'story' } })}>
             <View style={styles.ring}>
               <Avatar avatarUrl={profile?.avatarUrl ?? null} name={profile?.displayName ?? ''} size={AVATAR} />
               <View style={[styles.plus, { backgroundColor: colors.accent, borderColor: colors.background }]}>
-                <Text style={[type.headline, styles.plusSign, { color: colors.onAccent }]}>+</Text>
+                <PlusIcon color={colors.onAccent} size={10} />
               </View>
             </View>
           </Circle>
@@ -89,7 +90,7 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
           accessibilityLabel={`История: ${group.author.displayName}${group.hasUnseen ? ', есть новые' : ''}`}
           onPress={() => open(group.author.profileId)}
         >
-          <Ring color={group.hasUnseen ? colors.accent : colors.border}>
+          <Ring color={group.hasUnseen ? colors.highlight : colors.border}>
             <Avatar avatarUrl={group.author.avatarUrl} name={group.author.displayName} size={AVATAR} />
           </Ring>
         </Circle>
@@ -101,7 +102,7 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
 const styles = StyleSheet.create({
   // Ряд идёт от края до края экрана, а первый кружок выровнен по колонке
   scroll: { marginHorizontal: -20, flexGrow: 0 },
-  row: { paddingHorizontal: 20, gap: 4 },
+  row: { paddingHorizontal: 14, gap: 6 },
   item: { width: ITEM_WIDTH, alignItems: 'center', gap: 6 },
   ring: {
     width: OUTER,
@@ -124,5 +125,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusSign: { fontSize: 16, lineHeight: 18 },
 });

@@ -3,27 +3,21 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { authStart } from '../lib/api';
 import { useSession } from '../lib/session';
-import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../ui/components';
+import { Field } from '../ui/components';
+import { StepScreen } from '../ui/StepScreen';
 
-type Mode = 'register' | 'login';
-
+// Вход в существующий аккаунт: только почта. Регистрация идёт через «Кто вы?» и анкету
 export default function LoginScreen() {
   const router = useRouter();
   const { setPendingLogin } = useSession();
-  const [mode, setMode] = useState<Mode>('register');
-  const [inviteCode, setInviteCode] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    const parsed = authStartRequestSchema.safeParse({
-      email,
-      inviteCode: mode === 'register' ? inviteCode : undefined,
-    });
+    const parsed = authStartRequestSchema.safeParse({ email });
     if (!parsed.success) {
-      const badField = parsed.error.issues[0]?.path[0];
-      setError(badField === 'inviteCode' ? 'Введите код приглашения' : 'Введите почту, например name@mail.ru');
+      setError('Введите почту, например name@mail.ru');
       return;
     }
 
@@ -40,53 +34,26 @@ export default function LoginScreen() {
     }
   };
 
-  const switchMode = () => {
-    setMode(mode === 'register' ? 'login' : 'register');
-    setError(null);
-  };
-
   return (
-    <Screen>
-      <Title>{mode === 'register' ? 'Регистрация' : 'Вход'}</Title>
-      <Body muted>
-        {mode === 'register'
-          ? 'Студенческая соцсеть. Регистрация — по коду приглашения.'
-          : 'Введите почту, с которой вы регистрировались.'}
-      </Body>
-
-      <Card>
-        {mode === 'register' ? (
-          <Field
-            label="Код приглашения"
-            value={inviteCode}
-            onChangeText={setInviteCode}
-            autoCapitalize="characters"
-            placeholder="Например, ABCD-2026"
-            returnKeyType="next"
-          />
-        ) : null}
-        <Field
-          label="Почта"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoComplete="email"
-          inputMode="email"
-          placeholder="name@mail.ru"
-          hint="На неё придёт код для входа. Другие пользователи почту не увидят."
-          returnKeyType="go"
-          onSubmitEditing={submit}
-        />
-        <ErrorText>{error}</ErrorText>
-        <Button title="Получить код" onPress={submit} loading={loading} />
-      </Card>
-
-      <Button
-        variant="plain"
-        title={mode === 'register' ? 'У меня уже есть аккаунт' : 'У меня есть код приглашения'}
-        onPress={switchMode}
-        disabled={loading}
+    <StepScreen
+      title="С возвращением"
+      subtitle="Введите почту, с которой вы регистрировались"
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/welcome'))}
+      primary={{ title: 'Получить код', onPress: () => void submit(), loading }}
+    >
+      <Field
+        label="Почта"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoComplete="email"
+        inputMode="email"
+        placeholder="name@mail.ru"
+        returnKeyType="go"
+        onSubmitEditing={() => void submit()}
+        autoFocus
+        error={error}
       />
-    </Screen>
+    </StepScreen>
   );
 }

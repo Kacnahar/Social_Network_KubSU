@@ -57,7 +57,7 @@ export function RoomEntry({ state, persona }: { state: SlotsState; persona: Room
       <View style={styles.caption}>
         <Text style={[type.title, styles.center, { color: colors.text }]}>{headline}</Text>
         {detail ? (
-          <Text style={[type.subhead, styles.center, { color: joinable ? colors.success : colors.muted }, joinable && styles.live]}>
+          <Text style={[type.subhead, styles.center, { color: joinable ? colors.live : colors.muted }, joinable && styles.live]}>
             {detail}
           </Text>
         ) : null}

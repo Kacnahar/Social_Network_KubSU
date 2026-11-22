@@ -1,9 +1,10 @@
 import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -21,6 +22,10 @@ import { radius, type, useColors, useReduceMotion, useReduceTransparency, useSch
 
 // Настоящее «жидкое стекло» есть только на iOS 26+; на остальных платформах — размытие с подсветкой края
 const liquidGlass = isLiquidGlassAvailable();
+
+// В браузере у поля в фокусе появляется стандартная толстая обводка. Она рисуется стилем «auto»,
+// который не слушается толщины, поэтому отключаем сам стиль. Этого значения нет в типах React Native.
+export const noOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
 
 // Плавающая нижняя панель вкладок: её высота и отступы нужны и самой панели, и экранам под ней
 export const TAB_BAR = { height: 64, margin: 16 };
@@ -156,36 +161,81 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 
 type FieldProps = TextInputProps & { label: string; hint?: string; error?: string | null };
 
-export function Field({ label, hint, error, style, onFocus, onBlur, ...input }: FieldProps) {
+// Поле без рамки: мягкая заливка, подпись лежит внутри и уезжает наверх, когда в поле есть текст или фокус
+export function Field({ label, hint, error, style, onFocus, onBlur, value, placeholder, ...input }: FieldProps) {
   const colors = useColors();
+  const reduceMotion = useReduceMotion();
   const [focused, setFocused] = useState(false);
-  const borderColor = error ? colors.danger : focused ? colors.accent : 'transparent';
+  const floated = focused || (value !== undefined && value !== '');
+  const lift = useRef(new Animated.Value(floated ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      lift.setValue(floated ? 1 : 0);
+      return;
+    }
+    // Двигаем положение и размер подписи, поэтому анимация идёт не на «родном» драйвере; она короткая
+    Animated.timing(lift, {
+      toValue: floated ? 1 : 0,
+      duration: 130,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [floated, lift, reduceMotion]);
+
+  // Активное поле видно по чуть более плотному фону и цвету подписи — без обводки.
+  // Тонкая красная линия остаётся только у поля с ошибкой.
   return (
     <View style={styles.field}>
-      <Text style={[type.subhead, styles.label, { color: colors.muted }]}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        placeholderTextColor={colors.muted}
-        selectionColor={colors.accent}
-        autoCapitalize="none"
-        autoCorrect={false}
-        {...input}
-        onFocus={(event) => {
-          setFocused(true);
-          onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setFocused(false);
-          onBlur?.(event);
-        }}
-        style={[type.body, styles.input, { color: colors.text, backgroundColor: colors.fill, borderColor }, style]}
-      />
+      <View
+        style={[
+          styles.inputBox,
+          { backgroundColor: focused ? colors.fillActive : colors.fill, borderColor: error ? colors.danger : 'transparent' },
+        ]}
+      >
+        <Animated.Text
+          numberOfLines={1}
+          pointerEvents="none"
+          style={[
+            type.body,
+            styles.floatingLabel,
+            {
+              color: error ? colors.danger : focused ? colors.accent : colors.muted,
+              top: lift.interpolate({ inputRange: [0, 1], outputRange: [17, 8] }),
+              fontSize: lift.interpolate({ inputRange: [0, 1], outputRange: [17, 12] }),
+              lineHeight: lift.interpolate({ inputRange: [0, 1], outputRange: [23, 16] }),
+            },
+          ]}
+        >
+          {label}
+        </Animated.Text>
+        <TextInput
+          accessibilityLabel={label}
+          placeholderTextColor={colors.muted}
+          selectionColor={colors.accent}
+          autoCapitalize="none"
+          autoCorrect={false}
+          {...input}
+          value={value}
+          // Подсказку-пример показываем, только когда подпись уже уехала наверх, иначе они наложатся
+          placeholder={floated ? placeholder : undefined}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
+          style={[type.body, styles.input, noOutline, { color: colors.text }, style]}
+        />
+      </View>
       {error ? (
-        <Text accessibilityRole="alert" style={[type.footnote, { color: colors.danger }]}>
+        <Text accessibilityRole="alert" style={[type.footnote, styles.fieldNote, { color: colors.danger }]}>
           {error}
         </Text>
       ) : hint ? (
-        <Text style={[type.footnote, { color: colors.muted }]}>{hint}</Text>
+        <Text style={[type.footnote, styles.fieldNote, { color: colors.muted }]}>{hint}</Text>
       ) : null}
     </View>
   );
@@ -199,9 +249,11 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'danger' | 'plain' | 'plainDanger';
   loading?: boolean;
   disabled?: boolean;
+  // compact — ниже и с текстом помельче: для двух кнопок в один ряд
+  size?: 'regular' | 'compact';
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, size = 'regular' }: ButtonProps) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
   const scale = useRef(new Animated.Value(1)).current;
@@ -247,13 +299,16 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
         style={({ pressed }) => [
           styles.button,
           isPlain && styles.buttonPlain,
+          size === 'compact' && styles.buttonCompact,
           { backgroundColor: background, opacity: inactive ? 0.45 : pressed ? 0.8 : 1 },
         ]}
       >
         {loading ? (
           <ActivityIndicator color={foreground} />
         ) : (
-          <Text style={[type.headline, { color: foreground }]}>{title}</Text>
+          <Text numberOfLines={1} style={[size === 'compact' ? styles.buttonCompactText : type.headline, { color: foreground }]}>
+            {title}
+          </Text>
         )}
       </Pressable>
     </Animated.View>
@@ -292,16 +347,21 @@ const styles = StyleSheet.create({
   glassShadow: { shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 28, elevation: 3 },
   cardBody: { padding: 20, gap: 14 },
   field: { gap: 6 },
-  label: { fontWeight: '500', marginLeft: 4 },
-  input: {
-    minHeight: 50,
-    borderWidth: 1.5,
+  fieldNote: { marginLeft: 16 },
+  inputBox: {
+    minHeight: 58,
+    borderWidth: 1,
     borderRadius: radius.field,
     borderCurve: 'continuous',
+    justifyContent: 'center',
+  },
+  // Подпись в покое стоит на месте текста; с текстом или фокусом уезжает наверх и уменьшается
+  floatingLabel: { position: 'absolute', left: 16, right: 16, letterSpacing: 0 },
+  input: {
+    minHeight: 55,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    // Свою рамку фокуса рисуем сами, стандартная браузерная не нужна
-    outlineWidth: 0,
+    paddingTop: 25,
+    paddingBottom: 7,
   },
   button: {
     minHeight: 50,
@@ -311,4 +371,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonPlain: { minHeight: 44 },
+  buttonCompact: { minHeight: 42, paddingHorizontal: 12 },
+  buttonCompactText: { ...type.subhead, fontWeight: '600' },
 });

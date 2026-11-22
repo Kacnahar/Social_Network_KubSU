@@ -1,10 +1,11 @@
 import { ROLE_LABEL, can, type Post } from '@app/shared';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { Animated, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
-import { Body, Button, Card, ErrorText, Separator } from '../../ui/components';
+import { Body, Button, ErrorText } from '../../ui/components';
+import { CommentIcon, DotsIcon, HeartIcon, ShareIcon } from '../../ui/icons';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
 import { deletePost, likePost, reportPost, unlikePost } from './api';
 import { PostPhotos } from './PostPhotos';
@@ -86,94 +87,141 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
   const long = !expanded && !showFull && post.text.length > COLLAPSE_AFTER;
   const text = long ? `${post.text.slice(0, COLLAPSE_AFTER).trimEnd()}…` : post.text;
 
+  // Сообщение под постом, когда поделиться с этого устройства не получилось
+  const [shareNote, setShareNote] = useState(false);
+  const share = async () => {
+    setShareNote(false);
+    try {
+      await Share.share({ message: post.text ? `${post.author.displayName}: ${post.text}` : `Пост: ${post.author.displayName}` });
+    } catch {
+      setShareNote(true);
+    }
+  };
+
   return (
-    <Card>
-      <View style={styles.head}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Открыть профиль: ${post.author.displayName}`}
-          onPress={openAuthor}
-          style={({ pressed }) => [styles.author, { opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Avatar avatarUrl={post.author.avatarUrl} name={post.author.displayName} size={40} />
-          <View style={styles.authorText}>
-            <Text numberOfLines={1} style={[type.headline, { color: colors.text }]}>
+    <View style={[styles.post, { borderBottomColor: colors.border }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Открыть профиль: ${post.author.displayName}`}
+        onPress={openAuthor}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      >
+        <Avatar avatarUrl={post.author.avatarUrl} name={post.author.displayName} size={40} />
+      </Pressable>
+
+      <View style={styles.body}>
+        <View style={styles.head}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Открыть профиль: ${post.author.displayName}`}
+            onPress={openAuthor}
+            style={({ pressed }) => [styles.author, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Text numberOfLines={1} style={[type.headline, styles.name, { color: colors.text }]}>
               {post.author.displayName}
             </Text>
-            <Text numberOfLines={1} style={[type.footnote, { color: colors.muted }]}>
-              {ROLE_LABEL[post.author.role]} · {formatPostTime(new Date(post.createdAt), now)}
+            <Text numberOfLines={1} style={[type.subhead, styles.time, { color: colors.muted }]}>
+              {formatPostTime(new Date(post.createdAt), now)}
             </Text>
-          </View>
-        </Pressable>
-        {post.canDelete || !isMine ? (
-          <Button variant="plain" title={menuOpen ? 'Скрыть' : 'Ещё'} onPress={() => setMenuOpen((value) => !value)} />
-        ) : null}
-      </View>
-
-      {menuOpen ? (
-        confirmingDelete ? (
-          <View style={styles.menu}>
-            <Body>Удалить пост? Фото и комментарии тоже исчезнут, отменить это нельзя.</Body>
-            <Button variant="danger" title="Да, удалить" onPress={() => void remove()} loading={busy === 'delete'} />
-            <Button variant="plain" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
-          </View>
-        ) : (
-          <View style={styles.menuRow}>
-            {post.canDelete ? <Button variant="plainDanger" title="Удалить" onPress={() => setConfirmingDelete(true)} /> : null}
-            {!isMine ? (
-              reported ? (
-                <Body muted>Спасибо, мы посмотрим</Body>
-              ) : (
-                <Button variant="plain" title="Пожаловаться" onPress={() => void report()} loading={busy === 'report'} />
-              )
-            ) : null}
-          </View>
-        )
-      ) : null}
-
-      {post.text ? <Body>{text}</Body> : null}
-      {long ? <Button variant="plain" title="Показать полностью" onPress={() => setShowFull(true)} /> : null}
-
-      <PostPhotos photos={post.photos} />
-
-      <Separator />
-      {canReact ? (
-        <View style={styles.actions}>
-          <LikeButton liked={shownLike.likedByMe} count={shownLike.likeCount} onPress={() => void toggleLike()} />
-          {expanded ? (
-            <Text style={[type.subhead, { color: colors.muted }]}>Комментарии · {post.commentCount}</Text>
-          ) : (
-            <Button variant="plain" title={`Комментарии · ${post.commentCount}`} onPress={open} />
-          )}
+          </Pressable>
+          {post.canDelete || !isMine ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={menuOpen ? 'Скрыть действия' : 'Ещё действия'}
+              accessibilityState={{ expanded: menuOpen }}
+              hitSlop={10}
+              onPress={() => setMenuOpen((value) => !value)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <DotsIcon color={colors.muted} />
+            </Pressable>
+          ) : null}
         </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Открыть пост. Нравится: ${post.likeCount}, комментариев: ${post.commentCount}`}
-          disabled={expanded}
-          onPress={open}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-        >
-          <Text style={[type.subhead, { color: colors.muted }]}>
-            Нравится: {post.likeCount} · Комментариев: {post.commentCount}
-          </Text>
-        </Pressable>
-      )}
-      <ErrorText>{error}</ErrorText>
-    </Card>
+        {post.author.role !== 'student' ? (
+          <Text style={[type.footnote, styles.role, { color: colors.muted }]}>{ROLE_LABEL[post.author.role]}</Text>
+        ) : null}
+
+        {menuOpen ? (
+          confirmingDelete ? (
+            <View style={styles.menu}>
+              <Body>Удалить пост? Фото и комментарии тоже исчезнут, отменить это нельзя.</Body>
+              <Button variant="danger" title="Да, удалить" onPress={() => void remove()} loading={busy === 'delete'} />
+              <Button variant="plain" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
+            </View>
+          ) : (
+            <View style={styles.menuRow}>
+              {post.canDelete ? <Button variant="plainDanger" title="Удалить" onPress={() => setConfirmingDelete(true)} /> : null}
+              {!isMine ? (
+                reported ? (
+                  <Body muted>Спасибо, мы посмотрим</Body>
+                ) : (
+                  <Button variant="plain" title="Пожаловаться" onPress={() => void report()} loading={busy === 'report'} />
+                )
+              ) : null}
+            </View>
+          )
+        ) : null}
+
+        {post.text ? <Text style={[type.body, styles.text, { color: colors.text }]}>{text}</Text> : null}
+        {long ? <Button variant="plain" title="Показать полностью" onPress={() => setShowFull(true)} /> : null}
+
+        {post.photos.length > 0 ? (
+          <View style={styles.photos}>
+            <PostPhotos photos={post.photos} />
+          </View>
+        ) : null}
+
+        <View style={styles.actions}>
+          {/* Гость лайкать не может: сердце у него не нажимается и только показывает счёт */}
+          <Action
+            label={canReact ? 'Нравится' : `Нравится: ${shownLike.likeCount}`}
+            role={canReact ? 'switch' : 'text'}
+            checked={shownLike.likedByMe}
+            count={shownLike.likeCount}
+            tone={shownLike.likedByMe ? colors.danger : colors.muted}
+            onPress={canReact ? () => void toggleLike() : undefined}
+          >
+            <HeartIcon color={shownLike.likedByMe ? colors.danger : colors.muted} filled={shownLike.likedByMe} background={colors.background} />
+          </Action>
+          <Action
+            label={`Комментарии: ${post.commentCount}`}
+            role="button"
+            count={post.commentCount}
+            tone={colors.muted}
+            onPress={expanded ? undefined : open}
+          >
+            <CommentIcon color={colors.muted} background={colors.background} />
+          </Action>
+          <Action label="Поделиться" role="button" tone={colors.muted} onPress={() => void share()}>
+            <ShareIcon color={colors.muted} />
+          </Action>
+        </View>
+        {shareNote ? <Text style={[type.footnote, { color: colors.muted }]}>Поделиться с этого устройства пока нельзя</Text> : null}
+        <ErrorText>{error}</ErrorText>
+      </View>
+    </View>
   );
 }
 
-function LikeButton({ liked, count, onPress }: { liked: boolean; count: number; onPress: () => void }) {
-  const colors = useColors();
+type ActionProps = {
+  label: string;
+  role: 'button' | 'switch' | 'text';
+  checked?: boolean;
+  count?: number;
+  tone: string;
+  onPress?: () => void;
+  children: ReactNode;
+};
+
+// Иконка со счётчиком под постом; отклик — в момент касания, пружиной без отскока
+function Action({ label, role, checked, count, tone, onPress, children }: ActionProps) {
   const reduceMotion = useReduceMotion();
   const scale = useRef(new Animated.Value(1)).current;
 
-  // Отклик — в момент касания, как у обычных кнопок
   const press = (pressed: boolean) => {
-    if (reduceMotion) return;
+    if (reduceMotion || !onPress) return;
     Animated.spring(scale, {
-      toValue: pressed ? 0.94 : 1,
+      toValue: pressed ? 0.88 : 1,
       speed: 40,
       bounciness: 0,
       useNativeDriver: Platform.OS !== 'web',
@@ -183,29 +231,45 @@ function LikeButton({ liked, count, onPress }: { liked: boolean; count: number; 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
-        accessibilityRole="switch"
-        accessibilityLabel="Нравится"
-        accessibilityState={{ checked: liked }}
+        accessibilityRole={role}
+        accessibilityLabel={label}
+        accessibilityState={role === 'switch' ? { checked } : undefined}
+        disabled={!onPress}
+        hitSlop={8}
         onPress={onPress}
         onPressIn={() => press(true)}
         onPressOut={() => press(false)}
-        style={[styles.like, { backgroundColor: liked ? colors.accent : colors.fill }]}
+        style={styles.action}
       >
-        <Text style={[type.subhead, styles.likeText, { color: liked ? colors.onAccent : colors.text }]}>
-          Нравится · {count}
-        </Text>
+        {children}
+        {count !== undefined && count > 0 ? <Text style={[type.subhead, styles.count, { color: tone }]}>{count}</Text> : null}
       </Pressable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  author: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  authorText: { flex: 1 },
+  // Пост без карточки и теней: аватар слева, всё остальное справа, снизу тонкая линия на всю ширину экрана
+  post: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginHorizontal: -20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  body: { flex: 1, gap: 6 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 24 },
+  author: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  // Длинное имя сокращается, время видно всегда
+  name: { flexShrink: 1 },
+  time: { flexShrink: 0 },
+  role: { marginTop: -6 },
+  text: { marginTop: -2 },
+  photos: { marginTop: 4 },
   menu: { gap: 8 },
   menuRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  like: { minHeight: 44, paddingHorizontal: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  likeText: { fontWeight: '600' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 22, marginTop: 6, marginLeft: -2 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 28 },
+  count: { fontVariant: ['tabular-nums'] },
 });

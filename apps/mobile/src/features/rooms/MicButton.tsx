@@ -62,7 +62,7 @@ export function MicButton({ enabled, busy, onPress, disabled = false, note = nul
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: 12 },
+  wrap: { flex: 1, alignItems: 'center', gap: 12 },
   button: { width: SIZE, height: SIZE, borderRadius: SIZE / 2, alignItems: 'center', justifyContent: 'center' },
   caption: { textAlign: 'center' },
   icon: { width: 36, height: 40, alignItems: 'center' },

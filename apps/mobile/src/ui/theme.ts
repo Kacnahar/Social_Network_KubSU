@@ -1,49 +1,74 @@
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Platform, useColorScheme, type TextStyle } from 'react-native';
 
-// Цвета — системная палитра Apple; на стекле текст чуть контрастнее обычного вторичного
+// Цвета — своя палитра: глубокий синий (основной), тёплое золото (акцент для «живого»),
+// кремовый фон в светлой теме и тёмно-синий вместо чёрного — в тёмной.
+// На стекле текст чуть контрастнее обычного вторичного.
 const palette = {
   light: {
-    background: '#F2F2F7',
+    background: '#F7F5F0',
     card: '#FFFFFF',
-    glassTint: 'rgba(255,255,255,0.58)',
-    glassBorder: 'rgba(255,255,255,0.85)',
-    fill: 'rgba(120,120,128,0.14)',
-    text: '#000000',
-    muted: 'rgba(60,60,67,0.74)',
-    border: 'rgba(60,60,67,0.18)',
-    accent: '#007AFF',
-    accentTint: 'rgba(0,122,255,0.14)',
+    glassTint: 'rgba(255,255,255,0.62)',
+    glassBorder: 'rgba(255,255,255,0.9)',
+    fill: 'rgba(31,58,122,0.08)',
+    // Фон поля, в которое сейчас вводят: чуть плотнее обычного
+    fillActive: 'rgba(31,58,122,0.15)',
+    text: '#101A33',
+    muted: 'rgba(16,26,51,0.68)',
+    border: 'rgba(31,58,122,0.16)',
+    accent: '#1F3A7A',
+    accentTint: 'rgba(31,58,122,0.12)',
     onAccent: '#FFFFFF',
+    // Золото: заливка для важных действий и меток; live — золотой текст, читаемый на светлом фоне
+    highlight: '#F2B632',
+    highlightTint: 'rgba(242,182,50,0.22)',
+    onHighlight: '#1A1300',
+    live: '#8A5F00',
     danger: '#D70015',
     dangerTint: 'rgba(255,59,48,0.14)',
     success: '#248A3D',
-    shadow: 'rgba(31,38,70,0.16)',
+    shadow: 'rgba(31,58,122,0.16)',
+    // Затемнение под всплывающим листом
+    scrim: 'rgba(16,26,51,0.38)',
   },
   dark: {
-    background: '#000000',
-    card: '#1C1C1E',
-    glassTint: 'rgba(44,44,46,0.52)',
-    glassBorder: 'rgba(255,255,255,0.16)',
-    fill: 'rgba(120,120,128,0.28)',
+    background: '#0B1530',
+    card: '#15224A',
+    glassTint: 'rgba(27,42,84,0.55)',
+    glassBorder: 'rgba(255,255,255,0.14)',
+    fill: 'rgba(140,160,220,0.20)',
+    fillActive: 'rgba(140,160,220,0.32)',
     text: '#FFFFFF',
-    muted: 'rgba(235,235,245,0.74)',
-    border: 'rgba(84,84,88,0.65)',
-    accent: '#0A84FF',
-    accentTint: 'rgba(10,132,255,0.22)',
-    onAccent: '#FFFFFF',
+    muted: 'rgba(225,231,250,0.74)',
+    border: 'rgba(120,140,200,0.38)',
+    // На тёмно-синем фоне глубокий синий не виден, поэтому основной цвет светлее, а текст на нём — тёмный
+    accent: '#8FB0FF',
+    accentTint: 'rgba(143,176,255,0.20)',
+    onAccent: '#0B1530',
+    highlight: '#F2B632',
+    highlightTint: 'rgba(242,182,50,0.20)',
+    onHighlight: '#1A1300',
+    live: '#F2B632',
     danger: '#FF6961',
     dangerTint: 'rgba(255,69,58,0.20)',
     success: '#30D158',
     shadow: 'rgba(0,0,0,0.5)',
+    scrim: 'rgba(0,0,0,0.55)',
   },
 };
 
 export type Colors = (typeof palette)['light'] | (typeof palette)['dark'];
 export type Scheme = 'light' | 'dark';
 
+// Часть экранов всегда тёмная, какой бы ни была тема телефона (комната войса): обернуть в <ForceScheme scheme="dark">
+const SchemeOverride = createContext<Scheme | null>(null);
+export const ForceScheme = ({ scheme, children }: { scheme: Scheme; children: ReactNode }) =>
+  createElement(SchemeOverride.Provider, { value: scheme }, children);
+
 export function useScheme(): Scheme {
-  return useColorScheme() === 'dark' ? 'dark' : 'light';
+  const forced = useContext(SchemeOverride);
+  const system = useColorScheme() === 'dark' ? 'dark' : 'light';
+  return forced ?? system;
 }
 
 export function useColors(): Colors {
@@ -58,6 +83,8 @@ export const type = {
   body: { fontSize: 17, lineHeight: 23, fontWeight: '400', letterSpacing: -0.2 },
   subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400', letterSpacing: -0.1 },
   footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: 0 },
+  // Самый мелкий текст: подписи под вкладками нижнего меню
+  caption: { fontSize: 10, lineHeight: 13, fontWeight: '500', letterSpacing: -0.1 },
 } satisfies Record<string, TextStyle>;
 
 export const radius = { card: 26, field: 14, pill: 999 };
