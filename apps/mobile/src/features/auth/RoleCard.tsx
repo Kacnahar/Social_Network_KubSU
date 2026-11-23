@@ -32,8 +32,8 @@ export function RoleCard({ role, title, caption, selected, onPress }: RoleCardPr
           {caption}
         </Text>
       </View>
-      <View style={[styles.check, { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : 'transparent' }]}>
-        {selected ? <View style={[styles.tick, { borderColor: colors.onAccent }]} /> : null}
+      <View style={[styles.check, { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
+        {selected ? <View style={[styles.tick, { borderColor: colors.onPrimary }]} /> : null}
       </View>
     </Pressable>
   );

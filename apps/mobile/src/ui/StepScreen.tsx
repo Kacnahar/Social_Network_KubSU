@@ -46,7 +46,7 @@ export function StepScreen({ title, subtitle, step, onBack, children, primary, f
                 {Array.from({ length: step.total }, (_, index) => (
                   <View
                     key={index}
-                    style={[styles.segment, { backgroundColor: index < step.current ? colors.accent : colors.fill }]}
+                    style={[styles.segment, { backgroundColor: index < step.current ? colors.primary : colors.fill }]}
                   />
                 ))}
               </View>

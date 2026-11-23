@@ -98,8 +98,8 @@ function Step({ number, title, value, open }: { number: number; title: string; v
   const colors = useColors();
   return (
     <View style={styles.step}>
-      <View style={[styles.stepDot, { backgroundColor: open ? colors.accent : colors.fill }]}>
-        <Text style={[type.caption, { color: open ? colors.onAccent : colors.muted }]}>{number}</Text>
+      <View style={[styles.stepDot, { backgroundColor: open ? colors.primary : colors.fill }]}>
+        <Text style={[type.caption, { color: open ? colors.onPrimary : colors.muted }]}>{number}</Text>
       </View>
       <View style={styles.stepText}>
         <Text style={[type.footnote, { color: colors.muted }]}>{title}</Text>

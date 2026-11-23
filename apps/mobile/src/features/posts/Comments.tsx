@@ -329,9 +329,9 @@ export function CommentComposer({ comments, focusKey }: { comments: CommentsApi;
           accessibilityState={{ disabled: !canSend, busy: comments.sending }}
           disabled={!canSend}
           onPress={() => void comments.send()}
-          style={({ pressed }) => [styles.send, { backgroundColor: colors.accent, opacity: !canSend ? 0.4 : pressed ? 0.8 : 1 }]}
+          style={({ pressed }) => [styles.send, { backgroundColor: colors.primary, opacity: !canSend ? 0.4 : pressed ? 0.8 : 1 }]}
         >
-          {comments.sending ? <ActivityIndicator color={colors.onAccent} /> : <SendIcon color={colors.onAccent} />}
+          {comments.sending ? <ActivityIndicator color={colors.onPrimary} /> : <SendIcon color={colors.onPrimary} />}
         </Pressable>
       </View>
     </View>

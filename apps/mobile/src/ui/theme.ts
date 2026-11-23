@@ -1,61 +1,105 @@
+import { resolveScheme } from './themeChoice';
+import { useThemeChoice } from './themeStore';
 import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Platform, useColorScheme, type TextStyle } from 'react-native';
 
-// Цвета — своя палитра: глубокий синий (основной), тёплое золото (акцент для «живого»),
-// кремовый фон в светлой теме и тёмно-синий вместо чёрного — в тёмной.
-// На стекле текст чуть контрастнее обычного вторичного.
-const palette = {
+// ПАЛИТРА: чёрно-белая (монохром). Единственное место, где в приложении записаны цвета: на экранах и в элементах
+// пишем только имена (`colors.primary`, `colors.textSecondary` …), а не коды вроде #111111.
+//
+// primary — основные кнопки и активные элементы (в светлой теме чёрный, в тёмной белый); onPrimary — текст на них.
+// Золото (premiumGold, softGold) — ТОЛЬКО премиум-подписка, эксклюзивные функции и значки, больше нигде.
+// success / warning / error — только по назначению (удалось / внимание / ошибка и опасные действия).
+
+// Особые цвета, одинаковые в обеих темах
+export const special = {
+  premiumGold: '#D4AF37',
+  softGold: '#F3E5B0',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+} as const;
+
+// Базовые цвета тем
+const base = {
   light: {
-    background: '#F7F5F0',
-    card: '#FFFFFF',
-    glassTint: 'rgba(255,255,255,0.62)',
-    glassBorder: 'rgba(255,255,255,0.9)',
-    fill: 'rgba(31,58,122,0.08)',
-    // Фон поля, в которое сейчас вводят: чуть плотнее обычного
-    fillActive: 'rgba(31,58,122,0.15)',
-    text: '#101A33',
-    muted: 'rgba(16,26,51,0.68)',
-    border: 'rgba(31,58,122,0.16)',
-    accent: '#1F3A7A',
-    accentTint: 'rgba(31,58,122,0.12)',
-    onAccent: '#FFFFFF',
-    // Золото: заливка для важных действий и меток; live — золотой текст, читаемый на светлом фоне
-    highlight: '#F2B632',
-    highlightTint: 'rgba(242,182,50,0.22)',
-    onHighlight: '#1A1300',
-    live: '#8A5F00',
-    danger: '#D70015',
-    dangerTint: 'rgba(255,59,48,0.14)',
-    success: '#248A3D',
-    shadow: 'rgba(31,58,122,0.16)',
-    // Затемнение под всплывающим листом
-    scrim: 'rgba(16,26,51,0.38)',
+    background: '#F8F9FA',
+    surface: '#FFFFFF',
+    surfaceSecondary: '#E8EDF3',
+    primary: '#111111',
+    textPrimary: '#111111',
+    textSecondary: '#64748B',
+    border: '#D1D5DB',
   },
   dark: {
-    background: '#0B1530',
-    card: '#15224A',
-    glassTint: 'rgba(27,42,84,0.55)',
-    glassBorder: 'rgba(255,255,255,0.14)',
-    fill: 'rgba(140,160,220,0.20)',
-    fillActive: 'rgba(140,160,220,0.32)',
-    text: '#FFFFFF',
-    muted: 'rgba(225,231,250,0.74)',
-    border: 'rgba(120,140,200,0.38)',
-    // На тёмно-синем фоне глубокий синий не виден, поэтому основной цвет светлее, а текст на нём — тёмный
-    accent: '#8FB0FF',
-    accentTint: 'rgba(143,176,255,0.20)',
-    onAccent: '#0B1530',
-    highlight: '#F2B632',
-    highlightTint: 'rgba(242,182,50,0.20)',
-    onHighlight: '#1A1300',
-    live: '#F2B632',
-    danger: '#FF6961',
-    dangerTint: 'rgba(255,69,58,0.20)',
-    success: '#30D158',
-    shadow: 'rgba(0,0,0,0.5)',
-    scrim: 'rgba(0,0,0,0.55)',
+    background: '#0F1117',
+    surface: '#1F2937',
+    surfaceSecondary: '#374151',
+    primary: '#FFFFFF',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#9CA3AF',
+    border: '#374151',
+  },
+} as const;
+
+// Рабочие цвета приложения: базовые + производные (полупрозрачные оттенки тех же цветов).
+// Старые имена (card, fill, text, muted, accent, highlight …) сохранены, чтобы экраны не переписывать:
+// «акцент» теперь тоже primary, то есть чёрно-белый.
+const palette = {
+  light: {
+    ...base.light,
+    ...special,
+    accent: base.light.primary,
+    onPrimary: '#FFFFFF',
+    onSoft: base.light.primary,
+    card: base.light.surface,
+    glassTint: 'rgba(255,255,255,0.72)',
+    glassBorder: base.light.border,
+    fill: base.light.surfaceSecondary,
+    // Поле ввода, в которое сейчас вводят: чуть темнее обычного
+    fillActive: base.light.border,
+    text: base.light.textPrimary,
+    muted: base.light.textSecondary,
+    accentTint: 'rgba(17,17,17,0.08)',
+    onAccent: '#FFFFFF',
+    highlight: base.light.primary,
+    highlightTint: 'rgba(17,17,17,0.08)',
+    onHighlight: '#FFFFFF',
+    live: base.light.primary,
+    danger: special.error,
+    dangerTint: 'rgba(239,68,68,0.10)',
+    // Светлая тема: мягкие тени
+    shadow: 'rgba(17,17,17,0.10)',
+    scrim: 'rgba(17,17,17,0.40)',
+  },
+  dark: {
+    ...base.dark,
+    ...special,
+    accent: base.dark.primary,
+    onPrimary: '#111111',
+    onSoft: base.dark.primary,
+    card: base.dark.surface,
+    glassTint: 'rgba(31,41,55,0.72)',
+    glassBorder: base.dark.border,
+    fill: base.dark.surfaceSecondary,
+    fillActive: 'rgba(255,255,255,0.16)',
+    text: base.dark.textPrimary,
+    muted: base.dark.textSecondary,
+    accentTint: 'rgba(255,255,255,0.12)',
+    onAccent: '#111111',
+    highlight: base.dark.primary,
+    highlightTint: 'rgba(255,255,255,0.12)',
+    onHighlight: '#111111',
+    live: base.dark.primary,
+    danger: special.error,
+    dangerTint: 'rgba(239,68,68,0.18)',
+    // Тёмная тема: вместо теней — тонкие границы
+    shadow: 'transparent',
+    scrim: 'rgba(0,0,0,0.60)',
   },
 };
+
+// Для экранов, которым нужна тёмная палитра независимо от темы (просмотр историй, комната)
+export const darkColors = palette.dark;
 
 export type Colors = (typeof palette)['light'] | (typeof palette)['dark'];
 export type Scheme = 'light' | 'dark';
@@ -67,8 +111,10 @@ export const ForceScheme = ({ scheme, children }: { scheme: Scheme; children: Re
 
 export function useScheme(): Scheme {
   const forced = useContext(SchemeOverride);
+  const choice = useThemeChoice();
   const system = useColorScheme() === 'dark' ? 'dark' : 'light';
-  return forced ?? system;
+  // Комната всегда тёмная; иначе — выбор человека («как в системе» повторяет тему телефона)
+  return forced ?? resolveScheme(choice, system);
 }
 
 export function useColors(): Colors {
@@ -87,7 +133,8 @@ export const type = {
   caption: { fontSize: 10, lineHeight: 13, fontWeight: '500', letterSpacing: -0.1 },
 } satisfies Record<string, TextStyle>;
 
-export const radius = { card: 26, field: 14, pill: 999 };
+// control — аккуратно скруглённые маленькие кнопки и бейджи (тонкие кнопки профиля, бейдж роли)
+export const radius = { card: 26, field: 14, control: 9, pill: 999 };
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);

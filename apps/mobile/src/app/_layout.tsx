@@ -3,6 +3,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider, useSession } from '../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../ui/components';
+import { useScheme } from '../ui/theme';
+import { ToastHost } from '../ui/ToastHost';
 
 function Navigation() {
   const { state, retry } = useSession();
@@ -38,7 +40,9 @@ function Navigation() {
       <Stack.Protected guard={hasProfile} redirectTo={signedIn ? '/profile/setup' : '/welcome'}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile/edit" />
-        <Stack.Screen name="profile/settings" />
+        <Stack.Screen name="friends" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings/[item]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profiles/[profileId]" />
         <Stack.Screen name="posts/[postId]" />
         <Stack.Screen name="catalog/[section]" />
@@ -60,11 +64,17 @@ function Navigation() {
   );
 }
 
+// Значки в верхней строке телефона следуют выбранной теме, а не только системной
+function ThemedStatusBar() {
+  return <StatusBar style={useScheme() === 'dark' ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
   return (
     <SessionProvider>
       <Navigation />
-      <StatusBar style="auto" />
+      <ThemedStatusBar />
+      <ToastHost />
     </SessionProvider>
   );
 }

@@ -31,6 +31,6 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
 }
 
 const styles = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, borderRadius: radius.field, borderCurve: 'continuous' },
+  box: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, borderRadius: 10, borderCurve: 'continuous' },
   input: { flex: 1, minHeight: 44, paddingVertical: 8 },
 });

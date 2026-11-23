@@ -75,10 +75,10 @@ function Tile({ participant, selected, handRaised, onMore }: TileProps) {
             accessibilityState={{ expanded: selected }}
             hitSlop={8}
             onPress={onMore}
-            style={({ pressed }) => [styles.badge, styles.more, { backgroundColor: selected ? colors.accent : colors.card, borderColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [styles.badge, styles.more, { backgroundColor: selected ? colors.primary : colors.card, borderColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
           >
             <View style={styles.dots}>
-              <DotsIcon color={selected ? colors.onAccent : colors.text} />
+              <DotsIcon color={selected ? colors.onPrimary : colors.text} />
             </View>
           </Pressable>
         )}

@@ -35,7 +35,7 @@ export function MicButton({ enabled, busy, onPress, disabled = false, note = nul
   };
 
   const label = enabled ? 'Вы в эфире — нажмите, чтобы замолчать' : 'Микрофон выключен — нажмите, чтобы говорить';
-  const iconColor = enabled ? colors.onAccent : colors.text;
+  const iconColor = enabled ? colors.onPrimary : colors.text;
 
   return (
     <View style={styles.wrap}>
@@ -50,7 +50,7 @@ export function MicButton({ enabled, busy, onPress, disabled = false, note = nul
           onPressOut={() => press(false)}
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: enabled ? colors.accent : colors.fill, opacity: disabled ? 0.45 : busy ? 0.6 : pressed ? 0.85 : 1 },
+            { backgroundColor: enabled ? colors.primary : colors.fill, opacity: disabled ? 0.45 : busy ? 0.6 : pressed ? 0.85 : 1 },
           ]}
         >
           <MicIcon color={iconColor} />

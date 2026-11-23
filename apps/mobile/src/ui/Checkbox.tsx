@@ -13,8 +13,8 @@ export function Checkbox({ label, checked, onChange }: { label: string; checked:
       onPress={() => onChange(!checked)}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
     >
-      <View style={[styles.box, { borderColor: checked ? colors.accent : colors.border, backgroundColor: checked ? colors.accent : 'transparent' }]}>
-        {checked ? <View style={[styles.tick, { borderColor: colors.onAccent }]} /> : null}
+      <View style={[styles.box, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
+        {checked ? <View style={[styles.tick, { borderColor: colors.onPrimary }]} /> : null}
       </View>
       <Text style={[type.subhead, { color: colors.text }]}>{label}</Text>
     </Pressable>

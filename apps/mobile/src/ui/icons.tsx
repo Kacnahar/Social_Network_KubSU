@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 // Линейные иконки, нарисованные из простых фигур: библиотек иконок в проекте нет.
 // Цвет задаётся снаружи и следует теме. У иконок вкладок есть «залитый» вид для активной вкладки.
@@ -6,6 +6,15 @@ import { StyleSheet, View } from 'react-native';
 const W = 1.8; // толщина линии
 
 type IconProps = { color: string; filled?: boolean };
+
+// Галочка выбора
+export function CheckIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.check, { borderColor: color }]} />
+    </View>
+  );
+}
 
 // Лента: две «карточки» одна под другой
 export function FeedIcon({ color, filled = false }: IconProps) {
@@ -178,6 +187,18 @@ export function CommentIcon({ color, background }: { color: string; background: 
   );
 }
 
+// Сортировка: две стрелки, вверх и вниз
+export function SortIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 6.1, top: 4, width: W, height: 15, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 3.2, top: 4.5, width: 7.5, height: 7.5, borderLeftWidth: W, borderTopWidth: W, borderColor: color, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ position: 'absolute', left: 16.1, top: 5, width: W, height: 15, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 13.3, top: 12, width: 7.5, height: 7.5, borderRightWidth: W, borderBottomWidth: W, borderColor: color, transform: [{ rotate: '45deg' }] }} />
+    </View>
+  );
+}
+
 // Поделиться: стрелка вверх из лотка
 export function ShareIcon({ color }: { color: string }) {
   return (
@@ -252,6 +273,177 @@ export function CalendarIcon({ color }: { color: string }) {
   );
 }
 
+// Настройки: две тонкие линии с «ползунками» (как в системных значках), без подписи и фона
+export function SlidersIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.sliderLine, { top: 7, backgroundColor: color }]} />
+      <View style={[styles.sliderKnob, { top: 4.5, left: 12, borderColor: color }]} />
+      <View style={[styles.sliderLine, { top: 16, backgroundColor: color }]} />
+      <View style={[styles.sliderKnob, { top: 13.5, left: 4, borderColor: color }]} />
+    </View>
+  );
+}
+
+// Стрелка вправо в конце строки списка
+export function ChevronRightIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.chevronBox}>
+      <View style={[styles.chevronRight, { borderColor: color }]} />
+    </View>
+  );
+}
+
+// Колокольчик — уведомления
+export function BellIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.bellBody, { borderColor: color }]} />
+      <View style={[styles.bellTongue, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// Динамик с волной — звук
+export function SpeakerIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 3, top: 9, width: 5, height: 6, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 8, top: 5, width: 0, height: 0, borderTopWidth: 7, borderBottomWidth: 7, borderRightWidth: 7, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: color }} />
+      <View style={{ position: 'absolute', left: 14, top: 8, width: 6, height: 8, borderRightWidth: W, borderRadius: 4, borderColor: color }} />
+    </View>
+  );
+}
+
+// Ссылка: две сцепленные «скрепки», повёрнутые на 45°
+export function LinkIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', width: 13, height: 8, borderRadius: 4, borderWidth: W, borderColor: color, transform: [{ rotate: '-45deg' }, { translateX: -3 }] }} />
+      <View style={{ position: 'absolute', width: 13, height: 8, borderRadius: 4, borderWidth: W, borderColor: color, transform: [{ rotate: '-45deg' }, { translateX: 3 }] }} />
+    </View>
+  );
+}
+
+// Торт: коржи, свечка с огоньком
+export function CakeIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 3, top: 15, width: 18, height: 6, borderWidth: W, borderRadius: 2.5, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 6, top: 10, width: 12, height: 5.5, borderWidth: W, borderBottomWidth: 0, borderTopLeftRadius: 3, borderTopRightRadius: 3, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 11.1, top: 5.5, width: 1.8, height: 4.5, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 10.6, top: 1.5, width: 2.8, height: 3.5, borderRadius: 1.4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Люди: два человека — голова и плечи
+export function PeopleIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 5, top: 4, width: 8, height: 8, borderRadius: 4, borderWidth: W, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 2.5, top: 14, width: 13, height: 6, borderWidth: W, borderBottomWidth: 0, borderTopLeftRadius: 6, borderTopRightRadius: 6, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 15, top: 6, width: 6, height: 6, borderRadius: 3, borderWidth: W, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 16, top: 14, width: 7, height: 5, borderWidth: W, borderBottomWidth: 0, borderTopLeftRadius: 4, borderTopRightRadius: 4, borderColor: color }} />
+    </View>
+  );
+}
+
+// Точка «в сети»: кольцо с точкой внутри
+export function OnlineIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', width: 18, height: 18, borderRadius: 9, borderWidth: W, borderColor: color }} />
+      <View style={{ position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Флажок: древко и полотнище
+export function FlagIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 5, top: 3, width: W, height: 18, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 5, top: 4, width: 14, height: 9, borderWidth: W, borderLeftWidth: 0, borderTopRightRadius: 2, borderBottomRightRadius: 2, borderColor: color }} />
+    </View>
+  );
+}
+
+// Корзина: крышка с ручкой и корпус
+export function TrashIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 4, top: 6, width: 16, height: W, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 9, top: 3, width: 6, height: 3, borderWidth: W, borderBottomWidth: 0, borderTopLeftRadius: 2, borderTopRightRadius: 2, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 6, top: 8, width: 12, height: 13, borderWidth: W, borderTopWidth: 0, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, borderColor: color }} />
+      <View style={{ position: 'absolute', left: 10.1, top: 11, width: 1.5, height: 7, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 12.9, top: 11, width: 1.5, height: 7, borderRadius: 1, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Замок — конфиденциальность
+export function LockIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.lockShackle, { borderColor: color }]} />
+      <View style={[styles.lockBody, { borderColor: color }]} />
+    </View>
+  );
+}
+
+// Круг с чертой — заблокированные
+export function BlockIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.ring20, { borderColor: color }]} />
+      <View style={[styles.blockLine, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// Глобус — язык
+export function GlobeIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.ring20, { borderColor: color }]} />
+      <View style={[styles.globeMeridian, { borderColor: color }]} />
+      <View style={[styles.globeEquator, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// Круг, закрашенный наполовину — тема
+export function ThemeIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.ring20, { borderColor: color, overflow: 'hidden' }]}>
+        <View style={[styles.themeHalf, { backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+}
+
+// Круг со знаком в центре: «?» — помощь, «i» — о приложении
+export function MarkIcon({ color, mark }: { color: string; mark: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.ring20, { borderColor: color }]} />
+      <Text style={[styles.mark, { color }]}>{mark}</Text>
+    </View>
+  );
+}
+
+// История: пунктирный круг с плюсом
+export function StoryIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={[styles.storyRing, { borderColor: color }]} />
+      <PlusIcon color={color} size={10} />
+    </View>
+  );
+}
+
 // Отправить: стрелка вверх
 export function SendIcon({ color }: { color: string }) {
   return (
@@ -274,6 +466,7 @@ export function CloseIcon({ color, size = 12 }: { color: string; size?: number }
 const styles = StyleSheet.create({
   box: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
 
+  check: { width: 13, height: 7, borderLeftWidth: W, borderBottomWidth: W, transform: [{ rotate: '-45deg' }], marginTop: -3 },
   feedCard: { width: 19, height: 8, borderWidth: W, borderRadius: 3, marginVertical: 1 },
 
   tag: { width: 17, height: 17, borderWidth: W, borderRadius: 4, borderTopLeftRadius: 1, transform: [{ rotate: '45deg' }], marginTop: 3 },
@@ -351,6 +544,23 @@ const styles = StyleSheet.create({
   calendarPeg: { position: 'absolute', top: 1, width: W, height: 5, borderRadius: 1 },
   calendarPegLeft: { left: 7 },
   calendarPegRight: { right: 7 },
+
+  sliderLine: { position: 'absolute', left: 2, width: 20, height: W, borderRadius: 1 },
+  sliderKnob: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, borderWidth: W, backgroundColor: 'transparent' },
+  chevronBox: { width: 12, height: 20, alignItems: 'center', justifyContent: 'center' },
+  chevronRight: { width: 8, height: 8, borderRightWidth: 2, borderTopWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: -3 },
+  bellBody: { width: 16, height: 15, borderWidth: W, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -2 },
+  bellTongue: { position: 'absolute', bottom: 2, width: 6, height: 2.5, borderRadius: 1.5 },
+  lockShackle: { width: 10, height: 9, borderWidth: W, borderBottomWidth: 0, borderTopLeftRadius: 5, borderTopRightRadius: 5, marginBottom: -1 },
+  lockBody: { width: 16, height: 11, borderWidth: W, borderRadius: 3 },
+  ring20: { position: 'absolute', width: 20, height: 20, borderRadius: 10, borderWidth: W },
+  blockLine: { position: 'absolute', width: 18, height: W, borderRadius: 1, transform: [{ rotate: '-45deg' }] },
+  globeMeridian: { position: 'absolute', width: 9, height: 20, borderRadius: 5, borderWidth: W },
+  globeEquator: { position: 'absolute', width: 20, height: W },
+  themeHalf: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 9 },
+  mark: { fontSize: 13, lineHeight: 16, fontWeight: '600' },
+
+  storyRing: { position: 'absolute', width: 21, height: 21, borderRadius: 10.5, borderWidth: W, borderStyle: 'dashed' },
 
   sendHead: { position: 'absolute', top: 6, width: 9, height: 9, borderLeftWidth: 2, borderTopWidth: 2, transform: [{ rotate: '45deg' }] },
   sendStem: { position: 'absolute', top: 6, width: 2, height: 13, borderRadius: 1 },

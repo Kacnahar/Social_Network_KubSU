@@ -15,6 +15,8 @@ import { checkPhoto, readPhoto } from '../lib/photo';
 import { useSession, useSignedIn } from '../lib/session';
 import { Avatar } from './Avatar';
 import { Button, ErrorText, Field } from './components';
+import { checkNickname, normalizeNickname, NICK_MAX, NICK_RULES } from './nickname';
+import { setNickname, useNickname } from './nicknameStore';
 import { joinName, splitName } from './plural';
 import { StepScreen } from './StepScreen';
 
@@ -44,6 +46,7 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
   const { token, account } = useSignedIn();
   const { forgetSession } = useSession();
   const isStudent = account.role === 'student';
+  const savedNick = useNickname(initial?.profileId);
 
   // Сервер хранит имя одной строкой «Имя Фамилия»; в форме это два поля
   const [firstName, setFirstName] = useState(() => splitName(initial?.displayName ?? '').firstName);
@@ -52,6 +55,10 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
   const [faculty, setFaculty] = useState(initial?.faculty ?? '');
   const [course, setCourse] = useState(initial?.course ? String(initial.course) : '');
   const [about, setAbout] = useState(initial?.about ?? '');
+  // Публичный никнейм: пока хранится только на устройстве
+  const [nick, setNick] = useState(() => savedNick ?? '');
+  const nickCheck = nick === '' ? null : checkNickname(nick);
+  const nickError = nickCheck && !nickCheck.ok ? nickCheck.reason : null;
   // undefined — фото не трогали; null — убрать; строка — загруженное фото
   const [avatarMediaId, setAvatarMediaId] = useState<string | null | undefined>(undefined);
   const [localUri, setLocalUri] = useState<string | null>(null);
@@ -123,10 +130,16 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
       setErrors(next);
       return;
     }
+    if (nickCheck && !nickCheck.ok) {
+      setError('Проверьте никнейм');
+      return;
+    }
     setErrors({});
     setSaving(true);
     try {
-      onSaved(await updateProfile(token, result.data));
+      const saved = await updateProfile(token, result.data);
+      if (nickCheck?.ok) setNickname(saved.profileId, nickCheck.value);
+      onSaved(saved);
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') {
         await forgetSession();
@@ -169,6 +182,15 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
         maxLength={PROFILE_NAME_MAX}
         autoCapitalize="words"
         autoComplete="family-name"
+      />
+      <Field
+        label="Никнейм"
+        value={`@${nick}`}
+        onChangeText={(text) => setNick(normalizeNickname(text).slice(0, NICK_MAX))}
+        maxLength={NICK_MAX + 1}
+        autoCapitalize="none"
+        hint={NICK_RULES}
+        error={nickError}
       />
       <Field
         label="Факультет"

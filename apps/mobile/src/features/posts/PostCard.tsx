@@ -1,16 +1,24 @@
 import { ROLE_LABEL, can, type Post } from '@app/shared';
 import { useRouter } from 'expo-router';
+import * as ExpoLinking from 'expo-linking';
 import { useRef, useState, type ReactNode } from 'react';
-import { Animated, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, Share, StyleSheet, Text, Vibration, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
-import { Body, Button, ErrorText } from '../../ui/components';
-import { CommentIcon, DotsIcon, HeartIcon, ShareIcon } from '../../ui/icons';
+import { Button, ErrorText } from '../../ui/components';
+import { CollapseRow } from '../../ui/CollapseRow';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { copyText } from '../../ui/copyText';
+import { CommentIcon, DotsIcon, FlagIcon, HeartIcon, LinkIcon, ShareIcon, TrashIcon } from '../../ui/icons';
+import { Popover, PopoverItem, PopoverSeparator, useAnchor, type Rect } from '../../ui/Popover';
+import { useSound } from '../../ui/soundStore';
+import { showToast } from '../../ui/toastStore';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
 import { deletePost, likePost, reportPost, unlikePost } from './api';
 import { PostPhotos } from './PostPhotos';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useFail } from '../../lib/useFail';
+import { ReportDialog } from './ReportDialog';
 
 const COLLAPSE_AFTER = 600;
 
@@ -32,11 +40,17 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
   const isMine = profile?.profileId === post.author.profileId;
 
   const [showFull, setShowFull] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Меню «⋯» открывается от самой кнопки; жалоба и удаление — отдельные окна
+  const menuAnchor = useAnchor();
+  const sound = useSound();
+  const [menuAt, setMenuAt] = useState<Rect | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [busy, setBusy] = useState<'delete' | 'report' | null>(null);
-  const [reported, setReported] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Запускает плавное сворачивание поста; назначается, когда пост нарисован
+  const collapse = useRef<(() => void) | null>(null);
   // Лайк показываем сразу, не дожидаясь сервера; null — берём данные поста
   const [liking, setLiking] = useState<{ likedByMe: boolean; likeCount: number } | null>(null);
 
@@ -64,24 +78,41 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
     setBusy('delete');
     try {
       await deletePost(token, post.postId);
-      onDeleted(post.postId);
+      setConfirmingDelete(false);
+      // Пост плавно исчезает, и только потом убирается из списка
+      if (collapse.current) collapse.current();
+      else onDeleted(post.postId);
     } catch (caught) {
+      setConfirmingDelete(false);
       setError(await fail(caught));
       setBusy(null);
     }
   };
 
-  const report = async () => {
-    setError(null);
+  const report = async (reason: string) => {
+    setReportError(null);
     setBusy('report');
     try {
-      await reportPost(token, post.postId);
-      setReported(true);
+      await reportPost(token, post.postId, reason);
+      setReporting(false);
+      showToast('Спасибо, мы проверим');
     } catch (caught) {
-      setError(await fail(caught));
+      setReportError(await fail(caught));
     } finally {
       setBusy(null);
     }
+  };
+
+  const openMenu = () => {
+    if (Platform.OS === 'android' && sound.vibration) Vibration.vibrate(8);
+    menuAnchor.measure(setMenuAt);
+  };
+
+  // Ссылка на пост: адрес внутри приложения
+  const copyLink = async () => {
+    setMenuAt(null);
+    const copied = await copyText(ExpoLinking.createURL(`/posts/${post.postId}`));
+    if (copied) showToast('Ссылка скопирована');
   };
 
   const long = !expanded && !showFull && post.text.length > COLLAPSE_AFTER;
@@ -98,7 +129,13 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
     }
   };
 
+  const canReport = !isMine && canReact;
+
   return (
+    <CollapseRow onRemove={() => onDeleted(post.postId)}>
+      {(removeRow) => {
+        collapse.current = removeRow;
+        return (
     <View style={[styles.post, { borderBottomColor: colors.border }]}>
       <Pressable
         accessibilityRole="button"
@@ -124,42 +161,18 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
               {formatPostTime(new Date(post.createdAt), now)}
             </Text>
           </Pressable>
-          {post.canDelete || !isMine ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={menuOpen ? 'Скрыть действия' : 'Ещё действия'}
-              accessibilityState={{ expanded: menuOpen }}
-              hitSlop={10}
-              onPress={() => setMenuOpen((value) => !value)}
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
-            >
-              <DotsIcon color={colors.muted} />
-            </Pressable>
-          ) : null}
+          <Pressable
+            ref={menuAnchor.ref}
+            accessibilityRole="button"
+            accessibilityLabel="Действия с постом"
+            onPress={openMenu}
+            style={({ pressed }) => [styles.kebab, { opacity: pressed ? 0.5 : 1 }]}
+          >
+            <DotsIcon color={colors.textSecondary} />
+          </Pressable>
         </View>
         {post.author.role !== 'student' ? (
           <Text style={[type.footnote, styles.role, { color: colors.muted }]}>{ROLE_LABEL[post.author.role]}</Text>
-        ) : null}
-
-        {menuOpen ? (
-          confirmingDelete ? (
-            <View style={styles.menu}>
-              <Body>Удалить пост? Фото и комментарии тоже исчезнут, отменить это нельзя.</Body>
-              <Button variant="danger" title="Да, удалить" onPress={() => void remove()} loading={busy === 'delete'} />
-              <Button variant="plain" title="Отмена" onPress={() => setConfirmingDelete(false)} disabled={busy !== null} />
-            </View>
-          ) : (
-            <View style={styles.menuRow}>
-              {post.canDelete ? <Button variant="plainDanger" title="Удалить" onPress={() => setConfirmingDelete(true)} /> : null}
-              {!isMine ? (
-                reported ? (
-                  <Body muted>Спасибо, мы посмотрим</Body>
-                ) : (
-                  <Button variant="plain" title="Пожаловаться" onPress={() => void report()} loading={busy === 'report'} />
-                )
-              ) : null}
-            </View>
-          )
         ) : null}
 
         {post.text ? <Text style={[type.body, styles.text, { color: colors.text }]}>{text}</Text> : null}
@@ -199,7 +212,55 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
         {shareNote ? <Text style={[type.footnote, { color: colors.muted }]}>Поделиться с этого устройства пока нельзя</Text> : null}
         <ErrorText>{error}</ErrorText>
       </View>
+
+      {/* Меню «⋯»: гость видит только «Скопировать ссылку»; «Пожаловаться» — у чужих постов; «Удалить» — у своих */}
+      <Popover visible={menuAt !== null} anchor={menuAt} onClose={() => setMenuAt(null)}>
+        <PopoverItem compact first title="Скопировать ссылку" icon={<LinkIcon color={colors.textPrimary} />} onPress={() => void copyLink()} />
+        {canReport ? (
+          <PopoverItem
+            compact
+            title="Пожаловаться"
+            icon={<FlagIcon color={colors.textPrimary} />}
+            onPress={() => {
+              setMenuAt(null);
+              setReportError(null);
+              setReporting(true);
+            }}
+          />
+        ) : null}
+        {post.canDelete ? <PopoverSeparator /> : null}
+        {post.canDelete ? (
+          <PopoverItem
+            compact
+            first
+            danger
+            title="Удалить"
+            icon={<TrashIcon color={colors.danger} />}
+            onPress={() => {
+              setMenuAt(null);
+              setConfirmingDelete(true);
+            }}
+          />
+        ) : null}
+      </Popover>
+
+      <ConfirmDialog
+        visible={confirmingDelete}
+        title="Удалить пост?"
+        message="Это действие нельзя отменить"
+        confirmTitle="Удалить"
+        cancelTitle="Отмена"
+        danger
+        loading={busy === 'delete'}
+        onConfirm={() => void remove()}
+        onCancel={() => setConfirmingDelete(false)}
+      />
+
+      <ReportDialog visible={reporting} loading={busy === 'report'} error={reportError} onSend={(reason) => void report(reason)} onCancel={() => setReporting(false)} />
     </View>
+        );
+      }}
+    </CollapseRow>
   );
 }
 
@@ -267,8 +328,8 @@ const styles = StyleSheet.create({
   role: { marginTop: -6 },
   text: { marginTop: -2 },
   photos: { marginTop: 4 },
-  menu: { gap: 8 },
-  menuRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  // Область нажатия «⋯» — не меньше 44×44, сам значок тонкий и серый
+  kebab: { width: 44, height: 44, marginRight: -12, marginVertical: -10, alignItems: 'center', justifyContent: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 22, marginTop: 6, marginLeft: -2 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 28 },
   count: { fontVariant: ['tabular-nums'] },

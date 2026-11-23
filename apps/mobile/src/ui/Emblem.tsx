@@ -42,7 +42,7 @@ export function Emblem({ size = 240 }: { size?: number }) {
 
   const orbits = [size * 0.3, size * 0.45];
   const coreSize = size * 0.3;
-  const tone = { accent: colors.accent, tint: colors.accentTint, gold: colors.highlight };
+  const tone = { accent: colors.primary, tint: colors.accentTint, gold: colors.muted };
 
   return (
     <View accessibilityRole="image" accessibilityLabel="Студенты вокруг общего центра" style={{ width: size, height: size }}>
@@ -66,21 +66,21 @@ export function Emblem({ size = 240 }: { size?: number }) {
             borderRadius: coreSize / 2,
             left: (size - coreSize) / 2,
             top: (size - coreSize) / 2,
-            backgroundColor: colors.accent,
+            backgroundColor: colors.primary,
             opacity: core,
             transform: [{ scale: core.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
           },
         ]}
       >
         {/* Простой силуэт человека: голова и плечи */}
-        <View style={[styles.head, { width: coreSize * 0.26, height: coreSize * 0.26, borderRadius: coreSize * 0.13, backgroundColor: colors.onAccent }]} />
+        <View style={[styles.head, { width: coreSize * 0.26, height: coreSize * 0.26, borderRadius: coreSize * 0.13, backgroundColor: colors.onPrimary }]} />
         <View
           style={{
             width: coreSize * 0.5,
             height: coreSize * 0.24,
             borderTopLeftRadius: coreSize * 0.25,
             borderTopRightRadius: coreSize * 0.25,
-            backgroundColor: colors.onAccent,
+            backgroundColor: colors.onPrimary,
           }}
         />
       </Animated.View>

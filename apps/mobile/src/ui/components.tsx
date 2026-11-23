@@ -249,11 +249,13 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'danger' | 'plain' | 'plainDanger';
   loading?: boolean;
   disabled?: boolean;
-  // compact — ниже и с текстом помельче: для двух кнопок в один ряд
-  size?: 'regular' | 'compact';
+  // compact — ниже и с текстом помельче; thin — совсем тонкая: две кнопки в ряд под шапкой профиля
+  size?: 'regular' | 'compact' | 'thin';
+  // Подпись для экранного чтения; если не задана — берётся title
+  accessibilityLabel?: string;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, size = 'regular' }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, size = 'regular', accessibilityLabel }: ButtonProps) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
   const scale = useRef(new Animated.Value(1)).current;
@@ -272,15 +274,15 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
 
   const isPlain = variant === 'plain' || variant === 'plainDanger';
   const background = {
-    primary: colors.accent,
-    secondary: colors.accentTint,
+    primary: colors.primary,
+    secondary: colors.fill,
     danger: colors.dangerTint,
     plain: 'transparent',
     plainDanger: 'transparent',
   }[variant];
   const foreground = {
-    primary: colors.onAccent,
-    secondary: colors.accent,
+    primary: colors.onPrimary,
+    secondary: colors.onSoft,
     danger: colors.danger,
     plain: colors.accent,
     plainDanger: colors.danger,
@@ -290,7 +292,7 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={title}
+        accessibilityLabel={accessibilityLabel ?? title}
         accessibilityState={{ disabled: inactive, busy: loading }}
         disabled={inactive}
         onPress={onPress}
@@ -300,13 +302,14 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
           styles.button,
           isPlain && styles.buttonPlain,
           size === 'compact' && styles.buttonCompact,
+          size === 'thin' && styles.buttonThin,
           { backgroundColor: background, opacity: inactive ? 0.45 : pressed ? 0.8 : 1 },
         ]}
       >
         {loading ? (
           <ActivityIndicator color={foreground} />
         ) : (
-          <Text numberOfLines={1} style={[size === 'compact' ? styles.buttonCompactText : type.headline, { color: foreground }]}>
+          <Text numberOfLines={1} style={[size === 'compact' ? styles.buttonCompactText : size === 'thin' ? styles.buttonThinText : type.headline, { color: foreground }]}>
             {title}
           </Text>
         )}
@@ -373,4 +376,6 @@ const styles = StyleSheet.create({
   buttonPlain: { minHeight: 44 },
   buttonCompact: { minHeight: 42, paddingHorizontal: 12 },
   buttonCompactText: { ...type.subhead, fontWeight: '600' },
+  buttonThin: { minHeight: 38, paddingHorizontal: 2, borderRadius: radius.control },
+  buttonThinText: { ...type.footnote, fontSize: 12, letterSpacing: -0.2, fontWeight: '600' },
 });

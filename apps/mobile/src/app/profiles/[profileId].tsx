@@ -86,10 +86,10 @@ export default function ProfileByIdScreen() {
               {canAct ? (
                 <View style={styles.actions}>
                   <View style={styles.action}>
-                    <Button size="compact" title="Добавить в друзья" onPress={() => setNote('Друзья скоро появятся')} />
+                    <Button size="thin" title="Добавить в друзья" onPress={() => setNote('Друзья скоро появятся')} />
                   </View>
                   <View style={styles.actionSmall}>
-                    <Button size="compact" variant="secondary" title="Написать" onPress={() => setNote('Личные сообщения скоро появятся')} />
+                    <Button size="thin" variant="secondary" title="Написать" onPress={() => setNote('Личные сообщения скоро появятся')} />
                   </View>
                 </View>
               ) : null}
@@ -120,6 +120,6 @@ const styles = StyleSheet.create({
   menu: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4, marginVertical: -8 },
   actionsWrap: { gap: 8 },
   actions: { flexDirection: 'row', gap: 10 },
-  action: { flex: 1.75 },
+  action: { flex: 1 },
   actionSmall: { flex: 1 },
 });

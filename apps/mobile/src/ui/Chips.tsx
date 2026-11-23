@@ -26,10 +26,10 @@ export function Chips<T extends string>({ options, value, onChange, allowNone = 
             onPress={() => onChange(selected && allowNone ? null : option.value)}
             style={({ pressed }) => [
               styles.chip,
-              { backgroundColor: selected ? colors.accent : colors.fill, opacity: pressed ? 0.7 : 1 },
+              { backgroundColor: selected ? colors.primary : colors.fill, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text numberOfLines={1} style={[type.footnote, styles.label, { color: selected ? colors.onAccent : colors.text }]}>
+            <Text numberOfLines={1} style={[type.footnote, styles.label, { color: selected ? colors.onPrimary : colors.text }]}>
               {option.label}
             </Text>
           </Pressable>
