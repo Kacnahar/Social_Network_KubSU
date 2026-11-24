@@ -9,6 +9,7 @@ import { useAd } from '../../features/ads/store';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
+import { BackButton } from '../../ui/BackButton';
 import { Body, Button, Screen, Title } from '../../ui/components';
 import { type, useColors } from '../../ui/theme';
 
@@ -44,15 +45,9 @@ export default function AdScreen() {
         <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.column}>
             <AdPhoto ad={ad} style={styles.photo} iconScale={3} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Назад"
-              hitSlop={10}
-              onPress={back}
-              style={({ pressed }) => [styles.back, { backgroundColor: colors.card, shadowColor: colors.shadow, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <View style={[styles.chevron, { borderColor: colors.text }]} />
-            </Pressable>
+            <View style={styles.back}>
+              <BackButton inline onPress={back} />
+            </View>
 
             <View style={styles.body}>
               <View style={styles.heading}>
@@ -106,21 +101,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingBottom: 24 },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center' },
   photo: { width: '100%', aspectRatio: 4 / 3 },
-  back: {
-    position: 'absolute',
-    left: 16,
-    top: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
+  back: { position: 'absolute', left: 8, top: 8 },
   body: { paddingHorizontal: 20, paddingTop: 20, gap: 18 },
   heading: { gap: 6 },
   title: { fontWeight: '600' },

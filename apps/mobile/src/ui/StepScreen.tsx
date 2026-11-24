@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BackButton } from './BackButton';
 import { Button } from './components';
 import { type, useColors } from './theme';
 
@@ -26,15 +27,7 @@ export function StepScreen({ title, subtitle, step, onBack, children, primary, f
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.column, styles.header]}>
             {onBack ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Назад"
-                hitSlop={10}
-                onPress={onBack}
-                style={({ pressed }) => [styles.back, { backgroundColor: colors.fill, opacity: pressed ? 0.6 : 1 }]}
-              >
-                <View style={[styles.chevron, { borderColor: colors.text }]} />
-              </Pressable>
+              <BackButton inline onPress={onBack} />
             ) : null}
             {step ? (
               <View
@@ -84,9 +77,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 24 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 56, paddingTop: 8 },
-  back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  // Стрелка «назад»: уголок из двух сторон рамки
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
   progress: { flex: 1, flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 4, borderRadius: 2 },
   scroll: { flexGrow: 1 },

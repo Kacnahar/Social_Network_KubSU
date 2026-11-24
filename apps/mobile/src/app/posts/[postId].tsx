@@ -9,6 +9,7 @@ import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components'
 import { getPost } from '../../features/posts/api';
 import { CommentComposer, CommentList, useComments } from '../../features/posts/Comments';
 import { PostCard } from '../../features/posts/PostCard';
+import { BackButton } from '../../ui/BackButton';
 import { IconButton } from '../../ui/IconButton';
 import { type, useColors } from '../../ui/theme';
 
@@ -101,12 +102,16 @@ function PostWithComments({ post, now, onBack, onChanged, onDeleted, onCountChan
       <SafeAreaView style={styles.fill}>
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.column, styles.bar]}>
-            <IconButton label="Назад" onPress={onBack}>
-              <View style={[styles.chevron, { borderColor: colors.text }]} />
-            </IconButton>
-            <Text accessibilityRole="header" style={[type.headline, { color: colors.text }]}>
-              Пост
-            </Text>
+            <BackButton inline onPress={onBack} />
+            <View style={styles.titleBox}>
+              <Text accessibilityRole="header" numberOfLines={1} style={[type.headline, styles.title, { color: colors.textPrimary }]}>
+                Комментарии
+              </Text>
+              {/* Склонять имя по падежам без ошибок нельзя, поэтому «Пост · Имя Фамилия» */}
+              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.subtitle, { color: colors.textSecondary }]}>
+                Пост · {post.author.displayName}
+              </Text>
+            </View>
             <View style={styles.barSpace} />
           </View>
 
@@ -147,7 +152,9 @@ const styles = StyleSheet.create({
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20 },
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 },
   barSpace: { width: 40 },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
+  titleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  title: { fontWeight: '700' },
+  subtitle: { fontSize: 12, lineHeight: 16, maxWidth: '100%' },
   scroll: { flexGrow: 1, paddingBottom: 16 },
   guest: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 16 },
   guestText: { textAlign: 'center', fontWeight: '600' },

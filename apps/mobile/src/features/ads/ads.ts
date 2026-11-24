@@ -64,6 +64,40 @@ export type Ad = {
   createdAt: string;
 };
 
+// Категории раздела «Объявления» (чипы): типы объявлений, а «Услуги» и «Вакансии» стали категориями внутри него.
+// Книги из каталога скрыты, их данные и код остались.
+export type AdCategory = 'buy' | 'sell' | 'rent' | 'services' | 'jobs';
+
+export const AD_CATEGORIES: readonly { value: AdCategory; label: string; section: AdSection; kind: AdKind | null }[] = [
+  { value: 'buy', label: 'Купить', section: 'ads', kind: 'buy' },
+  { value: 'sell', label: 'Продать', section: 'ads', kind: 'sell' },
+  { value: 'rent', label: 'Аренда жилья', section: 'ads', kind: 'rent' },
+  { value: 'services', label: 'Услуги', section: 'services', kind: null },
+  { value: 'jobs', label: 'Вакансии', section: 'jobs', kind: null },
+];
+
+// Заголовки форм «Новое объявление» по категориям
+export const NEW_AD_TITLE: Record<AdCategory, string> = {
+  buy: 'Куплю',
+  sell: 'Продать вещь',
+  rent: 'Сдать жильё',
+  services: 'Предложить услугу',
+  jobs: 'Разместить вакансию',
+};
+
+export const isCategory = (value: unknown): value is AdCategory => AD_CATEGORIES.some((item) => item.value === value);
+
+export const categoryOfAd = (ad: Pick<Ad, 'section' | 'kind'>): AdCategory | null =>
+  ad.section === 'ads' ? (ad.kind === 'buy' || ad.kind === 'sell' || ad.kind === 'rent' ? ad.kind : null) : ad.section === 'services' || ad.section === 'jobs' ? ad.section : null;
+
+// Список «Объявлений»: выбранная категория (null — все) и поиск; книги сюда не попадают
+export function filterByCategory(ads: readonly Ad[], category: AdCategory | null, query: string): Ad[] {
+  return filterAds(ads, null, null, query).filter((ad) => {
+    const own = categoryOfAd(ad);
+    return own !== null && (category === null || own === category);
+  });
+}
+
 // Фильтр списка: раздел (null — все), тип (null — все) и поиск по названию и описанию
 export function filterAds(ads: readonly Ad[], section: AdSection | null, kind: AdKind | null, query: string): Ad[] {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);

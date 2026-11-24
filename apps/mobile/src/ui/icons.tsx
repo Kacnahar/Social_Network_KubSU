@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 // Линейные иконки, нарисованные из простых фигур: библиотек иконок в проекте нет.
 // Цвет задаётся снаружи и следует теме. У иконок вкладок есть «залитый» вид для активной вкладки.
@@ -131,10 +132,18 @@ export function VoiceIcon({ color, size = 24 }: { color: string; size?: number }
 // Плюс
 export function PlusIcon({ color, size = 18 }: { color: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ position: 'absolute', width: size, height: 2, borderRadius: 1, backgroundColor: color }} />
-      <View style={{ position: 'absolute', width: 2, height: size, borderRadius: 1, backgroundColor: color }} />
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2.5V21.5M2.5 12H21.5" stroke={color} strokeWidth={W} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// Шеврон «назад»: тонкий уголок, линия той же толщины, что у «+»
+export function BackIcon({ color, size = 22 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M15 4.5L7.5 12L15 19.5" stroke={color} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
   );
 }
 
@@ -158,41 +167,54 @@ export function DotsIcon({ color }: { color: string }) {
   );
 }
 
-// Сердце. Контур получается так: сердце цвета линии, а поверх — сердце поменьше цвета фона
-function HeartShape({ size, color }: { size: number; color: string }) {
-  const a = size * 0.52;
-  const shift = a * 0.354;
-  const cy = size * 0.56;
+// Сердце и облачко комментария: векторные, линия 1,8 px со скруглёнными концами (вариант А, как в Instagram)
+const HEART_PATH = 'M12 20.5C12 20.5 3.5 15.2 3.5 9.2C3.5 6.5 5.5 4.5 8 4.5C9.7 4.5 11.2 5.4 12 6.8C12.8 5.4 14.3 4.5 16 4.5C18.5 4.5 20.5 6.5 20.5 9.2C20.5 15.2 12 20.5 12 20.5Z';
+const COMMENT_PATH = 'M4 11.5C4 7.4 7.6 4 12 4C16.4 4 20 7.4 20 11.5C20 15.6 16.4 19 12 19C10.9 19 9.9 18.8 8.9 18.5L4.5 20L5.6 16.4C4.6 15.2 4 13.4 4 11.5Z';
+
+// Сердце: контур или залитое цветом. Параметр background оставлен для старых вызовов и не нужен
+export function HeartIcon({ color, filled = false, size = 22 }: IconProps & { background?: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size }}>
-      <View style={{ position: 'absolute', width: a, height: a, left: size / 2 - a / 2, top: cy - a / 2, backgroundColor: color, borderRadius: a * 0.12, transform: [{ rotate: '45deg' }] }} />
-      <View style={{ position: 'absolute', width: a, height: a, borderRadius: a / 2, left: size / 2 - shift - a / 2, top: cy - shift - a / 2, backgroundColor: color }} />
-      <View style={{ position: 'absolute', width: a, height: a, borderRadius: a / 2, left: size / 2 + shift - a / 2, top: cy - shift - a / 2, backgroundColor: color }} />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d={HEART_PATH} fill={filled ? color : 'none'} stroke={color} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// Сообщения: облачко диалога с тремя точками, той же линией, что у «+» и сердца
+export function MessageIcon({ color, size = 24 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5.5 4.5H18.5C19.6 4.5 20.5 5.4 20.5 6.5V14.5C20.5 15.6 19.6 16.5 18.5 16.5H11L6.8 20V16.5H5.5C4.4 16.5 3.5 15.6 3.5 14.5V6.5C3.5 5.4 4.4 4.5 5.5 4.5Z" stroke={color} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8.5 10.5H8.6M12 10.5H12.1M15.5 10.5H15.6" stroke={color} strokeWidth={W * 1.25} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// GIF: надпись в тонкой рамке; опрос: три столбика
+export function GifIcon({ color }: { color: string }) {
+  return (
+    <View style={[styles.box, { alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={{ width: 24, height: 17, borderWidth: W, borderRadius: 5, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color, fontSize: 9, lineHeight: 11, fontWeight: '800', letterSpacing: 0.3 }}>GIF</Text>
+      </View>
     </View>
   );
 }
 
-export function HeartIcon({ color, filled = false, background, size = 22 }: IconProps & { background: string; size?: number }) {
-  const inner = size - W * 2.6;
+export function PollIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <HeartShape size={size} color={color} />
-      {filled ? null : (
-        <View style={{ position: 'absolute' }}>
-          <HeartShape size={inner} color={background} />
-        </View>
-      )}
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 19.5V12.5M12 19.5V4.5M18 19.5V9" stroke={color} strokeWidth={W * 1.15} strokeLinecap="round" />
+    </Svg>
   );
 }
 
 // Комментарий: облачко с хвостиком
-export function CommentIcon({ color, background }: { color: string; background: string }) {
+export function CommentIcon({ color, size = 22 }: { color: string; background?: string; size?: number }) {
   return (
-    <View style={styles.box}>
-      <View style={[styles.bubble, { borderColor: color }]} />
-      <View style={[styles.bubbleTail, { borderColor: color, backgroundColor: background }]} />
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d={COMMENT_PATH} stroke={color} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
   );
 }
 
@@ -208,14 +230,13 @@ export function SortIcon({ color }: { color: string }) {
   );
 }
 
-// Поделиться: стрелка вверх из лотка
-export function ShareIcon({ color }: { color: string }) {
+// Поделиться: бумажный самолётик, та же линия, что у сердца и облачка
+export function ShareIcon({ color, size = 22 }: { color: string; size?: number }) {
   return (
-    <View style={styles.box}>
-      <View style={[styles.arrowHead, { borderColor: color }]} />
-      <View style={[styles.arrowStem, { backgroundColor: color }]} />
-      <View style={[styles.tray, { borderColor: color }]} />
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M20.5 3.5L3.5 10.2L10.3 13.7L13.8 20.5L20.5 3.5Z" stroke={color} strokeWidth={W} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M10.3 13.7L20.5 3.5" stroke={color} strokeWidth={W} strokeLinecap="round" />
+    </Svg>
   );
 }
 
@@ -563,19 +584,6 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'center', width: 24, height: 24 },
   dot: { width: 4, height: 4, borderRadius: 2 },
 
-  bubble: { width: 20, height: 16, borderWidth: W, borderRadius: 7, marginBottom: 2 },
-  bubbleTail: {
-    position: 'absolute',
-    left: 6,
-    bottom: 2.5,
-    width: 6,
-    height: 6,
-    borderLeftWidth: W,
-    borderBottomWidth: W,
-    borderBottomLeftRadius: 2,
-    transform: [{ skewX: '-20deg' }],
-  },
-
   frame: { width: 21, height: 17, borderWidth: W, borderRadius: 4, overflow: 'hidden' },
   sun: { position: 'absolute', left: 3, top: 2.5, width: 4, height: 4, borderRadius: 2 },
   hill: { position: 'absolute', right: -1, bottom: -7, width: 12, height: 12, borderLeftWidth: W, borderTopWidth: W, borderTopLeftRadius: 2, transform: [{ rotate: '45deg' }] },
@@ -617,7 +625,4 @@ const styles = StyleSheet.create({
   sendHead: { position: 'absolute', top: 6, width: 9, height: 9, borderLeftWidth: 2, borderTopWidth: 2, transform: [{ rotate: '45deg' }] },
   sendStem: { position: 'absolute', top: 6, width: 2, height: 13, borderRadius: 1 },
 
-  arrowHead: { position: 'absolute', top: 3, width: 8, height: 8, borderLeftWidth: W, borderTopWidth: W, transform: [{ rotate: '45deg' }] },
-  arrowStem: { position: 'absolute', top: 3, width: W, height: 13, borderRadius: 1 },
-  tray: { position: 'absolute', bottom: 2, width: 18, height: 8, borderWidth: W, borderTopWidth: 0, borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
 });

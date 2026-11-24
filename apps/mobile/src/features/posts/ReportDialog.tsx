@@ -70,10 +70,10 @@ export function ReportDialog({ visible, loading = false, error = null, onSend, o
           ) : null}
           <View style={styles.buttons}>
             <View style={styles.button}>
-              <Button variant="secondary" title="Отмена" onPress={onCancel} disabled={loading} />
+              <Button square variant="secondary" title="Отмена" onPress={onCancel} disabled={loading} />
             </View>
             <View style={styles.button}>
-              <Button title="Отправить" onPress={() => reason && onSend(reportText(reason, details))} disabled={!ready} loading={loading} />
+              <Button square title="Отправить" onPress={() => reason && onSend(reportText(reason, details))} disabled={!ready} loading={loading} />
             </View>
           </View>
         </View>
@@ -84,12 +84,12 @@ export function ReportDialog({ visible, loading = false, error = null, onSend, o
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dialog: { width: '100%', maxWidth: 360, maxHeight: '86%', borderRadius: radius.card, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 10 },
+  dialog: { width: '100%', maxWidth: 360, maxHeight: '86%', borderRadius: radius.field, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 10 },
   center: { textAlign: 'center' },
   list: { flexGrow: 0 },
   reason: { flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: 10 },
   reasonText: { flex: 1 },
-  input: { minHeight: 84, borderRadius: 10, padding: 12, marginTop: 6 },
+  input: { minHeight: 84, borderRadius: radius.control, padding: 12, marginTop: 6 },
   buttons: { flexDirection: 'row', gap: 10, paddingTop: 4 },
   button: { flex: 1 },
 });

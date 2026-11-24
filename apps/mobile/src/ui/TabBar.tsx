@@ -4,13 +4,14 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, Text, Vibration, Vie
 import { Glass, TAB_BAR } from './components';
 import { CatalogIcon, FeedIcon, MapIcon, ProfileIcon, VoiceIcon } from './icons';
 import { useSound } from './soundStore';
+import { VoicePulse } from './VoicePulse';
 import { VoiceWaves } from './VoiceWaves';
 import { radius, type, useColors, useReduceMotion } from './theme';
 
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 // Ровно пять вкладок в таком порядке; «Войс» — по центру и выделен
-const TABS = ['catalog', 'index', 'voice', 'map', 'profile'] as const;
+const TABS = ['index', 'catalog', 'voice', 'map', 'profile'] as const;
 type TabName = (typeof TABS)[number];
 const LABELS: Record<TabName, string> = { index: 'Лента', catalog: 'Каталог', voice: 'Войс', map: '3D карта', profile: 'Профиль' };
 
@@ -201,9 +202,11 @@ export function TabBar({ state, navigateToTab, emitter, insets }: TabBarProps) {
             >
               {/* Выделяется формой, а не цветом: чёрный круг (в тёмной теме белый); у недоступной кнопки — спокойная серая заливка */}
               {voiceAvailable ? (
-                <View style={[styles.voice, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-                  <VoiceWaves color={colors.onPrimary} playing={voiceSelected} />
-                </View>
+                <VoicePulse active={voiceSelected} size={VOICE} color={colors.primary}>
+                  <View style={[styles.voice, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+                    <VoiceWaves color={colors.onPrimary} playing={voiceSelected} />
+                  </View>
+                </VoicePulse>
               ) : (
                 <View style={[styles.voice, { backgroundColor: colors.card, borderColor: colors.background }]}>
                   <VoiceIcon color={colors.muted} />

@@ -5,6 +5,7 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 import { ApiError, getProfileById } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components';
+import { BackButton } from '../../ui/BackButton';
 import { IconButton } from '../../ui/IconButton';
 import { DotsIcon } from '../../ui/icons';
 import { ProfileBody } from '../../ui/ProfileBody';
@@ -64,9 +65,7 @@ export default function ProfileByIdScreen() {
     return (
       <Screen align="top">
         <View style={styles.bar}>
-          <IconButton label="Назад" onPress={back}>
-            <View style={[styles.chevron, { borderColor: colors.text }]} />
-          </IconButton>
+          <BackButton inline onPress={back} />
           <IconButton label={menuOpen ? 'Скрыть действия' : 'Ещё действия'} onPress={() => setMenuOpen((value) => !value)}>
             <DotsIcon color={colors.text} />
           </IconButton>
@@ -116,7 +115,6 @@ export default function ProfileByIdScreen() {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: -4 },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
   menu: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4, marginVertical: -8 },
   actionsWrap: { gap: 8 },
   actions: { flexDirection: 'row', gap: 10 },

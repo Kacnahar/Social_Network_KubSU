@@ -8,7 +8,8 @@ import { useFail } from '../../lib/useFail';
 import { Avatar } from '../../ui/Avatar';
 import { Button, ErrorText, noOutline } from '../../ui/components';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { CloseIcon, CommentIcon, DotsIcon, FlagIcon, HeartIcon, SendIcon, TrashIcon } from '../../ui/icons';
+import { CommentButton, LikeButton } from '../../ui/ActionButtons';
+import { CloseIcon, DotsIcon, FlagIcon, SendIcon, TrashIcon } from '../../ui/icons';
 import { useNickname } from '../../ui/nicknameStore';
 import { Popover, PopoverItem, PopoverSeparator, useAnchor, type Rect } from '../../ui/Popover';
 import { plural } from '../../ui/plural';
@@ -367,29 +368,13 @@ function CommentRow({ node, lineBelow, now, canReact, onReply, onRemoved, postAu
         <MentionLine comment={comment} mention={node.mentionOf} />
 
         <View style={styles.actions}>
-          <Pressable
-            accessibilityRole={canReact ? 'switch' : 'text'}
-            accessibilityLabel={canReact ? 'Нравится' : `Нравится: ${likes}`}
-            accessibilityState={canReact ? { checked: liked } : undefined}
-            disabled={!canReact}
-            hitSlop={8}
-            onPress={like}
-            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}
-          >
-            <HeartIcon color={liked ? colors.danger : colors.muted} filled={liked} background={colors.background} size={16} />
-            {likes > 0 ? <Text style={[type.footnote, { color: liked ? colors.danger : colors.muted }]}>{likes}</Text> : null}
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Ответить: ${comment.author.displayName}. Ответов: ${node.children.length}`}
-            disabled={!canReact}
-            hitSlop={8}
-            onPress={() => onReply(comment)}
-            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}
-          >
-            <CommentIcon color={colors.muted} background={colors.background} />
-            {node.children.length > 0 ? <Text style={[type.footnote, { color: colors.muted }]}>{node.children.length}</Text> : null}
-          </Pressable>
+          <LikeButton liked={liked} count={likes} onPress={canReact ? like : undefined} size={18} />
+          <CommentButton
+            count={node.children.length}
+            size={18}
+            label={`Ответить: ${comment.author.displayName}. Ответов: ${node.children.length}`}
+            onPress={canReact ? () => onReply(comment) : undefined}
+          />
         </View>
 
         {reported ? <Text style={[type.footnote, { color: colors.muted }]}>Спасибо, мы проверим</Text> : null}

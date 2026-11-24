@@ -29,10 +29,10 @@ export function ConfirmDialog({ visible, title, message, confirmTitle, cancelTit
           {message ? <Text style={[type.subhead, styles.center, { color: colors.muted }]}>{message}</Text> : null}
           <View style={styles.buttons}>
             <View style={styles.button}>
-              <Button size="compact" variant="secondary" title={cancelTitle} onPress={onCancel} disabled={loading} />
+              <Button size="compact" square variant="secondary" title={cancelTitle} onPress={onCancel} disabled={loading} />
             </View>
             <View style={styles.button}>
-              <Button size="compact" variant={danger ? 'danger' : 'primary'} title={confirmTitle} onPress={onConfirm} loading={loading} />
+              <Button size="compact" square variant={danger ? 'danger' : 'primary'} title={confirmTitle} onPress={onConfirm} loading={loading} />
             </View>
           </View>
         </View>
@@ -43,7 +43,7 @@ export function ConfirmDialog({ visible, title, message, confirmTitle, cancelTit
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dialog: { width: '100%', maxWidth: 340, borderRadius: radius.card, borderCurve: 'continuous', padding: 22, gap: 10 },
+  dialog: { width: '100%', maxWidth: 340, borderRadius: radius.field, borderCurve: 'continuous', padding: 22, gap: 10 },
   center: { textAlign: 'center' },
   buttons: { flexDirection: 'row', gap: 10, paddingTop: 12 },
   button: { flex: 1 },

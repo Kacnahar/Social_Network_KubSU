@@ -171,7 +171,7 @@ export default function MyProfileScreen() {
           icon={<StoryIcon color={colors.textPrimary} />}
           onPress={() => {
             setPlusAt(null);
-            router.navigate({ pathname: '/create', params: { kind: 'story' } });
+            router.push('/stories/new');
           }}
         />
       </Popover>

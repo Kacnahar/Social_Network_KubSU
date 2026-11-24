@@ -1,20 +1,27 @@
-import { StyleSheet, View } from 'react-native';
-import { IconButton } from './IconButton';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { BackIcon } from './icons';
 import { useColors } from './theme';
 
-// Кнопка «назад» в шапке экрана: круглая, со стрелкой-«уголком»
-export function BackButton({ onPress }: { onPress: () => void }) {
+// Кнопка «назад» в шапке экрана: только тонкий знак «<», без фона и рамки.
+// Область нажатия 44 px, при нажатии значок слегка бледнеет.
+// inline — для шапки, где кнопка стоит в ряду с другими элементами; без него кнопка занимает свою строку.
+export function BackButton({ onPress, inline = false }: { onPress: () => void; inline?: boolean }) {
   const colors = useColors();
-  return (
-    <View style={styles.bar}>
-      <IconButton label="Назад" onPress={onPress}>
-        <View style={[styles.chevron, { borderColor: colors.text }]} />
-      </IconButton>
-    </View>
+  const button = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Назад"
+      hitSlop={{ top: 0, bottom: 0, left: 4, right: 4 }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.button, { opacity: pressed ? 0.4 : 1 }]}
+    >
+      <BackIcon color={colors.textPrimary} />
+    </Pressable>
   );
+  return inline ? button : <View style={styles.bar}>{button}</View>;
 }
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', marginBottom: -4 },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
+  button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

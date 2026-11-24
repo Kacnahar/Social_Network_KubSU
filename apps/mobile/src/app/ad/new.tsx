@@ -1,243 +1,66 @@
 import { can } from '@app/shared';
-import * as ImagePicker from 'expo-image-picker';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  AD_DESCRIPTION_MAX,
-  AD_DISTRICT_MAX,
-  AD_PHOTOS_MAX,
-  AD_SECTIONS,
-  AD_TITLE_MAX,
-  RENT_TERMS,
-  emptyAdDraft,
-  isFree,
-  isRent,
-  isSection,
-  kindOptions,
-  priceOf,
-  validateAdDraft,
-  type AdDraft,
-  type AdDraftField,
-  type RentTerm,
-} from '../../features/ads/ads';
-import { addAd } from '../../features/ads/store';
+import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { CategoryTile } from '../../features/ads/CategoryTile';
+import { BriefcaseGlyph, HomeGlyph, TagGlyph, ToolsGlyph } from '../../features/catalog/CatalogIcons';
 import { useSignedIn } from '../../lib/session';
-import { Checkbox } from '../../ui/Checkbox';
-import { Chips } from '../../ui/Chips';
-import { ErrorText, Field } from '../../ui/components';
-import { PlusIcon } from '../../ui/icons';
-import { Segmented } from '../../ui/Segmented';
-import { StepScreen } from '../../ui/StepScreen';
-import { radius, type, useColors } from '../../ui/theme';
+import { BackButton } from '../../ui/BackButton';
+import { type, useColors } from '../../ui/theme';
 
-// Форма нового объявления в выбранном разделе: тип, фото, название, описание, цена («Договорная» — кроме аренды);
-// для аренды жилья ещё район и срок. «Опубликовать» — внизу экрана
-export default function NewAdScreen() {
+const THICK = 2.2;
+
+// Четыре категории нового объявления; у каждой свой экран формы
+const CHOICES: readonly { key: 'sell' | 'rent' | 'services' | 'jobs'; title: string; caption: string; href: Href; icon: (color: string) => React.ReactNode }[] = [
+  { key: 'sell', title: 'Продать вещь', caption: 'Техника, одежда, книги…', href: '/ad/new-sell', icon: (color) => <TagGlyph color={color} size={40} weight={THICK} /> },
+  { key: 'rent', title: 'Сдать жильё', caption: 'Комната, квартира, подселение', href: '/ad/new-rent', icon: (color) => <HomeGlyph color={color} size={40} weight={THICK} /> },
+  { key: 'services', title: 'Предложить услугу', caption: 'Репетиторство, ремонт, фото…', href: '/ad/new-service', icon: (color) => <ToolsGlyph color={color} size={40} weight={THICK} /> },
+  { key: 'jobs', title: 'Разместить вакансию', caption: 'Работа и подработка', href: '/ad/new-job', icon: (color) => <BriefcaseGlyph color={color} size={40} weight={THICK} /> },
+];
+
+// «Новое объявление»: сначала выбор категории, потом её форма. Если категория уже известна (фильтр в «Объявлениях»,
+// быстрая кнопка «Продать»), выбор пропускаем. Гостю экран недоступен
+export default function NewAdChooser() {
   const router = useRouter();
   const colors = useColors();
-  const { account, profile } = useSignedIn();
-  const params = useLocalSearchParams<{ section?: string }>();
-  const section = isSection(params.section) ? params.section : null;
-  const [draft, setDraft] = useState<AdDraft>(() => emptyAdDraft(section ?? 'ads'));
-  const [photos, setPhotos] = useState<string[]>([]);
-  // Ошибку под полем показываем после того, как человек из него вышел
-  const [touched, setTouched] = useState<Partial<Record<AdDraftField, boolean>>>({});
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  const { account } = useSignedIn();
+  const params = useLocalSearchParams<{ category?: string }>();
+  if (!can(account.role, 'publish')) return <Redirect href="/catalog" />;
 
-  // Без раздела форме не от чего отталкиваться; гость объявления не добавляет — возвращаем в каталог
-  if (!section || !can(account.role, 'publish')) return <Redirect href="/catalog" />;
+  const known = CHOICES.find((item) => item.key === params.category);
+  if (known) return <Redirect href={known.href} />;
 
-  const meta = AD_SECTIONS.find((item) => item.value === section);
-  const kinds = kindOptions(section);
-  const rent = isRent(draft);
-  const errors = validateAdDraft(draft);
-  const valid = Object.keys(errors).length === 0;
-  const set = (patch: Partial<AdDraft>) => setDraft((current) => ({ ...current, ...patch }));
-  const touch = (field: AdDraftField) => setTouched((current) => ({ ...current, [field]: true }));
-  const shown = (field: AdDraftField) => (touched[field] ? errors[field] : undefined);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/catalog'));
 
-  const pickPhotos = async () => {
-    setPhotoError(null);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: true,
-        selectionLimit: AD_PHOTOS_MAX - photos.length,
-        quality: 0.85,
-      });
-      if (result.canceled) return;
-      setPhotos((current) => [...current, ...result.assets.map((asset) => asset.uri)].slice(0, AD_PHOTOS_MAX));
-    } catch {
-      setPhotoError('Не получилось выбрать фото. Попробуйте ещё раз');
-    }
-  };
-
-  const publish = () => {
-    if (!valid) return;
-    addAd({
-      section,
-      kind: draft.kind,
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      price: priceOf(draft),
-      district: rent ? draft.district.trim() : null,
-      rentTerm: rent ? draft.rentTerm : null,
-      photos,
-      author: { profileId: profile?.profileId ?? null, displayName: profile?.displayName ?? '', avatarUrl: profile?.avatarUrl ?? null },
-    });
-    // Возвращаемся в тот же раздел: новое объявление наверху списка
-    back();
-  };
-
-  const priceLabel = rent ? (draft.rentTerm === 'daily' ? 'Цена за сутки, ₽' : 'Цена за месяц, ₽') : 'Цена, ₽';
-
   return (
-    <StepScreen title={meta?.newTitle ?? 'Новое объявление'} onBack={back} primary={{ title: 'Опубликовать', onPress: publish, disabled: !valid }}>
-      <View style={styles.fields}>
-        {kinds.length > 0 ? (
-          <View style={styles.group}>
-            <Text style={[type.subhead, styles.label, { color: colors.muted }]}>Тип</Text>
-            <Chips
-              options={kinds}
-              value={draft.kind}
-              allowNone={false}
-              onChange={(kind) => {
-                set({ kind });
-                touch('kind');
-              }}
-            />
-            {shown('kind') ? <ErrorText>{shown('kind') ?? null}</ErrorText> : null}
+    <View style={[styles.fill, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={styles.fill}>
+        <View style={styles.column}>
+          <View style={styles.bar}>
+            <BackButton inline onPress={back} />
+            <Text accessibilityRole="header" numberOfLines={1} style={[type.headline, styles.barTitle, { color: colors.textPrimary }]}>
+              Новое объявление
+            </Text>
+            <View style={styles.space} />
           </View>
-        ) : null}
-
-        <View style={styles.group}>
-          <Text style={[type.subhead, styles.label, { color: colors.muted }]}>
-            Фото · {photos.length} из {AD_PHOTOS_MAX}
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photos}>
-            {photos.length < AD_PHOTOS_MAX ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Добавить фото"
-                onPress={() => void pickPhotos()}
-                style={({ pressed }) => [styles.photo, styles.addPhoto, { backgroundColor: colors.fill, opacity: pressed ? 0.6 : 1 }]}
-              >
-                <PlusIcon color={colors.accent} size={22} />
-              </Pressable>
-            ) : null}
-            {photos.map((uri, index) => (
-              <View key={uri}>
-                <Image source={{ uri }} accessibilityLabel={`Фото ${index + 1} из ${photos.length}`} style={[styles.photo, { backgroundColor: colors.fill }]} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Убрать фото ${index + 1}`}
-                  hitSlop={8}
-                  onPress={() => setPhotos((current) => current.filter((item) => item !== uri))}
-                  style={[styles.remove, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
-                >
-                  <View style={styles.cross}>
-                    <PlusIcon color={colors.text} size={12} />
-                  </View>
-                </Pressable>
-              </View>
+          <Text style={[type.largeTitle, styles.heading, { color: colors.textPrimary }]}>Что хотите разместить?</Text>
+          <View style={styles.grid}>
+            {CHOICES.map((choice, index) => (
+              <CategoryTile key={choice.key} index={index} title={choice.title} caption={choice.caption} icon={choice.icon} onPress={() => router.push(choice.href)} />
             ))}
-          </ScrollView>
-          <ErrorText>{photoError}</ErrorText>
+          </View>
         </View>
-
-        <Field
-          label="Название"
-          value={draft.title}
-          onChangeText={(title) => set({ title })}
-          onBlur={() => touch('title')}
-          maxLength={AD_TITLE_MAX}
-          autoCapitalize="sentences"
-          autoCorrect
-          error={shown('title')}
-        />
-        <Field
-          label="Описание"
-          value={draft.description}
-          onChangeText={(description) => set({ description })}
-          onBlur={() => touch('description')}
-          maxLength={AD_DESCRIPTION_MAX}
-          autoCapitalize="sentences"
-          autoCorrect
-          multiline
-          numberOfLines={5}
-          textAlignVertical="top"
-          style={styles.description}
-          hint={`${draft.description.length} из ${AD_DESCRIPTION_MAX}`}
-          error={shown('description')}
-        />
-
-        {rent ? (
-          <>
-            <Field
-              label="Район"
-              value={draft.district}
-              onChangeText={(district) => set({ district })}
-              onBlur={() => touch('district')}
-              maxLength={AD_DISTRICT_MAX}
-              autoCapitalize="sentences"
-              error={shown('district')}
-            />
-            <View style={styles.group}>
-              <Text style={[type.subhead, styles.label, { color: colors.muted }]}>Срок</Text>
-              <Segmented<RentTerm> options={RENT_TERMS} value={draft.rentTerm} onChange={(rentTerm) => set({ rentTerm })} />
-            </View>
-          </>
-        ) : null}
-
-        {/* Книгу отдают бесплатно — цену не спрашиваем */}
-        {isFree(draft) ? null : (
-        <View style={styles.group}>
-          <Field
-            label={priceLabel}
-            value={!rent && draft.negotiable ? '' : draft.price}
-            onChangeText={(price) => set({ price: price.replace(/\D/g, '') })}
-            onBlur={() => touch('price')}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            maxLength={9}
-            editable={rent || !draft.negotiable}
-            style={!rent && draft.negotiable ? styles.inactive : undefined}
-            error={!rent && draft.negotiable ? undefined : shown('price')}
-          />
-          {/* У аренды цена обязательна, «Договорная» бывает только у остальных */}
-          {rent ? null : <Checkbox label="Договорная" checked={draft.negotiable} onChange={(negotiable) => set({ negotiable })} />}
-        </View>
-        )}
-      </View>
-    </StepScreen>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fields: { gap: 20 },
-  group: { gap: 8 },
-  label: { fontWeight: '500', marginLeft: 4 },
-  photos: { gap: 10, paddingTop: 6, paddingRight: 6 },
-  photo: { width: 84, height: 84, borderRadius: radius.field, borderCurve: 'continuous' },
-  addPhoto: { alignItems: 'center', justifyContent: 'center' },
-  remove: {
-    position: 'absolute',
-    right: -6,
-    top: -6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  // Крестик — тот же плюс, повёрнутый на 45°
-  cross: { transform: [{ rotate: '45deg' }] },
-  description: { minHeight: 130 },
-  inactive: { opacity: 0.45 },
+  fill: { flex: 1 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20, gap: 16 },
+  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 },
+  barTitle: { flex: 1, textAlign: 'center' },
+  space: { width: 44 },
+  heading: { marginTop: 4 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
 });

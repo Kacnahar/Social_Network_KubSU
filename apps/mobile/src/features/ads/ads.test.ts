@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyAdDraft, filterAds, formatAdPrice, formatPrice, isSection, kindOptions, priceOf, validateAdDraft, type Ad, type AdDraft } from './ads';
+import { categoryOfAd, emptyAdDraft, filterAds, filterByCategory, formatAdPrice, formatPrice, isSection, kindOptions, priceOf, validateAdDraft, type Ad, type AdDraft } from './ads';
 
 const ad = (patch: Partial<Ad>): Ad => ({
   adId: 'a',
@@ -119,5 +119,21 @@ describe('validateAdDraft', () => {
     const filled = { ...rent, district: 'Центр', price: '14000' };
     expect(validateAdDraft(filled)).toEqual({});
     expect(priceOf(filled)).toBe(14000);
+  });
+});
+
+describe('категории «Объявлений»', () => {
+  it('определяет категорию: тип объявления, услуги или вакансии; книги — без категории', () => {
+    expect(categoryOfAd(ads[0]!)).toBe('sell');
+    expect(categoryOfAd(ads[3]!)).toBeNull();
+    expect(categoryOfAd(ads[4]!)).toBe('services');
+    expect(categoryOfAd(ad({ section: 'jobs', kind: null }))).toBe('jobs');
+  });
+
+  it('без категории показывает всё, кроме книг; с категорией — только её', () => {
+    expect(filterByCategory(ads, null, '').map((item) => item.adId)).toEqual(['1', '2', '3', '5']);
+    expect(filterByCategory(ads, 'rent', '').map((item) => item.adId)).toEqual(['3']);
+    expect(filterByCategory(ads, 'services', '').map((item) => item.adId)).toEqual(['5']);
+    expect(filterByCategory(ads, null, 'учебник')).toEqual([]);
   });
 });

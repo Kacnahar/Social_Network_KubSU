@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Screen, Title } from '../../ui/components';
+import { BackButton } from '../../ui/BackButton';
 import { IconButton } from '../../ui/IconButton';
 import { type, useColors } from '../../ui/theme';
 
@@ -41,9 +42,7 @@ export default function VoiceFriendsScreen() {
   return (
     <Screen align="top">
       <View style={styles.bar}>
-        <IconButton label="Назад" onPress={back}>
-          <View style={[styles.chevron, { borderColor: colors.text }]} />
-        </IconButton>
+        <BackButton inline onPress={back} />
       </View>
       <View style={styles.heading}>
         <Title>Знакомые</Title>
@@ -111,7 +110,6 @@ function Step({ number, title, value, open }: { number: number; title: string; v
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', marginBottom: -4 },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
   heading: { gap: 6 },
   banner: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
   bannerText: { fontWeight: '600' },

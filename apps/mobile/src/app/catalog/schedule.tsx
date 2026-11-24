@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { EXAMPLE_GROUPS, exampleWeek, type ExampleGroup } from '../../features/catalog/scheduleExample';
 import { Chips } from '../../ui/Chips';
 import { Screen, Title } from '../../ui/components';
+import { BackButton } from '../../ui/BackButton';
 import { IconButton } from '../../ui/IconButton';
 import { radius, type, useColors } from '../../ui/theme';
 
@@ -19,9 +20,7 @@ export default function ScheduleScreen() {
   return (
     <Screen align="top">
       <View style={styles.bar}>
-        <IconButton label="Назад" onPress={back}>
-          <View style={[styles.chevron, { borderColor: colors.text }]} />
-        </IconButton>
+        <BackButton inline onPress={back} />
       </View>
       <Title>Расписание</Title>
 
@@ -59,7 +58,6 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', marginBottom: -4 },
-  chevron: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, transform: [{ rotate: '45deg' }], marginLeft: 4 },
   banner: { borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 10 },
   bannerText: { fontWeight: '600' },
   group: { gap: 8 },

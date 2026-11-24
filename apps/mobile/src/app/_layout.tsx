@@ -40,18 +40,28 @@ function Navigation() {
       <Stack.Protected guard={hasProfile} redirectTo={signedIn ? '/profile/setup' : '/welcome'}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile/edit" />
+        <Stack.Screen name="messages" options={{ animation: 'slide_from_right', gestureEnabled: true, fullScreenGestureEnabled: true }} />
         <Stack.Screen name="friends" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/index" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/[item]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="profiles/[profileId]" />
-        <Stack.Screen name="posts/[postId]" />
-        <Stack.Screen name="catalog/[section]" />
+        {/* Экран поста выезжает справа, закрывается стрелкой или свайпом от левого края */}
+        <Stack.Screen name="posts/[postId]" options={{ animation: 'slide_from_right', gestureEnabled: true, fullScreenGestureEnabled: true }} />
+        <Stack.Screen name="catalog/[section]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="catalog/forum" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="catalog/forum-new" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="catalog/events" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="catalog/schedule" />
         <Stack.Screen name="ad/[adId]" />
-        <Stack.Screen name="ad/new" />
+        <Stack.Screen name="ad/new" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ad/new-sell" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ad/new-rent" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ad/new-service" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ad/new-job" options={{ animation: 'slide_from_right' }} />
         {/* Новый пост выезжает снизу поверх ленты */}
         <Stack.Screen name="compose" options={{ presentation: 'modal' }} />
         <Stack.Screen name="stories/[profileId]" />
+        <Stack.Screen name="stories/new" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="admin/index" />
       </Stack.Protected>
       <Stack.Protected guard={hasProfile && canUseRooms}>

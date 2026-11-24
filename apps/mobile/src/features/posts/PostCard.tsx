@@ -1,19 +1,20 @@
 import { ROLE_LABEL, can, type Post } from '@app/shared';
 import { useRouter } from 'expo-router';
 import * as ExpoLinking from 'expo-linking';
-import { useRef, useState, type ReactNode } from 'react';
-import { Animated, Platform, Pressable, Share, StyleSheet, Text, Vibration, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Platform, Pressable, Share, StyleSheet, Text, Vibration, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
 import { Button, ErrorText } from '../../ui/components';
 import { CollapseRow } from '../../ui/CollapseRow';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { copyText } from '../../ui/copyText';
-import { CommentIcon, DotsIcon, FlagIcon, HeartIcon, LinkIcon, ShareIcon, TrashIcon } from '../../ui/icons';
+import { CommentButton, DoubleTapLike, LikeButton, ShareButton } from '../../ui/ActionButtons';
+import { DotsIcon, FlagIcon, LinkIcon, TrashIcon } from '../../ui/icons';
 import { Popover, PopoverItem, PopoverSeparator, useAnchor, type Rect } from '../../ui/Popover';
 import { useSound } from '../../ui/soundStore';
 import { showToast } from '../../ui/toastStore';
-import { type, useColors, useReduceMotion } from '../../ui/theme';
+import { type, useColors } from '../../ui/theme';
 import { deletePost, likePost, reportPost, unlikePost } from './api';
 import { PostPhotos } from './PostPhotos';
 import { formatPostTime } from '../../lib/relativeTime';
@@ -71,6 +72,11 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
     } finally {
       setLiking(null);
     }
+  };
+
+  // Двойное касание только ставит лайк; уже поставленный не снимает
+  const likeByDoubleTap = () => {
+    if (canReact && !shownLike.likedByMe) void toggleLike();
   };
 
   const remove = async () => {
@@ -175,39 +181,22 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
           <Text style={[type.footnote, styles.role, { color: colors.muted }]}>{ROLE_LABEL[post.author.role]}</Text>
         ) : null}
 
-        {post.text ? <Text style={[type.body, styles.text, { color: colors.text }]}>{text}</Text> : null}
-        {long ? <Button variant="plain" title="Показать полностью" onPress={() => setShowFull(true)} /> : null}
+        <DoubleTapLike onLike={likeByDoubleTap}>
+          {post.text ? <Text style={[type.body, styles.text, { color: colors.text }]}>{text}</Text> : null}
+          {long ? <Button variant="plain" title="Показать полностью" onPress={() => setShowFull(true)} /> : null}
 
-        {post.photos.length > 0 ? (
-          <View style={styles.photos}>
-            <PostPhotos photos={post.photos} />
-          </View>
-        ) : null}
+          {post.photos.length > 0 ? (
+            <View style={styles.photos}>
+              <PostPhotos photos={post.photos} />
+            </View>
+          ) : null}
+        </DoubleTapLike>
 
         <View style={styles.actions}>
           {/* Гость лайкать не может: сердце у него не нажимается и только показывает счёт */}
-          <Action
-            label={canReact ? 'Нравится' : `Нравится: ${shownLike.likeCount}`}
-            role={canReact ? 'switch' : 'text'}
-            checked={shownLike.likedByMe}
-            count={shownLike.likeCount}
-            tone={shownLike.likedByMe ? colors.danger : colors.muted}
-            onPress={canReact ? () => void toggleLike() : undefined}
-          >
-            <HeartIcon color={shownLike.likedByMe ? colors.danger : colors.muted} filled={shownLike.likedByMe} background={colors.background} />
-          </Action>
-          <Action
-            label={`Комментарии: ${post.commentCount}`}
-            role="button"
-            count={post.commentCount}
-            tone={colors.muted}
-            onPress={expanded ? undefined : open}
-          >
-            <CommentIcon color={colors.muted} background={colors.background} />
-          </Action>
-          <Action label="Поделиться" role="button" tone={colors.muted} onPress={() => void share()}>
-            <ShareIcon color={colors.muted} />
-          </Action>
+          <LikeButton liked={shownLike.likedByMe} count={shownLike.likeCount} onPress={canReact ? () => void toggleLike() : undefined} />
+          <CommentButton count={post.commentCount} onPress={expanded ? undefined : open} />
+          <ShareButton onPress={() => void share()} />
         </View>
         {shareNote ? <Text style={[type.footnote, { color: colors.muted }]}>Поделиться с этого устройства пока нельзя</Text> : null}
         <ErrorText>{error}</ErrorText>
@@ -264,51 +253,6 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
   );
 }
 
-type ActionProps = {
-  label: string;
-  role: 'button' | 'switch' | 'text';
-  checked?: boolean;
-  count?: number;
-  tone: string;
-  onPress?: () => void;
-  children: ReactNode;
-};
-
-// Иконка со счётчиком под постом; отклик — в момент касания, пружиной без отскока
-function Action({ label, role, checked, count, tone, onPress, children }: ActionProps) {
-  const reduceMotion = useReduceMotion();
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const press = (pressed: boolean) => {
-    if (reduceMotion || !onPress) return;
-    Animated.spring(scale, {
-      toValue: pressed ? 0.88 : 1,
-      speed: 40,
-      bounciness: 0,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        accessibilityRole={role}
-        accessibilityLabel={label}
-        accessibilityState={role === 'switch' ? { checked } : undefined}
-        disabled={!onPress}
-        hitSlop={8}
-        onPress={onPress}
-        onPressIn={() => press(true)}
-        onPressOut={() => press(false)}
-        style={styles.action}
-      >
-        {children}
-        {count !== undefined && count > 0 ? <Text style={[type.subhead, styles.count, { color: tone }]}>{count}</Text> : null}
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 const styles = StyleSheet.create({
   // Пост без карточки и теней: аватар слева, всё остальное справа, снизу тонкая линия на всю ширину экрана
   post: {
@@ -331,6 +275,4 @@ const styles = StyleSheet.create({
   // Область нажатия «⋯» — не меньше 44×44, сам значок тонкий и серый
   kebab: { width: 44, height: 44, marginRight: -12, marginVertical: -10, alignItems: 'center', justifyContent: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 22, marginTop: 6, marginLeft: -2 },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 28 },
-  count: { fontVariant: ['tabular-nums'] },
 });

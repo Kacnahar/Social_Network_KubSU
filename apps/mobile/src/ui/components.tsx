@@ -253,9 +253,11 @@ type ButtonProps = {
   size?: 'regular' | 'compact' | 'thin';
   // Подпись для экранного чтения; если не задана — берётся title
   accessibilityLabel?: string;
+  // Скругление как у кнопок «Редактировать профиль» и «Друзья», а не «пилюля»: для кнопок в окнах
+  square?: boolean;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, size = 'regular', accessibilityLabel }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, size = 'regular', accessibilityLabel, square = false }: ButtonProps) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
   const scale = useRef(new Animated.Value(1)).current;
@@ -305,6 +307,7 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
           isPlain && styles.buttonPlain,
           size === 'compact' && styles.buttonCompact,
           size === 'thin' && styles.buttonThin,
+          square && { borderRadius: radius.control },
           { backgroundColor: background, opacity: inactive ? 0.45 : pressed ? 0.8 : 1 },
         ]}
       >

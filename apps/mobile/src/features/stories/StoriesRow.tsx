@@ -79,7 +79,7 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
             </Ring>
           </Circle>
         ) : (
-          <Circle label="Ваша история" accessibilityLabel="Ваша история. Добавить" onPress={() => router.navigate({ pathname: '/create', params: { kind: 'story' } })}>
+          <Circle label="Ваша история" accessibilityLabel="Ваша история. Добавить" onPress={() => router.push('/stories/new')}>
             <View style={styles.ring}>
               <Avatar avatarUrl={profile?.avatarUrl ?? null} name={profile?.displayName ?? ''} size={AVATAR} />
               <View style={[styles.plus, { backgroundColor: colors.primary, borderColor: colors.background }]}>
