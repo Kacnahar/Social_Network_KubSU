@@ -12,6 +12,7 @@ import { useSignedIn } from '../lib/session';
 import { useFail } from '../lib/useFail';
 import { Avatar } from '../ui/Avatar';
 import { Body, Button, ErrorText, Screen, Title, noOutline } from '../ui/components';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { CameraIcon, CloseIcon, GalleryIcon } from '../ui/icons';
 import { Segmented } from '../ui/Segmented';
 import { radius, type, useColors } from '../ui/theme';
@@ -167,15 +168,15 @@ export default function ComposeScreen() {
             <Button size="compact" title="Опубликовать" onPress={() => void publish()} loading={publishing} disabled={empty || picking} />
           </View>
 
-          {confirmingDiscard ? (
-            <View style={[styles.column, styles.discard, { backgroundColor: colors.fill }]}>
-              <Text style={[type.headline, { color: colors.text }]}>Удалить черновик?</Text>
-              <View style={styles.discardActions}>
-                <Button size="compact" variant="danger" title="Удалить" onPress={close} />
-                <Button size="compact" variant="plain" title="Продолжить" onPress={() => setConfirmingDiscard(false)} />
-              </View>
-            </View>
-          ) : null}
+          <ConfirmDialog
+            visible={confirmingDiscard}
+            title="Удалить черновик?"
+            confirmTitle="Удалить"
+            cancelTitle="Продолжить"
+            danger
+            onConfirm={close}
+            onCancel={() => setConfirmingDiscard(false)}
+          />
 
           <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={[styles.column, styles.compose]}>
@@ -280,8 +281,6 @@ const styles = StyleSheet.create({
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 16 },
   bar: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { flex: 1, textAlign: 'center' },
-  discard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingVertical: 10 },
-  discardActions: { flexDirection: 'row', gap: 4 },
   scroll: { flexGrow: 1 },
   compose: { flexDirection: 'row', gap: 12, paddingTop: 16, paddingBottom: 16 },
   body: { flex: 1, gap: 6 },

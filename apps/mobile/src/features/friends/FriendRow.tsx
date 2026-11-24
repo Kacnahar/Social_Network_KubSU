@@ -2,16 +2,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../ui/Avatar';
 import { DotsIcon } from '../../ui/icons';
 import { useAnchor, type Rect } from '../../ui/Popover';
-import { type, useColors } from '../../ui/theme';
+import { radius, type, useColors } from '../../ui/theme';
 import type { Person } from './testData';
 
-// Маленькая кнопка в строке: высота 32, скругление 8; primary — главное действие, иначе мягкая подложка
+// Маленькая кнопка в строке: высота 32, скругление radius.control; primary — главное действие, иначе мягкая подложка
 export function RowButton({ title, primary = false, onPress, label }: { title: string; primary?: boolean; onPress: () => void; label?: string }) {
   const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label ?? title}
+      hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
       onPress={onPress}
       style={({ pressed }) => [styles.button, { backgroundColor: primary ? colors.primary : colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 }]}
     >
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { flex: 1, gap: 1 },
   nick: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
-  button: { height: 32, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  button: { height: 32, paddingHorizontal: 12, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontWeight: '600' },
   more: { width: 28, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

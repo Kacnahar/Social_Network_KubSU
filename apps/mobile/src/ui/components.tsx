@@ -295,6 +295,8 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
         accessibilityLabel={accessibilityLabel ?? title}
         accessibilityState={{ disabled: inactive, busy: loading }}
         disabled={inactive}
+        // Область нажатия до 44 px: тонкие размеры добираем по вертикали, внешний вид не меняется
+        hitSlop={size === 'thin' ? { top: 3, bottom: 3, left: 0, right: 0 } : size === 'compact' ? { top: 1, bottom: 1, left: 0, right: 0 } : undefined}
         onPress={onPress}
         onPressIn={() => press(true)}
         onPressOut={() => press(false)}

@@ -106,8 +106,9 @@ export function Popover({ visible, anchor, onClose, size = 'menu', children }: P
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <View style={StyleSheet.absoluteFill}>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: Animated.multiply(opacity, 0.55) }]} />
-        <Pressable accessibilityLabel="Закрыть меню" style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Закрыть меню" style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View
+          accessibilityViewIsModal
           pointerEvents={box ? 'auto' : 'none'}
           onLayout={(event) => {
             const { width, height } = event.nativeEvent.layout;
@@ -154,9 +155,9 @@ export function PopoverItem({ title, icon, selected = false, danger = false, fir
   const color = danger ? colors.danger : colors.textPrimary;
   return (
     <Pressable
-      accessibilityRole={selected ? 'radio' : 'button'}
+      accessibilityRole="menuitem"
       accessibilityLabel={title}
-      accessibilityState={selected ? { selected: true, checked: true } : undefined}
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [styles.item, !first && { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth }, { opacity: pressed ? 0.6 : 1 }]}
     >

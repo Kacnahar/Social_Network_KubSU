@@ -1,17 +1,16 @@
 import { can } from '@app/shared';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSession, useSignedIn } from '../../lib/session';
 import { BackButton } from '../../ui/BackButton';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { Screen, Title } from '../../ui/components';
+import { Button, Screen, Title } from '../../ui/components';
 import { BellIcon, BlockIcon, GlobeIcon, HeartIcon, LockIcon, MarkIcon, ProfileIcon, SpeakerIcon, ThemeIcon } from '../../ui/icons';
 import { SettingsGroup, SettingsRow } from '../../ui/SettingsList';
 import { themeChoiceLabel } from '../../ui/themeChoice';
 import { useThemeChoice } from '../../ui/themeStore';
-import { type, useColors } from '../../ui/theme';
-import { Pressable } from 'react-native';
+import { useColors } from '../../ui/theme';
 
 // Настройки: список с тонкими иконками. У гостя только «Язык» и «Тема»
 export default function SettingsScreen() {
@@ -69,9 +68,7 @@ export default function SettingsScreen() {
       {/* Выход — отдельно, с отступом, красным текстом по центру, без рамки */}
       {full ? (
         <View style={styles.leaveWrap}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Выйти из аккаунта" hitSlop={10} onPress={() => setConfirming(true)} style={({ pressed }) => [styles.leave, { opacity: pressed ? 0.6 : 1 }]}>
-            <Text style={[type.body, styles.leaveText, { color: colors.danger }]}>Выйти из аккаунта</Text>
-          </Pressable>
+          <Button title="Выйти из аккаунта" variant="plainDanger" onPress={() => setConfirming(true)} />
         </View>
       ) : null}
 
@@ -91,6 +88,4 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   leaveWrap: { paddingTop: 28, paddingBottom: 12, alignItems: 'center' },
-  leave: { minHeight: 44, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
-  leaveText: { fontWeight: '500' },
 });

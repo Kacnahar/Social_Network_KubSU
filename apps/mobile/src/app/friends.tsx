@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Animated, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FriendRow } from '../features/friends/FriendRow';
 import { DEFAULT_SORT, SORT_OPTIONS, sortPeople, type SortMode } from '../features/friends/sort';
 import { Suggestions } from '../features/friends/Suggestions';
@@ -15,7 +15,7 @@ import { CommentIcon, PeopleIcon, SortIcon } from '../ui/icons';
 import { useNickname } from '../ui/nicknameStore';
 import { Popover, PopoverItem, useAnchor, type Rect } from '../ui/Popover';
 import { SearchField } from '../ui/SearchField';
-import { type, useColors, useReduceMotion } from '../ui/theme';
+import { radius, type, useColors, useReduceMotion } from '../ui/theme';
 import { showToast } from '../ui/toastStore';
 
 // «Друзья»: шапка с вашим @никнеймом, вкладки «Друзья» и «Заявки» (листаются и свайпом), поиск и сортировка, строки без карточек.
@@ -28,8 +28,11 @@ const NATIVE = Platform.OS !== 'web';
 export default function FriendsScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const { profile } = useSignedIn();
+  // Нижний отступ списков: с учётом безопасной зоны телефона (полоска «домой»), но не меньше 16 + 24
+  const listPadding = { paddingBottom: Math.max(insets.bottom, 16) + 24 };
   const nickname = useNickname(profile?.profileId);
   const faculty = profile?.faculty ? shortFaculty(profile.faculty) : '';
 
@@ -182,7 +185,7 @@ export default function FriendsScreen() {
                   ListHeaderComponent={listHeader(true, 0)}
                   renderItem={({ item }) => <FriendRow mode="friend" person={item} onOpen={() => open(item)} onMenu={(rect) => setMenuFor({ person: item, rect })} />}
                   ListEmptyComponent={<Empty text={needle ? 'Никого не нашли' : 'Пока нет друзей'} />}
-                  contentContainerStyle={styles.list}
+                  contentContainerStyle={[styles.list, listPadding]}
                   initialNumToRender={14}
                 />
               </View>
@@ -211,7 +214,7 @@ export default function FriendsScreen() {
                     </CollapseRow>
                   )}
                   ListEmptyComponent={<Empty text={needle ? 'Никого не нашли' : 'Новых заявок нет'} />}
-                  contentContainerStyle={styles.list}
+                  contentContainerStyle={[styles.list, listPadding]}
                 />
               </View>
             </Animated.ScrollView>
@@ -293,8 +296,8 @@ const styles = StyleSheet.create({
   line: { position: 'absolute', left: 0, bottom: -StyleSheet.hairlineWidth, height: 2, borderRadius: 1 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   searchField: { flex: 1 },
-  sortButton: { width: 44, height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  sortButton: { width: 44, height: 44, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' },
   sortDot: { position: 'absolute', top: 7, right: 7, width: 9, height: 9, borderRadius: 4.5, borderWidth: 1.5 },
-  list: { paddingBottom: 40, flexGrow: 1 },
+  list: { flexGrow: 1 },
   empty: { alignItems: 'center', gap: 16, paddingTop: 70, paddingHorizontal: 32 },
 });

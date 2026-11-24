@@ -1,6 +1,6 @@
 import type { Profile } from '@app/shared';
-import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { detectService, normalizeLink, SERVICE_LABEL } from '../features/profile/links';
 import { birthLine } from '../features/profile/birth';
 import { useExtras } from '../features/profile/profileExtrasStore';
@@ -18,11 +18,12 @@ type ProfileViewProps = {
   profile: Profile;
   // На своём профиле: маленький «+» у аватарки открывает меню (фото профиля, история)
   onPlus?: (rect: Rect) => void;
+  photoBusy?: boolean;
 };
 
 // Шапка профиля — одна и та же для своего и чужого: слева имя, роль и факультет, справа аватар;
 // ниже «о себе» и цифры
-export function ProfileView({ profile, onPlus }: ProfileViewProps) {
+export function ProfileView({ profile, onPlus, photoBusy = false }: ProfileViewProps) {
   const colors = useColors();
   const nickname = useNickname(profile.profileId);
   const plusAnchor = useAnchor();
@@ -36,7 +37,22 @@ export function ProfileView({ profile, onPlus }: ProfileViewProps) {
   }, [copied]);
   const meta = [profile.faculty ? shortFaculty(profile.faculty) : null, profile.course !== null ? `${profile.course} курс` : null].filter(Boolean).join(' · ');
 
-  const avatar = <Avatar avatarUrl={profile.avatarUrl} name={profile.displayName} size={84} />;
+  // Новое фото появляется плавно: при смене адреса фото аватарка коротко проявляется заново
+  const fade = useRef(new Animated.Value(1)).current;
+  const firstPhoto = useRef(true);
+  useEffect(() => {
+    if (firstPhoto.current) {
+      firstPhoto.current = false;
+      return;
+    }
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [profile.avatarUrl, fade]);
+  const avatar = (
+    <Animated.View style={{ opacity: fade }}>
+      <Avatar avatarUrl={profile.avatarUrl} name={profile.displayName} size={84} busy={photoBusy} />
+    </Animated.View>
+  );
 
   return (
     <View style={styles.wrap}>

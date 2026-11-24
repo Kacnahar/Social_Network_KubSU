@@ -7,12 +7,11 @@ import {
   updateProfileRequestSchema,
   type Profile,
 } from '@app/shared';
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ApiError, updateProfile, uploadMedia } from '../lib/api';
-import { checkPhoto, readPhoto } from '../lib/photo';
+import { ApiError, updateProfile } from '../lib/api';
 import { useSession, useSignedIn } from '../lib/session';
+import { useAvatarPhoto } from '../features/profile/useAvatarPhoto';
 import { Avatar } from './Avatar';
 import { Button, ErrorText, Field } from './components';
 import { checkNickname, normalizeNickname, NICK_MAX, NICK_RULES } from './nickname';
@@ -60,54 +59,15 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
   const nickCheck = nick === '' ? null : checkNickname(nick);
   const nickError = nickCheck && !nickCheck.ok ? nickCheck.reason : null;
   // undefined — фото не трогали; null — убрать; строка — загруженное фото
-  const [avatarMediaId, setAvatarMediaId] = useState<string | null | undefined>(undefined);
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  // Выбор, обрезка и загрузка фото — общий код (useAvatarPhoto)
+  const photo = useAvatarPhoto();
+  const { mediaId: avatarMediaId, localUri, uploading, error: photoError } = photo;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const hasPhoto = avatarMediaId === undefined ? Boolean(initial?.avatarUrl) : avatarMediaId !== null;
   const shownRemoteUrl = avatarMediaId === undefined ? (initial?.avatarUrl ?? null) : null;
-
-  const pickPhoto = async () => {
-    setPhotoError(null);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      const uri = result.canceled ? undefined : result.assets[0]?.uri;
-      if (!uri) return;
-      setUploading(true);
-      const blob = await readPhoto(uri);
-      const problem = checkPhoto(blob);
-      if (problem) {
-        setPhotoError(problem);
-        return;
-      }
-      const uploaded = await uploadMedia(token, 'avatar', blob);
-      setAvatarMediaId(uploaded.mediaId);
-      setLocalUri(uri);
-    } catch (caught) {
-      if (caught instanceof ApiError && caught.code === 'unauthorized') {
-        await forgetSession();
-        return;
-      }
-      setPhotoError(caught instanceof ApiError ? caught.message : 'Не получилось загрузить фото. Попробуйте ещё раз');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removePhoto = () => {
-    setPhotoError(null);
-    setAvatarMediaId(null);
-    setLocalUri(null);
-  };
 
   const submit = async () => {
     setError(null);
@@ -158,10 +118,10 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
           <Button
             variant="secondary"
             title={hasPhoto ? 'Изменить фото' : 'Выбрать фото'}
-            onPress={() => void pickPhoto()}
+            onPress={() => void photo.pick('library')}
             disabled={saving || uploading}
           />
-          {hasPhoto ? <Button variant="plain" title="Убрать" onPress={removePhoto} disabled={saving || uploading} /> : null}
+          {hasPhoto ? <Button variant="plain" title="Убрать" onPress={photo.remove} disabled={saving || uploading} /> : null}
         </View>
       </View>
       <ErrorText>{photoError}</ErrorText>
@@ -243,6 +203,7 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
       footer={<Button variant="plain" title={footer.title} onPress={footer.onPress} disabled={saving} />}
     >
       <View style={styles.stepFields}>{fields}</View>
+      {photo.cropper}
     </StepScreen>
   );
 }

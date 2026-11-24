@@ -1,17 +1,20 @@
 import { COMMENT_TEXT_MAX, type Comment } from '@app/shared';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { useFail } from '../../lib/useFail';
 import { Avatar } from '../../ui/Avatar';
 import { Button, ErrorText, noOutline } from '../../ui/components';
-import { CloseIcon, HeartIcon, SendIcon } from '../../ui/icons';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { CloseIcon, CommentIcon, DotsIcon, FlagIcon, HeartIcon, SendIcon, TrashIcon } from '../../ui/icons';
+import { useNickname } from '../../ui/nicknameStore';
+import { Popover, PopoverItem, PopoverSeparator, useAnchor, type Rect } from '../../ui/Popover';
 import { plural } from '../../ui/plural';
-import { type, useColors } from '../../ui/theme';
+import { type, useColors, useReduceMotion } from '../../ui/theme';
 import { addComment, deleteComment, getComments, reportComment } from './api';
-import { buildThreads, isCommentLiked, parentOfComment, rememberReply, toggleCommentLike, visibleReplies, type Thread } from './commentThreads';
+import { ancestorsOf, buildTree, isCommentLiked, likeCountOf, parentOfComment, rememberReply, toggleCommentLike, visibleReplies, type TreeNode } from './commentThreads';
 
 type State =
   | { status: 'loading' }
@@ -30,6 +33,8 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Последний добавленный ответ: список раскрывает его ветку и показывает ответ плавно
+  const [lastAdded, setLastAdded] = useState<{ id: string; parentId: string | null } | null>(null);
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
@@ -74,6 +79,7 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
     try {
       const comment = await addComment(token, postId, text);
       if (replyTo) rememberReply(comment.commentId, replyTo.commentId);
+      setLastAdded({ id: comment.commentId, parentId: replyTo ? replyTo.commentId : null });
       setState((current) => (current.status === 'ready' ? { ...current, comments: [...current.comments, comment] } : current));
       setDraft('');
       setReplyTo(null);
@@ -92,17 +98,59 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
     onCountChange(-1);
   };
 
-  return { state, load, loadMore, loadingMore, moreError, draft, setDraft, replyTo, setReplyTo, send, sending, sendError, removed };
+  return { state, load, loadMore, loadingMore, moreError, draft, setDraft, replyTo, setReplyTo, send, sending, sendError, removed, lastAdded };
 }
 
 type CommentsApi = ReturnType<typeof useComments>;
 
-type CommentListProps = { comments: CommentsApi; now: Date; canReact: boolean; onReply: (comment: Comment) => void };
+// Размеры дерева: аватарка 32, сдвиг ответа на её ширину и промежуток, толщина линии-ветки 1,5
+const AVATAR = 32;
+const INDENT = AVATAR + 10;
+const LINE = 1.5;
+const ROW_PAD = 8;
+const ELBOW_Y = ROW_PAD + AVATAR / 2; // на какой высоте ветка подходит к аватарке ответа
+const LINE_X = AVATAR / 2 - LINE / 2; // где проходит вертикальная линия под аватаркой родителя
 
-export function CommentList({ comments, now, canReact, onReply }: CommentListProps) {
+type CommentListProps = {
+  comments: CommentsApi;
+  now: Date;
+  canReact: boolean;
+  onReply: (comment: Comment) => void;
+  // Номер профиля автора поста: у его комментариев значок «Автор»
+  postAuthorId?: string;
+};
+
+export function CommentList({ comments, now, canReact, onReply, postAuthorId }: CommentListProps) {
   const colors = useColors();
   const { state } = comments;
-  const threads = state.status === 'ready' ? buildThreads(state.comments, parentOfComment) : [];
+  const tree = state.status === 'ready' ? buildTree(state.comments, parentOfComment) : [];
+
+  // Раскрытые «Показать ещё» (по номеру комментария-родителя)
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const expand = (ids: string[]) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+
+  // Новый ответ: раскрываем ветку, чтобы он был виден
+  const added = comments.lastAdded;
+  useEffect(() => {
+    if (added?.parentId) expand([added.parentId, ...ancestorsOf(added.parentId)]);
+  }, [added]);
+
+  // Что уже было на экране: всё новое появляется плавно
+  const known = useRef<Set<string> | null>(null);
+  const firstLoad = known.current === null;
+  const ids = state.status === 'ready' ? state.comments.map((comment) => comment.commentId) : [];
+  const knownNow = known.current;
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    known.current = new Set(ids);
+  });
+
+  const shared = { now, canReact, onReply, postAuthorId, expanded, expand, isNew: (id: string) => !firstLoad && knownNow !== null && !knownNow.has(id), onRemoved: comments.removed };
 
   return (
     <View style={styles.list}>
@@ -113,14 +161,14 @@ export function CommentList({ comments, now, canReact, onReply }: CommentListPro
           <Button variant="secondary" title="Повторить" onPress={() => void comments.load()} />
         </View>
       ) : null}
-      {state.status === 'ready' && threads.length === 0 ? (
+      {state.status === 'ready' && tree.length === 0 ? (
         <Text style={[type.body, styles.empty, { color: colors.muted }]}>
           Пока нет комментариев.{canReact ? ' Будьте первым' : ''}
         </Text>
       ) : null}
 
-      {threads.map((thread) => (
-        <ThreadView key={thread.comment.commentId} thread={thread} now={now} canReact={canReact} onReply={onReply} onRemoved={comments.removed} />
+      {tree.map((node) => (
+        <NodeView key={node.comment.commentId} node={node} sibling="root" {...shared} />
       ))}
 
       {state.status === 'ready' && state.nextCursor ? (
@@ -133,47 +181,109 @@ export function CommentList({ comments, now, canReact, onReply }: CommentListPro
   );
 }
 
-type RowHandlers = { now: Date; canReact: boolean; onReply: (comment: Comment) => void; onRemoved: (commentId: string) => void };
+type Shared = {
+  now: Date;
+  canReact: boolean;
+  onReply: (comment: Comment) => void;
+  postAuthorId?: string;
+  expanded: Set<string>;
+  expand: (ids: string[]) => void;
+  isNew: (commentId: string) => boolean;
+  onRemoved: (commentId: string) => void;
+};
 
-function ThreadView({ thread, ...handlers }: { thread: Thread } & RowHandlers) {
+// Появление: прозрачность и лёгкий сдвиг (при «Уменьшении движения» — сразу)
+function Reveal({ animate, children }: { animate: boolean; children: ReactNode }) {
+  const reduceMotion = useReduceMotion();
+  const on = animate && !reduceMotion;
+  const progress = useRef(new Animated.Value(on ? 0 : 1)).current;
+  useEffect(() => {
+    if (on) Animated.timing(progress, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [on, progress]);
+  return <Animated.View style={{ opacity: progress, transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>{children}</Animated.View>;
+}
+
+// Один комментарий и всё, что под ним. sibling: root — верхний уровень; last — последний ответ в ветке; more — не последний.
+// У ответа рисуется «колено» ветки: линия от аватарки родителя загибается к аватарке ответа
+function NodeView({ node, sibling, animate = false, ...shared }: { node: TreeNode; sibling: 'root' | 'last' | 'more'; animate?: boolean } & Shared) {
   const colors = useColors();
-  const [expanded, setExpanded] = useState(false);
-  const { shown, hidden } = visibleReplies(thread.replies, expanded);
+  const open = shared.expanded.has(node.comment.commentId);
+  const { shown, hidden } = visibleReplies(node.children, open);
+  const hasChildren = shown.length > 0;
+  const nested = sibling !== 'root';
+  const showMore = hidden > 0;
 
   return (
-    <View>
-      <CommentRow comment={thread.comment} {...handlers} />
-      {shown.length > 0 ? (
-        // Ответы сдвинуты вправо, слева — тонкая вертикальная линия
-        <View style={[styles.replies, { borderLeftColor: colors.border }]}>
-          {shown.map((reply) => (
-            <CommentRow key={reply.commentId} comment={reply} small {...handlers} />
-          ))}
-          {hidden > 0 ? (
-            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setExpanded(true)} style={({ pressed }) => [styles.moreReplies, { opacity: pressed ? 0.6 : 1 }]}>
-              <Text style={[type.footnote, styles.link, { color: colors.accent }]}>
-                Показать ещё {hidden} {plural(hidden, 'ответ', 'ответа', 'ответов')}
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-    </View>
+    <Reveal animate={animate || shared.isNew(node.comment.commentId)}>
+      <View>
+        {nested ? <View pointerEvents="none" style={[styles.elbow, { borderColor: colors.border }]} /> : null}
+        {sibling === 'more' ? <View pointerEvents="none" style={[styles.through, { backgroundColor: colors.border }]} /> : null}
+        <CommentRow node={node} lineBelow={hasChildren || showMore} {...shared} />
+        {hasChildren || showMore ? (
+          <View style={styles.children}>
+            {shown.map((child, index) => (
+              <NodeView
+                key={child.comment.commentId}
+                node={child}
+                // Последний на экране: если ниже есть «Показать ещё», ветка продолжается до него
+                sibling={index === shown.length - 1 && !showMore ? 'last' : 'more'}
+                animate={open && index >= 2}
+                {...shared}
+              />
+            ))}
+            {showMore ? (
+              <View>
+                <View pointerEvents="none" style={[styles.elbow, { borderColor: colors.border }]} />
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => shared.expand([node.comment.commentId])} style={({ pressed }) => [styles.moreReplies, { opacity: pressed ? 0.6 : 1 }]}>
+                  <Text style={[type.footnote, styles.link, { color: colors.muted }]}>
+                    Показать ещё {hidden} {plural(hidden, 'ответ', 'ответа', 'ответов')}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </Reveal>
   );
 }
 
-function CommentRow({ comment, small = false, now, canReact, onReply, onRemoved }: { comment: Comment; small?: boolean } & RowHandlers) {
+// Имя для показа: никнейм, если он известен (пока только свой), иначе имя профиля
+function useHandle(author: Comment['author']): string {
+  const nickname = useNickname(author.profileId);
+  return nickname ? nickname : author.displayName;
+}
+
+function MentionLine({ comment, mention }: { comment: Comment; mention: Comment | null }) {
+  const colors = useColors();
+  const mentionName = useHandle((mention ?? comment).author);
+  return (
+    <Text style={[type.body, { color: colors.text }]}>
+      {mention ? <Text style={{ color: colors.muted }}>@{mentionName} </Text> : null}
+      {comment.text}
+    </Text>
+  );
+}
+
+function CommentRow({ node, lineBelow, now, canReact, onReply, onRemoved, postAuthorId }: { node: TreeNode; lineBelow: boolean } & Shared) {
+  const { comment } = node;
   const router = useRouter();
   const colors = useColors();
   const fail = useFail();
   const { token, profile } = useSignedIn();
+  const handle = useHandle(comment.author);
   const isMine = profile?.profileId === comment.author.profileId;
-  // Действия открываются долгим нажатием: «Удалить» — у своего, «Пожаловаться» — у чужого
+  const isPostAuthor = postAuthorId !== undefined && comment.author.profileId === postAuthorId;
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirm'>('closed');
+  const [menuAt, setMenuAt] = useState<Rect | null>(null);
+  const anchor = useAnchor();
   const [busy, setBusy] = useState<'delete' | 'report' | null>(null);
   const [reported, setReported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liked, setLiked] = useState(() => isCommentLiked(comment.commentId));
+  const canReport = !isMine && canReact && !reported;
+  const hasMenu = canReport || comment.canDelete;
+  const likes = likeCountOf(comment.commentId);
 
   const remove = async () => {
     setError(null);
@@ -183,7 +293,9 @@ function CommentRow({ comment, small = false, now, canReact, onReply, onRemoved 
       onRemoved(comment.commentId);
     } catch (caught) {
       setError(await fail(caught));
+    } finally {
       setBusy(null);
+      setMenu('closed');
     }
   };
 
@@ -193,7 +305,6 @@ function CommentRow({ comment, small = false, now, canReact, onReply, onRemoved 
     try {
       await reportComment(token, comment.commentId);
       setReported(true);
-      setMenu('closed');
     } catch (caught) {
       setError(await fail(caught));
     } finally {
@@ -206,75 +317,105 @@ function CommentRow({ comment, small = false, now, canReact, onReply, onRemoved 
     setLiked(isCommentLiked(comment.commentId));
   };
 
-  const hasActions = comment.canDelete || !isMine;
-
   return (
-    <Pressable
-      accessibilityLabel={`${comment.author.displayName}: ${comment.text}`}
-      accessibilityHint={hasActions ? 'Долгое нажатие открывает действия' : undefined}
-      onLongPress={hasActions ? () => setMenu('open') : undefined}
-      delayLongPress={350}
-      style={[styles.row, menu !== 'closed' && { backgroundColor: colors.fill }]}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Открыть профиль: ${comment.author.displayName}`}
-        onPress={() => router.push(isMine ? '/profile' : `/profiles/${comment.author.profileId}`)}
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      >
-        <Avatar avatarUrl={comment.author.avatarUrl} name={comment.author.displayName} size={small ? 26 : 32} />
-      </Pressable>
+    <View style={styles.row}>
+      <View style={styles.avatarCol}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Открыть профиль: ${comment.author.displayName}`}
+          onPress={() => router.push(isMine ? '/profile' : `/profiles/${comment.author.profileId}`)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Avatar avatarUrl={comment.author.avatarUrl} name={comment.author.displayName} size={AVATAR} />
+        </Pressable>
+        {/* Линия-ветка вниз от аватарки к ответам */}
+        {lineBelow ? <View pointerEvents="none" style={[styles.stem, { backgroundColor: colors.border }]} /> : null}
+      </View>
 
       <View style={styles.body}>
         <View style={styles.head}>
           <Text numberOfLines={1} style={[type.subhead, styles.name, { color: colors.text }]}>
-            {comment.author.displayName}
+            {handle}
           </Text>
           <Text numberOfLines={1} style={[type.footnote, styles.time, { color: colors.muted }]}>
             {formatPostTime(new Date(comment.createdAt), now)}
           </Text>
-        </View>
-        <Text style={[type.body, { color: colors.text }]}>{comment.text}</Text>
-
-        {canReact ? (
-          <View style={styles.actions}>
+          {isPostAuthor ? (
+            <View style={[styles.badge, { backgroundColor: colors.surfaceSecondary }]}>
+              <Text style={[type.caption, styles.badgeText, { color: colors.textPrimary }]}>Автор</Text>
+            </View>
+          ) : null}
+          <View style={styles.flex} />
+          {hasMenu ? (
             <Pressable
-              accessibilityRole="switch"
-              accessibilityLabel="Нравится"
-              accessibilityState={{ checked: liked }}
-              hitSlop={8}
-              onPress={like}
-              style={({ pressed }) => [styles.like, { opacity: pressed ? 0.6 : 1 }]}
+              ref={anchor.ref}
+              accessibilityRole="button"
+              accessibilityLabel={`Действия с комментарием: ${comment.author.displayName}`}
+              onPress={() =>
+                anchor.measure((rect) => {
+                  setMenuAt(rect);
+                  setMenu('open');
+                })
+              }
+              style={({ pressed }) => [styles.kebab, { opacity: pressed ? 0.5 : 1 }]}
             >
-              <HeartIcon color={liked ? colors.danger : colors.muted} filled={liked} background={menu !== 'closed' ? colors.card : colors.background} size={16} />
-              {liked ? <Text style={[type.footnote, { color: colors.danger }]}>1</Text> : null}
+              <DotsIcon color={colors.textSecondary} />
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Ответить: ${comment.author.displayName}`} hitSlop={8} onPress={() => onReply(comment)} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-              <Text style={[type.footnote, styles.link, { color: colors.muted }]}>Ответить</Text>
-            </Pressable>
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
-        {reported ? <Text style={[type.footnote, { color: colors.muted }]}>Спасибо, мы посмотрим</Text> : null}
+        <MentionLine comment={comment} mention={node.mentionOf} />
 
-        {menu === 'open' ? (
-          <View style={styles.menu}>
-            {comment.canDelete ? <Button size="compact" variant="plainDanger" title="Удалить" onPress={() => setMenu('confirm')} /> : null}
-            {!isMine && !reported ? (
-              <Button size="compact" variant="plain" title="Пожаловаться" onPress={() => void report()} loading={busy === 'report'} />
-            ) : null}
-            <Button size="compact" variant="plain" title="Отмена" onPress={() => setMenu('closed')} disabled={busy !== null} />
-          </View>
-        ) : null}
-        {menu === 'confirm' ? (
-          <View style={styles.menu}>
-            <Button size="compact" variant="danger" title="Да, удалить" onPress={() => void remove()} loading={busy === 'delete'} />
-            <Button size="compact" variant="plain" title="Отмена" onPress={() => setMenu('closed')} disabled={busy !== null} />
-          </View>
-        ) : null}
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole={canReact ? 'switch' : 'text'}
+            accessibilityLabel={canReact ? 'Нравится' : `Нравится: ${likes}`}
+            accessibilityState={canReact ? { checked: liked } : undefined}
+            disabled={!canReact}
+            hitSlop={8}
+            onPress={like}
+            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}
+          >
+            <HeartIcon color={liked ? colors.danger : colors.muted} filled={liked} background={colors.background} size={16} />
+            {likes > 0 ? <Text style={[type.footnote, { color: liked ? colors.danger : colors.muted }]}>{likes}</Text> : null}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Ответить: ${comment.author.displayName}. Ответов: ${node.children.length}`}
+            disabled={!canReact}
+            hitSlop={8}
+            onPress={() => onReply(comment)}
+            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}
+          >
+            <CommentIcon color={colors.muted} background={colors.background} />
+            {node.children.length > 0 ? <Text style={[type.footnote, { color: colors.muted }]}>{node.children.length}</Text> : null}
+          </Pressable>
+        </View>
+
+        {reported ? <Text style={[type.footnote, { color: colors.muted }]}>Спасибо, мы проверим</Text> : null}
+
+        <Popover visible={menu === 'open'} anchor={menuAt} onClose={() => setMenu('closed')}>
+          {canReport ? (
+            <PopoverItem compact first title="Пожаловаться" icon={<FlagIcon color={colors.textPrimary} />} onPress={() => { setMenu('closed'); void report(); }} />
+          ) : null}
+          {comment.canDelete && canReport ? <PopoverSeparator /> : null}
+          {comment.canDelete ? (
+            <PopoverItem compact danger first={!canReport} title="Удалить" icon={<TrashIcon color={colors.danger} />} onPress={() => setMenu('confirm')} />
+          ) : null}
+        </Popover>
+        <ConfirmDialog
+          visible={menu === 'confirm'}
+          title="Удалить комментарий?"
+          message="Это действие нельзя отменить"
+          confirmTitle="Удалить"
+          danger
+          loading={busy === 'delete'}
+          onConfirm={() => void remove()}
+          onCancel={() => setMenu('closed')}
+        />
         <ErrorText>{error}</ErrorText>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -282,6 +423,7 @@ function CommentRow({ comment, small = false, now, canReact, onReply, onRemoved 
 // При ответе над полем — плашка «Ответ для Имя ✕»
 export function CommentComposer({ comments, focusKey }: { comments: CommentsApi; focusKey: number }) {
   const colors = useColors();
+  const replyHandle = useNickname(comments.replyTo?.author.profileId);
   const { profile } = useSignedIn();
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const [focused, setFocused] = useState(false);
@@ -297,7 +439,7 @@ export function CommentComposer({ comments, focusKey }: { comments: CommentsApi;
       {comments.replyTo ? (
         <View style={[styles.replyChip, { backgroundColor: colors.accentTint }]}>
           <Text numberOfLines={1} style={[type.footnote, styles.replyText, { color: colors.accent }]}>
-            Ответ для {comments.replyTo.author.displayName}
+            Ответ для @{replyHandle ?? comments.replyTo.author.displayName}
           </Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Отменить ответ" hitSlop={10} onPress={() => comments.setReplyTo(null)}>
             <CloseIcon color={colors.accent} size={11} />
@@ -343,17 +485,28 @@ const styles = StyleSheet.create({
   spinner: { paddingVertical: 24 },
   notice: { alignItems: 'center', gap: 10, paddingVertical: 16 },
   empty: { textAlign: 'center', paddingVertical: 36 },
-  row: { flexDirection: 'row', gap: 10, paddingVertical: 10, paddingHorizontal: 20, marginHorizontal: -20 },
-  body: { flex: 1, gap: 3 },
-  head: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  name: { fontWeight: '600', flexShrink: 1 },
+  flex: { flex: 1 },
+  row: { flexDirection: 'row', gap: 10, paddingVertical: ROW_PAD },
+  avatarCol: { width: AVATAR },
+  // Линия вниз от аватарки к ответам
+  stem: { position: 'absolute', left: LINE_X, top: AVATAR + 4, bottom: -ROW_PAD, width: LINE, borderRadius: 1 },
+  body: { flex: 1, gap: 3, minWidth: 0 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 20 },
+  name: { fontWeight: '700', flexShrink: 1 },
   time: { flexShrink: 0 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 4 },
-  like: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 20 },
+  badge: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 8, flexShrink: 0 },
+  badgeText: { fontWeight: '600' },
+  // Область нажатия «⋯» — 44×44, сам значок тонкий и серый
+  kebab: { width: 44, height: 44, marginRight: -12, marginVertical: -12, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 4 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 24 },
   link: { fontWeight: '600' },
-  menu: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4, marginLeft: -12 },
-  replies: { marginLeft: 15, paddingLeft: 26, borderLeftWidth: 1.5 },
-  moreReplies: { paddingVertical: 8 },
+  // Ответы сдвинуты на ширину аватарки; у каждого — «колено» ветки от линии родителя
+  children: { marginLeft: INDENT },
+  elbow: { position: 'absolute', left: -INDENT + LINE_X, top: 0, width: INDENT - LINE_X - 6, height: ELBOW_Y, borderLeftWidth: LINE, borderBottomWidth: LINE, borderBottomLeftRadius: 14 },
+  // Линия продолжается мимо ответа к следующему ответу той же ветки
+  through: { position: 'absolute', left: -INDENT + LINE_X, top: ELBOW_Y, bottom: 0, width: LINE, borderRadius: 1 },
+  moreReplies: { paddingVertical: 10, paddingLeft: 0, minHeight: 44, justifyContent: 'center' },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, paddingBottom: 8, gap: 6 },
   composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: { flex: 1, minHeight: 40, maxHeight: 120, borderRadius: 20, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8 },

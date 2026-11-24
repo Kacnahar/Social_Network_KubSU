@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, Text, View, type GestureResponderEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { IOSSwitch } from './IOSSwitch';
 import { formatMinutes, MELODIES, stepMinutes, type Melody } from './soundSettings';
 import { updateSound, useSound } from './soundStore';
 import { type, useColors } from './theme';
@@ -46,15 +47,7 @@ function ToggleRow({ title, note, value, onChange }: { title: string; note?: str
         <Text style={[type.body, { color: colors.text }]}>{title}</Text>
         {note ? <Text style={[type.footnote, { color: colors.muted }]}>{note}</Text> : null}
       </View>
-      <Switch
-        accessibilityLabel={title}
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: colors.border, true: colors.primary }}
-        thumbColor={colors.background}
-        // На вебе цвет включённого бегунка задаётся отдельным свойством, которого нет в типах телефона
-        {...({ activeThumbColor: colors.background } as object)}
-      />
+      <IOSSwitch accessibilityLabel={title} value={value} onValueChange={onChange} />
     </View>
   );
 }

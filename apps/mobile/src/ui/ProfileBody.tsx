@@ -18,18 +18,20 @@ type ProfileBodyProps = {
   profile: Profile;
   isMine: boolean;
   onPlus?: (rect: Rect) => void;
+  // Фото сейчас загружается: на аватарке крутится индикатор
+  photoBusy?: boolean;
   // Кнопки под шапкой: свои у своего и у чужого профиля
   actions: ReactNode;
 };
 
 // Общая часть своего и чужого профиля: шапка, кнопки, «Актуальное», вкладки Посты · Фото · Ответы
-export function ProfileBody({ profile, isMine, onPlus, actions }: ProfileBodyProps) {
+export function ProfileBody({ profile, isMine, onPlus, photoBusy, actions }: ProfileBodyProps) {
   const colors = useColors();
   const [tab, setTab] = useState<Tab>('posts');
 
   return (
     <View style={styles.wrap}>
-      <ProfileView profile={profile} onPlus={onPlus} />
+      <ProfileView profile={profile} onPlus={onPlus} photoBusy={photoBusy} />
       {actions}
 
       <View>

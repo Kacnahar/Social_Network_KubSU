@@ -1,12 +1,9 @@
 import { ROLE_LABEL, PROFILE_NAME_MAX, updateProfileRequestSchema, type Profile } from '@app/shared';
-import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -17,17 +14,17 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ApiError, updateProfile, uploadMedia } from '../../lib/api';
-import { checkPhoto, readPhoto } from '../../lib/photo';
+import { ApiError, updateProfile } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
 import { Popover, PopoverItem, useAnchor, type Rect } from '../../ui/Popover';
 import { noOutline } from '../../ui/components';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { CakeIcon, CheckIcon, ChevronRightIcon, CloseIcon, GalleryIcon, OnlineIcon, PeopleIcon } from '../../ui/icons';
+import { CakeIcon, CameraIcon, CheckIcon, ChevronRightIcon, CloseIcon, GalleryIcon, OnlineIcon, PeopleIcon } from '../../ui/icons';
 import { CollapseRow } from '../../ui/CollapseRow';
 import { IOSSwitch } from '../../ui/IOSSwitch';
 import { RoleIcon } from '../auth/RoleIcon';
+import { useAvatarPhoto } from './useAvatarPhoto';
 import { BirthPicker } from './BirthPicker';
 import { birthLine, formatDate } from './birth';
 import { checkNickname, NICK_MAX, NICK_RULES, normalizeNickname } from '../../ui/nickname';
@@ -68,10 +65,9 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
   const [about, setAbout] = useState(initial.about ?? '');
   const [extras, setExtrasState] = useState<ProfileExtras>(start.extras ?? DEFAULT_EXTRAS);
   // undefined — фото не трогали; null — убрать; строка — загруженное
-  const [avatarMediaId, setAvatarMediaId] = useState<string | null | undefined>(undefined);
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  // Выбор, обрезка и загрузка фото — общий код (useAvatarPhoto); здесь результат сохранится по «Готово»
+  const photo = useAvatarPhoto();
+  const { mediaId: avatarMediaId, localUri, uploading, error: photoError } = photo;
 
   // Всплывающие меню открываются от своих кнопок: у каждого запоминается место кнопки на экране
   const photoAnchor = useAnchor();
@@ -82,6 +78,9 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
   const [birthAt, setBirthAt] = useState<Rect | null>(null);
   const [facultyQuery, setFacultyQuery] = useState('');
   const { height: screenH } = useWindowDimensions();
+  // Для перехода к полям из строк «что видно»: прокрутка и положение групп на экране
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const groupY = useRef({ personal: 0, study: 0 }).current;
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -143,27 +142,13 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
   const hasPhoto = avatarMediaId === undefined ? Boolean(initial.avatarUrl) : avatarMediaId !== null;
   const shownRemoteUrl = avatarMediaId === undefined ? initial.avatarUrl : null;
 
-  const pickPhoto = async () => {
-    setPhotoAt(null);
-    setPhotoError(null);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-      const uri = result.canceled ? undefined : result.assets[0]?.uri;
-      if (!uri) return;
-      setUploading(true);
-      const blob = await readPhoto(uri);
-      const problem = checkPhoto(blob);
-      if (problem) return setPhotoError(problem);
-      const uploaded = await uploadMedia(token, 'avatar', blob);
-      setAvatarMediaId(uploaded.mediaId);
-      setLocalUri(uri);
-    } catch (caught) {
-      if (caught instanceof ApiError && caught.code === 'unauthorized') return void (await forgetSession());
-      setPhotoError(caught instanceof ApiError ? caught.message : 'Не получилось загрузить фото. Попробуйте ещё раз');
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Новая аватарка появляется плавно
+  const avatarFade = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!localUri) return;
+    avatarFade.setValue(0);
+    Animated.timing(avatarFade, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [localUri, avatarFade]);
 
   const cancel = () => (dirty ? setConfirmCancel(true) : onClose());
 
@@ -202,6 +187,18 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
   };
 
   const canDone = dirty && !saving && !uploading;
+
+  // Подписи в «Что видно в профиле» — настоящие данные с экрана, обновляются сразу, без сохранения
+  const missingFaculty = faculty === '';
+  const missingCourse = isStudent && course === '';
+  const facultyNote = [missingFaculty ? 'Факультет не выбран' : shortFaculty(faculty), isStudent ? (missingCourse ? 'Курс не выбран' : `${course} курс`) : null].filter(Boolean).join(' · ');
+  const birthNote = extras.birth ? birthLine(extras.birth, new Date()) : 'Дата рождения не указана';
+  const goTo = (y: number, then: () => void) => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+    setTimeout(then, 380);
+  };
+  const toFaculty = () => goTo(groupY.study, () => { setFacultyQuery(''); facultyAnchor.measure(setFacultyAt); });
+  const toBirth = () => goTo(groupY.personal, () => birthAnchor.measure(setBirthAt));
   const meta = [faculty ? shortFaculty(faculty) : '', isStudent && course ? `${course} курс` : ''].filter(Boolean).join(' · ');
 
   return (
@@ -211,7 +208,7 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
           <Pressable accessibilityRole="button" accessibilityLabel="Отмена" hitSlop={10} onPress={cancel} style={styles.headerSide}>
             <Text style={[type.body, { color: colors.muted }]}>Отмена</Text>
           </Pressable>
-          <Text accessibilityRole="header" numberOfLines={1} style={[type.headline, styles.headerTitle, { color: colors.text }]}>
+          <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[type.headline, styles.headerTitle, { color: colors.text }]}>
             Редактировать профиль
           </Text>
           <Pressable
@@ -227,12 +224,25 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
           </Pressable>
         </View>
 
-        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
-            <Pressable accessible={false} onPress={Keyboard.dismiss} style={styles.column}>
+        {/* Клавиатура: экран сам поднимает поле выше клавиатуры (iOS — automaticallyAdjustKeyboardInsets, Android — системное сжатие окна).
+            Нажатие мимо полей закрывает клавиатуру само («handled»), отдельной обёртки с Keyboard.dismiss нет:
+            она могла сразу закрывать клавиатуру после нажатия на поле */}
+        <View style={styles.fill}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.fill}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.column}>
               {/* Аватар и ссылка «Изменить фото» */}
               <View style={styles.photo}>
-                <Avatar avatarUrl={shownRemoteUrl} localUri={localUri} name={displayName || ' '} size={96} busy={uploading} />
+                <Animated.View style={{ opacity: avatarFade }}>
+                  <Avatar avatarUrl={shownRemoteUrl} localUri={localUri} name={displayName || ' '} size={96} busy={uploading} />
+                </Animated.View>
                 <Pressable ref={photoAnchor.ref} accessibilityRole="button" accessibilityLabel="Изменить фото" hitSlop={8} onPress={() => photoAnchor.measure(setPhotoAt)}>
                   <Text style={[type.subhead, styles.photoLink, { color: colors.text }]}>{hasPhoto ? 'Изменить фото' : 'Добавить фото'}</Text>
                 </Pressable>
@@ -274,18 +284,22 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
                 ) : null}
               </View>
 
+              <View onLayout={(event) => (groupY.personal = event.nativeEvent.layout.y)}>
               <Group title="Личные данные">
                 <Row label="Имя" error={nameError}>
-                  <TextInput accessibilityLabel="Имя" value={firstName} onChangeText={setFirstName} maxLength={PROFILE_NAME_MAX} autoCapitalize="words" autoComplete="given-name" placeholder="Обязательно" placeholderTextColor={colors.muted} style={[type.body, styles.input, noOutline, { color: colors.text }]} />
+                  <TextInput accessibilityLabel="Имя" autoCorrect={false} spellCheck={false} value={firstName} onChangeText={setFirstName} maxLength={PROFILE_NAME_MAX} autoCapitalize="words" autoComplete="given-name" placeholder="Обязательно" placeholderTextColor={colors.muted} style={[type.body, styles.input, noOutline, { color: colors.text }]} />
                 </Row>
                 <Row label="Фамилия" error={lastNameError}>
-                  <TextInput accessibilityLabel="Фамилия" value={lastName} onChangeText={setLastName} maxLength={PROFILE_NAME_MAX} autoCapitalize="words" autoComplete="family-name" placeholder="Обязательно" placeholderTextColor={colors.muted} style={[type.body, styles.input, noOutline, { color: colors.text }]} />
+                  <TextInput accessibilityLabel="Фамилия" autoCorrect={false} spellCheck={false} value={lastName} onChangeText={setLastName} maxLength={PROFILE_NAME_MAX} autoCapitalize="words" autoComplete="family-name" placeholder="Обязательно" placeholderTextColor={colors.muted} style={[type.body, styles.input, noOutline, { color: colors.text }]} />
                 </Row>
                 <Row label="Никнейм" error={nickError}>
                   <View style={styles.nickWrap}>
                     <Text style={[type.body, { color: colors.muted }]}>@</Text>
                     <TextInput
                       accessibilityLabel="Никнейм"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      autoComplete="off"
                       value={nick}
                       onChangeText={(text) => setNick(normalizeNickname(text).slice(0, NICK_MAX))}
                       maxLength={NICK_MAX + 1}
@@ -304,13 +318,15 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
                   onPress={() => birthAnchor.measure(setBirthAt)}
                   style={styles.row}
                 >
-                  <Text style={[type.body, styles.label, { color: colors.muted }]}>Дата рождения</Text>
+                  <Text style={[type.body, styles.birthLabel, { color: colors.muted }]}>Дата рождения</Text>
                   <Text style={[type.body, styles.faculty, { color: extras.birth ? colors.text : colors.muted }]}>{extras.birth ? formatDate(extras.birth) : 'Выбрать'}</Text>
                   <ChevronRightIcon color={colors.muted} />
                 </Pressable>
               </Group>
+              </View>
               <Hint>{NICK_RULES}</Hint>
 
+              <View onLayout={(event) => (groupY.study = event.nativeEvent.layout.y)}>
               <Group title="Учёба">
                 <Pressable ref={facultyAnchor.ref} accessibilityRole="button" accessibilityLabel={`Факультет: ${faculty || 'не выбран'}`} onPress={() => { setFacultyQuery(''); facultyAnchor.measure(setFacultyAt); }} style={[styles.row, styles.rowBorder, { borderBottomColor: colors.border }]}>
                   <Text style={[type.body, styles.label, { color: colors.muted }]}>Факультет</Text>
@@ -344,6 +360,7 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
                   </Row>
                 )}
               </Group>
+              </View>
 
               <Group title="О себе">
                 <View style={styles.aboutBox}>
@@ -405,8 +422,8 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
               </Group>
 
               <Group title="Что видно в профиле">
-                <ToggleRow icon={<RoleIcon role="student" color={colors.text} />} iconScale={0.72} title="Показывать факультет и курс" note="Например, ФКТиПМ · 2 курс" value={extras.showFaculty} onChange={(v) => setExtra('showFaculty', v)} />
-                <ToggleRow icon={<CakeIcon color={colors.text} />} title="Показывать дату рождения" note="Дата и возраст в профиле" value={extras.showBirth} onChange={(v) => setExtra('showBirth', v)} />
+                <ToggleRow icon={<RoleIcon role="student" color={colors.text} />} iconScale={0.72} title="Показывать факультет и курс" note={facultyNote} onNotePress={missingFaculty || missingCourse ? toFaculty : undefined} value={extras.showFaculty} onChange={(v) => setExtra('showFaculty', v)} />
+                <ToggleRow icon={<CakeIcon color={colors.text} />} title="Показывать дату рождения" note={birthNote} onNotePress={extras.birth ? undefined : toBirth} value={extras.showBirth} onChange={(v) => setExtra('showBirth', v)} />
                 <ToggleRow icon={<PeopleIcon color={colors.text} />} title="Показывать список друзей" note="Кто у вас в друзьях" value={extras.showFriends} onChange={(v) => setExtra('showFriends', v)} />
                 <ToggleRow icon={<OnlineIcon color={colors.text} />} title="Показывать, когда я в сети" note="Отметка «в сети» рядом с именем" value={extras.showOnline} onChange={(v) => setExtra('showOnline', v)} last />
               </Group>
@@ -414,21 +431,21 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
 
               {error ? <View style={styles.errorPad}><ErrorLine>{error}</ErrorLine></View> : null}
               <Text style={[type.footnote, styles.role, { color: colors.muted }]}>Роль: {ROLE_LABEL[account.role].toLowerCase()}. Изменить её нельзя</Text>
-            </Pressable>
+            </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
 
       <Popover visible={photoAt !== null} anchor={photoAt} onClose={() => setPhotoAt(null)}>
-        <PopoverItem first title={hasPhoto ? 'Выбрать другое фото' : 'Выбрать фото'} icon={<GalleryIcon color={colors.textPrimary} />} onPress={() => void pickPhoto()} />
+        <PopoverItem first title={hasPhoto ? 'Выбрать другое фото' : 'Выбрать фото'} icon={<GalleryIcon color={colors.textPrimary} />} onPress={() => { setPhotoAt(null); void photo.pick('library'); }} />
+        <PopoverItem title="Сделать снимок" icon={<CameraIcon color={colors.textPrimary} />} onPress={() => { setPhotoAt(null); void photo.pick('camera'); }} />
         {hasPhoto ? (
           <PopoverItem
             title="Убрать фото"
             icon={<CloseIcon color={colors.textPrimary} size={14} />}
             onPress={() => {
               setPhotoAt(null);
-              setAvatarMediaId(null);
-              setLocalUri(null);
+              photo.remove();
             }}
           />
         ) : null}
@@ -471,6 +488,8 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
           {filterFaculties(facultyQuery).length === 0 ? <Text style={[type.body, styles.noResults, { color: colors.muted }]}>Ничего не нашли</Text> : null}
         </ScrollView>
       </Popover>
+
+      {photo.cropper}
 
       <ConfirmDialog visible={confirmCancel} title="Отменить изменения?" message="Всё, что вы изменили, пропадёт" confirmTitle="Да, отменить" cancelTitle="Продолжить" danger onConfirm={onClose} onCancel={() => setConfirmCancel(false)} />
     </View>
@@ -517,7 +536,7 @@ function Row({ label, error, last = false, children }: { label: string; error?: 
   );
 }
 
-function ToggleRow({ icon, iconScale = 1, title, note, value, onChange, last = false }: { icon: ReactNode; iconScale?: number; title: string; note: string; value: boolean; onChange: (value: boolean) => void; last?: boolean }) {
+function ToggleRow({ icon, iconScale = 1, title, note, onNotePress, value, onChange, last = false }: { icon: ReactNode; iconScale?: number; title: string; note: string; onNotePress?: () => void; value: boolean; onChange: (value: boolean) => void; last?: boolean }) {
   const colors = useColors();
   return (
     <View style={[styles.toggle, !last && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
@@ -526,7 +545,13 @@ function ToggleRow({ icon, iconScale = 1, title, note, value, onChange, last = f
       </View>
       <View style={styles.toggleText}>
         <Text style={[type.body, { color: colors.text }]}>{title}</Text>
-        <Text numberOfLines={1} style={[type.footnote, { color: colors.muted }]}>{note}</Text>
+        {onNotePress ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={`${note}. Перейти к полю`} hitSlop={6} onPress={onNotePress}>
+            <Text numberOfLines={2} style={[type.footnote, { color: colors.textSecondary }]}>{note}</Text>
+          </Pressable>
+        ) : (
+          <Text numberOfLines={2} style={[type.footnote, { color: colors.textSecondary }]}>{note}</Text>
+        )}
       </View>
       <IOSSwitch accessibilityLabel={title} value={value} onValueChange={onChange} />
     </View>
@@ -579,7 +604,7 @@ function NickStatus({ state }: { state: NickState }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: 16 },
-  headerSide: { minWidth: 72, minHeight: 44, justifyContent: 'center' },
+  headerSide: { minWidth: 64, minHeight: 44, justifyContent: 'center' },
   headerRight: { alignItems: 'flex-end' },
   headerTitle: { flex: 1, textAlign: 'center' },
   done: { fontWeight: '700' },
@@ -599,7 +624,8 @@ const styles = StyleSheet.create({
   hint: { paddingLeft: 4, paddingTop: 4 },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingHorizontal: 14, gap: 10 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth },
-  label: { width: 130 },
+  label: { width: 112, flexShrink: 1 },
+  birthLabel: { width: 130, flexShrink: 0 },
   rowField: { flex: 1 },
   input: { flex: 1, minHeight: 44, paddingVertical: 8 },
   nickWrap: { flexDirection: 'row', alignItems: 'center', gap: 2 },
@@ -607,7 +633,7 @@ const styles = StyleSheet.create({
   faculty: { flex: 1, textAlign: 'right', paddingVertical: 10 },
   courseRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 56, paddingHorizontal: 14 },
   segments: { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'flex-end' },
-  segment: { flex: 1, maxWidth: 48, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  segment: { flex: 1, maxWidth: 48, height: 44, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontWeight: '600' },
   aboutBox: { padding: 14, paddingBottom: 8 },
   aboutInput: { minHeight: 84, padding: 0 },

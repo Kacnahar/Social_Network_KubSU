@@ -3,11 +3,13 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { pausedUntilText } from '../../lib/banText';
+import { updateProfile } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
+import { useAvatarPhoto } from '../../features/profile/useAvatarPhoto';
 import { Body, Button, ListScreen, Screen, useTabBarSpace } from '../../ui/components';
 import { Emblem } from '../../ui/Emblem';
 import { Popover, PopoverItem, type Rect } from '../../ui/Popover';
-import { CameraIcon, ShareIcon, SlidersIcon, StoryIcon } from '../../ui/icons';
+import { CameraIcon, GalleryIcon, ShareIcon, SlidersIcon, StoryIcon, TrashIcon } from '../../ui/icons';
 import { ProfileBody } from '../../ui/ProfileBody';
 import { radius, type, useColors } from '../../ui/theme';
 
@@ -15,12 +17,28 @@ import { radius, type, useColors } from '../../ui/theme';
 export default function MyProfileScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { signOut, refreshAccount } = useSession();
-  const { profile, account } = useSignedIn();
+  const { signOut, refreshAccount, setProfile } = useSession();
+  const { profile, account, token } = useSignedIn();
   const tabBarSpace = useTabBarSpace();
   const [shareNote, setShareNote] = useState(false);
   const [plusAt, setPlusAt] = useState<Rect | null>(null);
   const [leaving, setLeaving] = useState<'/register' | '/login' | null>(null);
+
+  // Фото профиля прямо здесь: выбор → экран обрезки → сразу сохраняется в профиль (без захода в «Редактировать профиль»).
+  // Код выбора и обрезки общий с экраном редактирования
+  const photo = useAvatarPhoto({
+    onChanged: async (mediaId) => {
+      if (!profile) return;
+      const saved = await updateProfile(token, {
+        displayName: profile.displayName,
+        faculty: profile.faculty ?? '',
+        about: profile.about ?? '',
+        ...(account.role === 'student' ? { course: profile.course } : {}),
+        avatarMediaId: mediaId,
+      });
+      setProfile(saved);
+    },
+  });
 
   // Бан могли выдать или снять, пока приложение открыто
   useFocusEffect(
@@ -86,6 +104,7 @@ export default function MyProfileScreen() {
         profile={profile}
         isMine
         onPlus={setPlusAt}
+        photoBusy={photo.uploading}
         actions={
           <View style={styles.actionsWrap}>
             {account.status === 'banned' ? <Body muted>{pausedUntilText(account.bannedUntil)}</Body> : null}
@@ -111,26 +130,52 @@ export default function MyProfileScreen() {
           </View>
         }
       />
-      {/* Меню по «+» у аватарки: фото профиля (экран редактирования, где выбирается фото) и история */}
+      {photo.error ? (
+        <Text accessibilityRole="alert" style={[type.footnote, { color: colors.danger }]}>
+          {photo.error}
+        </Text>
+      ) : null}
+
+      {/* Меню по «+» у аватарки: фото выбирается и обрезается прямо здесь, переход в «Редактировать профиль» не нужен */}
       <Popover visible={plusAt !== null} anchor={plusAt} onClose={() => setPlusAt(null)}>
         <PopoverItem
           first
-          title={profile.avatarUrl ? 'Изменить фото профиля' : 'Добавить фото профиля'}
-          icon={<CameraIcon color={colors.text} />}
+          title="Галерея"
+          icon={<GalleryIcon color={colors.textPrimary} />}
           onPress={() => {
             setPlusAt(null);
-            router.push('/profile/edit');
+            void photo.pick('library');
           }}
         />
         <PopoverItem
+          title="Камера"
+          icon={<CameraIcon color={colors.textPrimary} />}
+          onPress={() => {
+            setPlusAt(null);
+            void photo.pick('camera');
+          }}
+        />
+        {profile.avatarUrl ? (
+          <PopoverItem
+            danger
+            title="Удалить фото"
+            icon={<TrashIcon color={colors.danger} />}
+            onPress={() => {
+              setPlusAt(null);
+              photo.remove();
+            }}
+          />
+        ) : null}
+        <PopoverItem
           title="Добавить историю"
-          icon={<StoryIcon color={colors.text} />}
+          icon={<StoryIcon color={colors.textPrimary} />}
           onPress={() => {
             setPlusAt(null);
             router.navigate({ pathname: '/create', params: { kind: 'story' } });
           }}
         />
       </Popover>
+      {photo.cropper}
     </Screen>
   );
 }

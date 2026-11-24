@@ -113,7 +113,7 @@ function PostWithComments({ post, now, onBack, onChanged, onDeleted, onCountChan
           <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.column}>
               <PostCard post={post} now={now} expanded onChanged={onChanged} onDeleted={onDeleted} />
-              <CommentList comments={comments} now={now} canReact={canReact} onReply={reply} />
+              <CommentList comments={comments} now={now} canReact={canReact} onReply={reply} postAuthorId={post.author.profileId} />
             </View>
           </ScrollView>
 

@@ -138,6 +138,15 @@ export function PlusIcon({ color, size = 18 }: { color: string; size?: number })
   );
 }
 
+// Минус: одна тонкая линия, в паре с PlusIcon
+export function MinusIcon({ color, size = 18 }: { color: string; size?: number }) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: size, height: 2, borderRadius: 1, backgroundColor: color }} />
+    </View>
+  );
+}
+
 // Три точки — «ещё»
 export function DotsIcon({ color }: { color: string }) {
   return (
@@ -378,6 +387,49 @@ export function TrashIcon({ color }: { color: string }) {
       <View style={{ position: 'absolute', left: 6, top: 8, width: 12, height: 13, borderWidth: W, borderTopWidth: 0, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, borderColor: color }} />
       <View style={{ position: 'absolute', left: 10.1, top: 11, width: 1.5, height: 7, borderRadius: 1, backgroundColor: color }} />
       <View style={{ position: 'absolute', left: 12.9, top: 11, width: 1.5, height: 7, borderRadius: 1, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Повернуть по часовой: открытая сверху дуга, стрелка на левом конце смотрит вверх-вправо, то есть по ходу часовой стрелки.
+// «Против часовой» — та же картинка, отражённая слева направо
+function TurnArrow({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 3, top: 3, width: 18, height: 18, borderRadius: 9, borderWidth: W, borderColor: color, borderTopColor: 'transparent' }} />
+      <View style={{ position: 'absolute', left: 2.4, top: 3.2, width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 6.5, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color, transform: [{ rotate: '45deg' }] }} />
+    </View>
+  );
+}
+
+export function RotateRightIcon({ color }: { color: string }) {
+  return <TurnArrow color={color} />;
+}
+
+export function RotateLeftIcon({ color }: { color: string }) {
+  return (
+    <View style={{ transform: [{ scaleX: -1 }] }}>
+      <TurnArrow color={color} />
+    </View>
+  );
+}
+
+// Отразить слева направо: два треугольника по сторонам вертикальной оси
+export function FlipHorizontalIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.box}>
+      <View style={{ position: 'absolute', left: 11.1, top: 3, width: W, height: 18, borderRadius: 1, backgroundColor: color, opacity: 0.55 }} />
+      <View style={{ position: 'absolute', left: 3, top: 7, width: 0, height: 0, borderTopWidth: 5, borderBottomWidth: 5, borderRightWidth: 6.5, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: color }} />
+      <View style={{ position: 'absolute', left: 14.5, top: 7, width: 0, height: 0, borderTopWidth: 5, borderBottomWidth: 5, borderLeftWidth: 6.5, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: color, opacity: 0.55 }} />
+    </View>
+  );
+}
+
+// Отразить сверху вниз: то же самое, повёрнутое на 90°
+export function FlipVerticalIcon({ color }: { color: string }) {
+  return (
+    <View style={{ transform: [{ rotate: '90deg' }] }}>
+      <FlipHorizontalIcon color={color} />
     </View>
   );
 }
