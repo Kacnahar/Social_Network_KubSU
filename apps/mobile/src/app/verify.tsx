@@ -1,10 +1,15 @@
 import { LOGIN_CODE_LENGTH } from '@app/shared';
 import { Redirect, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { authStart, authVerify } from '../lib/api';
+import { useEffect, useState } from 'react';
+import { SIGNUP_STEPS, getSignupDraft, setSignupDraft } from '../features/auth/registration';
+import { authStart, authVerify, updateProfile } from '../lib/api';
 import { useSession } from '../lib/session';
-import { Body, Button, Card, ErrorText, Field, Screen, Title } from '../ui/components';
+import { CodeField } from '../ui/CodeField';
+import { Body, Button } from '../ui/components';
+import { StepScreen } from '../ui/StepScreen';
+
+// Сколько секунд ждать, прежде чем можно запросить код ещё раз
+const RESEND_WAIT = 60;
 
 export default function VerifyScreen() {
   const router = useRouter();
@@ -13,9 +18,19 @@ export default function VerifyScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState<'verify' | 'resend' | null>(null);
+  const [wait, setWait] = useState(RESEND_WAIT);
 
-  if (!pendingLogin) return <Redirect href="/login" />;
+  // Обратный отсчёт до повторной отправки
+  useEffect(() => {
+    if (wait <= 0) return;
+    const timer = setTimeout(() => setWait((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [wait]);
 
+  if (!pendingLogin) return <Redirect href="/welcome" />;
+
+  // Код приглашения в черновике входа есть только при регистрации — тогда показываем шаги
+  const isSignup = Boolean(pendingLogin.inviteCode);
   const codeIsComplete = code.length === LOGIN_CODE_LENGTH;
 
   const submit = async () => {
@@ -27,7 +42,15 @@ export default function VerifyScreen() {
     setNotice(null);
     setLoading('verify');
     try {
-      await signIn(await authVerify(pendingLogin.email, code));
+      const token = await authVerify(pendingLogin.email, code);
+      // После регистрации сразу создаём профиль из анкеты, чтобы человек попал прямо в ленту.
+      // Не получилось — не страшно: приложение само откроет экран заполнения профиля.
+      const draft = getSignupDraft(pendingLogin.email);
+      if (draft) {
+        await updateProfile(token, { displayName: draft.displayName }).catch(() => undefined);
+        setSignupDraft(null);
+      }
+      await signIn(token);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
       setLoading(null);
@@ -43,6 +66,7 @@ export default function VerifyScreen() {
       setPendingLogin({ ...pendingLogin, devCode: response.devCode });
       setCode('');
       setNotice('Отправили новый код');
+      setWait(RESEND_WAIT);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
     } finally {
@@ -50,53 +74,50 @@ export default function VerifyScreen() {
     }
   };
 
+  // Возвращаемся к анкете (или к входу): введённое там сохраняется, почту можно поправить
   const changeEmail = () => {
     setPendingLogin(null);
-    router.replace('/login');
+    if (router.canGoBack()) router.back();
+    else router.replace(isSignup ? '/register' : '/login');
   };
 
   return (
-    <Screen>
-      <Title>Код из письма</Title>
-      <Body muted>
-        Если всё верно, на {pendingLogin.email} пришло письмо с кодом из {LOGIN_CODE_LENGTH} цифр. Он действует 10 минут.
-      </Body>
-
-      <Card>
-        {pendingLogin.devCode ? (
-          <Body muted>Режим разработки: письма пока не отправляются. Ваш код — {pendingLogin.devCode}</Body>
-        ) : null}
-        <Field
-          label="Код"
-          value={code}
-          onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, LOGIN_CODE_LENGTH))}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={LOGIN_CODE_LENGTH}
-          placeholder="000000"
-          returnKeyType="go"
-          onSubmitEditing={submit}
-          autoFocus
-          style={styles.code}
-        />
-        <ErrorText>{error}</ErrorText>
-        {notice ? <Body muted>{notice}</Body> : null}
-        <Button title="Войти" onPress={submit} loading={loading === 'verify'} disabled={loading === 'resend'} />
-        <Button
-          variant="secondary"
-          title="Отправить код ещё раз"
-          onPress={resend}
-          loading={loading === 'resend'}
-          disabled={loading === 'verify'}
-        />
-      </Card>
-
-      <Button variant="plain" title="Изменить почту" onPress={changeEmail} disabled={loading !== null} />
-    </Screen>
+    <StepScreen
+      title="Подтвердите почту"
+      subtitle={`Мы отправили код на ${pendingLogin.email}. Он действует 10 минут`}
+      step={isSignup ? { current: 3, total: SIGNUP_STEPS } : undefined}
+      onBack={changeEmail}
+      primary={{
+        title: isSignup ? 'Готово' : 'Войти',
+        onPress: () => void submit(),
+        loading: loading === 'verify',
+        disabled: loading === 'resend' || !codeIsComplete,
+      }}
+      footer={
+        <>
+          <Button
+            variant="plain"
+            title={wait > 0 ? `Отправить ещё раз через ${wait} с` : 'Отправить ещё раз'}
+            onPress={() => void resend()}
+            loading={loading === 'resend'}
+            disabled={loading === 'verify' || wait > 0}
+          />
+          <Button variant="plain" title="Изменить почту" onPress={changeEmail} disabled={loading !== null} />
+        </>
+      }
+    >
+      <CodeField
+        label="Код из письма"
+        length={LOGIN_CODE_LENGTH}
+        value={code}
+        onChange={(next) => {
+          setCode(next);
+          setError(null);
+        }}
+        error={error}
+        hint={pendingLogin.devCode ? `Режим разработки: письма не отправляются. Ваш код — ${pendingLogin.devCode}` : undefined}
+      />
+      {notice ? <Body muted>{notice}</Body> : null}
+    </StepScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  code: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: 8, textAlign: 'center', fontVariant: ['tabular-nums'] },
-});

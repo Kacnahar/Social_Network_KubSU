@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, type ElementType } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useReduceMotion, useScheme } from '../../ui/theme';
+import { useColors, useReduceMotion, useScheme } from '../../ui/theme';
 
 const DEFAULT_SIZE = 188;
 const nativeDriver = Platform.OS !== 'web';
@@ -56,6 +56,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
   // Кнопку в кнопку вкладывать нельзя: без onPress шар рисуется обычным блоком
   const Shell: ElementType = onPress ? Pressable : View;
   const scheme = useScheme();
+  const colors = useColors();
   const reduceMotion = useReduceMotion();
   const moving = !reduceMotion;
   const tempo = active ? 1 : 2.2;
@@ -79,7 +80,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
   const haloOpacity = halo.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.5, 0] });
 
   const isDark = scheme === 'dark';
-  const base = ['#FFFFFF', '#E2E5EA', '#A7ADBA'] as const;
+  const base = [colors.surface, colors.surfaceSecondary, colors.border] as const;
 
   return (
     <View style={styles.frame}>
@@ -88,7 +89,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
           pointerEvents="none"
           style={[
             styles.halo,
-            { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(140,146,160,0.30)' },
+            { backgroundColor: colors.accentTint },
             { opacity: moving ? haloOpacity : 0.25, transform: [{ scale: moving ? haloScale : 0.9 }] },
           ]}
         />
@@ -109,7 +110,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
             : { accessible: false })}
           style={[
             styles.orb,
-            { shadowColor: isDark ? '#FFFFFF' : '#5B6478', shadowOpacity: active ? (isDark ? 0.35 : 0.45) : 0.18 },
+            { shadowColor: colors.primary, shadowOpacity: active ? (isDark ? 0.35 : 0.45) : 0.18 },
             !active && styles.resting,
           ]}
         >
@@ -118,7 +119,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
 
             <Animated.View style={[styles.layer, { transform: [{ rotate }] }]}>
               <LinearGradient
-                colors={['rgba(84,92,112,0.9)', 'rgba(84,92,112,0)']}
+                colors={[colors.textSecondary, 'transparent']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={[styles.cloud, styles.cloudDark]}
@@ -127,7 +128,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
 
             <Animated.View style={[styles.layer, { transform: [{ rotate: rotateBack }] }]}>
               <LinearGradient
-                colors={['rgba(255,255,255,1)', 'rgba(255,255,255,0)']}
+                colors={[colors.surface, 'transparent']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={[styles.cloud, styles.cloudLight]}
@@ -136,7 +137,7 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
 
             <Animated.View style={[styles.layer, { transform: [{ translateY: drift }, { rotate }] }]}>
               <LinearGradient
-                colors={['rgba(118,126,146,0.8)', 'rgba(118,126,146,0)']}
+                colors={[colors.border, 'transparent']}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={[styles.cloud, styles.cloudMid]}
@@ -145,14 +146,14 @@ export function Orb({ label, onPress, active, disabled = false, size = DEFAULT_S
 
             <LinearGradient
               pointerEvents="none"
-              colors={['rgba(60,68,88,0)', 'rgba(60,68,88,0.38)']}
+              colors={['transparent', colors.textSecondary]}
               start={{ x: 0.5, y: 0.45 }}
               end={{ x: 0.5, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <LinearGradient
               pointerEvents="none"
-              colors={['rgba(255,255,255,0.7)', 'rgba(255,255,255,0)']}
+              colors={[colors.surface, 'transparent']}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 0.55 }}
               style={styles.gloss}
@@ -185,7 +186,7 @@ function createStyles(size: number) {
       borderRadius: size / 2,
       overflow: 'hidden',
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.9)',
+      borderColor: 'transparent',
     },
     layer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
     // Размытие превращает пятна с чёткой границей в облака

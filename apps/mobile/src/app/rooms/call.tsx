@@ -1,11 +1,13 @@
 import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { JoinRoomResponse } from '@app/shared';
 import { getRoomState, joinRoom, leaveRoom } from '../../features/rooms/api';
-import { MicButton } from '../../features/rooms/MicButton';
+import { AfterRoom } from '../../features/rooms/AfterRoom';
 import { formatBlockedUntil, isInFuture, minutesLeft, voteResultText } from '../../features/rooms/moderation';
 import { ParticipantList } from '../../features/rooms/ParticipantList';
+import { RoomControls } from '../../features/rooms/RoomControls';
 import { formatMinutesLeft } from '../../features/rooms/slotTime';
 import { useRoomState } from '../../features/rooms/useRoomState';
 import { VoteBanner } from '../../features/rooms/VoteBanner';
@@ -13,8 +15,8 @@ import { usePersona } from '../../features/rooms/usePersona';
 import { useCall, voiceSupported } from '../../features/rooms/voice';
 import { ApiError } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
-import { Body, Button, Card, ErrorText, LoadingScreen, Screen, Title } from '../../ui/components';
-import { type, useColors } from '../../ui/theme';
+import { Body, Button, ErrorText, LoadingScreen, Screen, Title } from '../../ui/components';
+import { ForceScheme, type, useColors } from '../../ui/theme';
 
 const TICK_MS = 30_000;
 
@@ -75,6 +77,9 @@ function Room({ slotId }: { slotId: string }) {
   const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
   const focused = useIsFocused();
   const names = useRef(new Map<string, string>());
+  const otherNicknames = useRef<string[]>([]);
+  // Поднятая рука пока живёт только на этом экране: сервер о ней не знает, другие её не видят
+  const [handRaised, setHandRaised] = useState(false);
   const leftRef = useRef(false);
   const forgetRef = useRef(forgetSession);
   forgetRef.current = forgetSession;
@@ -142,6 +147,10 @@ function Room({ slotId }: { slotId: string }) {
 
   // Ники помним, чтобы итог голосования назвал и того, кто уже вышел
   for (const participant of call.participants) names.current.set(participant.id, participant.name);
+  // Ники тех, кто был в комнате со мной: пригодятся на экране «Хотите пообщаться ещё?»
+  for (const participant of call.participants) {
+    if (!participant.isMe && !otherNicknames.current.includes(participant.name)) otherNicknames.current.push(participant.name);
+  }
   const nameOf = (personaId: string) => names.current.get(personaId) ?? null;
 
   // Меня выгнали: рвём соединение (повторный вызов безопасен) и показываем объяснение
@@ -225,21 +234,17 @@ function Room({ slotId }: { slotId: string }) {
     );
   }
 
-  if (timeUp) {
-    return (
-      <Screen>
-        <Title>Комната закончилась</Title>
-        <Body muted>Спасибо, что были с нами. Загляните в следующий раз.</Body>
-        <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
-      </Screen>
-    );
+  // Комната закончилась или человек вышел сам — предлагаем отметить, с кем было интересно.
+  // Ники берём из памяти экрана: это только ники комнат, без профилей
+  if (timeUp || call.status === 'ended') {
+    return <AfterRoom nicknames={otherNicknames.current} onDone={() => router.dismissTo('/voice')} />;
   }
 
-  if (call.status === 'error' || call.status === 'ended') {
+  if (call.status === 'error') {
     return (
       <Screen>
         <Title>Комната</Title>
-        <ErrorText>{call.error ?? 'Вы вышли из комнаты'}</ErrorText>
+        <ErrorText>{call.error ?? 'Связь с комнатой прервалась'}</ErrorText>
         <Button title="К комнатам" onPress={() => router.dismissTo('/voice')} />
       </Screen>
     );
@@ -265,62 +270,96 @@ function Room({ slotId }: { slotId: string }) {
       : null;
 
   return (
-    <Screen align="top">
-      <View style={styles.header}>
-        <Title>Комната</Title>
-        <Body muted>
-          {call.participants.length} в комнате · до конца {formatMinutesLeft(new Date(join.endsAt), new Date(now))}
-        </Body>
-      </View>
+    // Комната всегда тёмная, какой бы ни была тема телефона
+    <ForceScheme scheme="dark">
+      <RoomFrame
+        top={
+          <View style={styles.header}>
+            <Title>Комната</Title>
+            <Body muted>
+              {call.participants.length} в комнате · до конца {formatMinutesLeft(new Date(join.endsAt), new Date(now))}
+            </Body>
+          </View>
+        }
+        bottom={
+          <View style={styles.bottom}>
+            {/* При голосовании единственная primary-кнопка экрана — «Поддержать» */}
+            {call.needsAudioUnlock ? <Button variant={vote ? 'secondary' : 'primary'} title="Включить звук" onPress={call.unlockAudio} /> : null}
+            <ErrorText>{call.micError}</ErrorText>
+            <RoomControls
+              micEnabled={call.micEnabled}
+              micBusy={call.micBusy}
+              micBlocked={micBlocked}
+              micNote={micNote}
+              onToggleMic={call.toggleMic}
+              handRaised={handRaised}
+              onToggleHand={() => setHandRaised((value) => !value)}
+              // Выход ведёт на экран «Хотите пообщаться ещё?», а не сразу к расписанию
+              onLeave={() => leave(false)}
+            />
+          </View>
+        }
+      >
+        {!vote && result ? <RoomNote tone="muted">{voteResultText(result, nameOf(result.targetPersonaId))}</RoomNote> : null}
+        {call.status === 'reconnecting' ? <RoomNote tone="danger">Связь пропала, подключаемся заново…</RoomNote> : null}
 
-      {!vote && result ? (
-        <Text accessibilityLiveRegion="polite" style={[type.subhead, { color: colors.muted }]}>
-          {voteResultText(result, nameOf(result.targetPersonaId))}
-        </Text>
-      ) : null}
+        {vote && roomId ? (
+          <VoteBanner
+            vote={vote}
+            targetName={nameOf(vote.targetPersonaId)}
+            token={token}
+            onChanged={refresh}
+            onUnauthorized={onUnauthorized}
+          />
+        ) : null}
 
-      {call.status === 'reconnecting' ? (
-        <Text accessibilityLiveRegion="polite" style={[type.headline, { color: colors.danger }]}>
-          Связь пропала, подключаемся заново…
-        </Text>
-      ) : null}
-
-      {vote && roomId ? (
-        <VoteBanner
-          vote={vote}
-          targetName={nameOf(vote.targetPersonaId)}
-          token={token}
-          onChanged={refresh}
-          onUnauthorized={onUnauthorized}
-        />
-      ) : null}
-
-      <Card>
         <ParticipantList
           participants={call.participants}
           roomId={join.roomId}
           token={token}
           voteActive={vote !== null}
+          handRaised={handRaised}
           onChanged={refresh}
           onUnauthorized={onUnauthorized}
         />
-      </Card>
+      </RoomFrame>
+    </ForceScheme>
+  );
+}
 
-      {/* При голосовании единственная primary-кнопка экрана — «Поддержать» */}
-      {call.needsAudioUnlock ? <Button variant={vote ? 'secondary' : 'primary'} title="Включить звук" onPress={call.unlockAudio} /> : null}
+// Рамка комнаты: заголовок, прокручиваемая середина с участниками и закреплённые внизу кнопки
+function RoomFrame({ top, bottom, children }: { top: ReactNode; bottom: ReactNode; children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.fill, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={styles.fill}>
+        <View style={[styles.column, styles.top]}>{top}</View>
+        <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={[styles.column, styles.middle]}>{children}</View>
+        </ScrollView>
+        <View style={[styles.column, styles.controls, { borderTopColor: colors.border }]}>{bottom}</View>
+      </SafeAreaView>
+    </View>
+  );
+}
 
-      <View style={styles.mic}>
-        <MicButton enabled={call.micEnabled} busy={call.micBusy} onPress={call.toggleMic} disabled={micBlocked} note={micNote} />
-        <ErrorText>{call.micError}</ErrorText>
-      </View>
-
-      <Button variant="plainDanger" title="Выйти из комнаты" onPress={() => leave(true)} />
-    </Screen>
+function RoomNote({ tone, children }: { tone: 'muted' | 'danger'; children: string }) {
+  const colors = useColors();
+  return (
+    <Text accessibilityLiveRegion="polite" style={[tone === 'danger' ? type.headline : type.subhead, { color: tone === 'danger' ? colors.danger : colors.muted }]}>
+      {children}
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20 },
+  top: { paddingTop: 20, paddingBottom: 12 },
   header: { gap: 4 },
+  scroll: { flexGrow: 1 },
+  middle: { gap: 16, paddingTop: 12, paddingBottom: 24 },
+  controls: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, paddingBottom: 12 },
+  bottom: { gap: 10 },
   connecting: { alignItems: 'center', gap: 12 },
-  mic: { alignItems: 'center', gap: 12, paddingVertical: 8 },
 });

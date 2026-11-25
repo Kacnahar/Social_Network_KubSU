@@ -20,8 +20,8 @@ function SlotRow({ slot, now, showCountdown }: { slot: Slot; now: Date; showCoun
       {slot.state === 'live' ? (
         <>
           <View style={styles.liveRow}>
-            <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-            <Text style={[type.subhead, styles.live, { color: colors.success }]}>Идёт сейчас</Text>
+            <View style={[styles.liveDot, { backgroundColor: colors.highlight }]} />
+            <Text style={[type.subhead, styles.live, { color: colors.live }]}>Идёт сейчас</Text>
           </View>
         </>
       ) : (
