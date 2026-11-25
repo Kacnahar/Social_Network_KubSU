@@ -4,10 +4,11 @@ import { useRef, type ReactNode } from 'react';
 import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
+import { PlusIcon } from '../../ui/icons';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
 
 const AVATAR = 64;
-const RING = 3;
+const RING = 2.5;
 const GAP = 3;
 const OUTER = AVATAR + 2 * (RING + GAP);
 const ITEM_WIDTH = OUTER + 8;
@@ -36,7 +37,7 @@ function Circle({ label, accessibilityLabel, onPress, children }: CircleProps) {
         style={styles.item}
       >
         {children}
-        <Text numberOfLines={1} style={[type.footnote, styles.label, { color: colors.text }]}>
+        <Text numberOfLines={1} style={[type.caption, styles.label, { color: colors.muted }]}>
           {label}
         </Text>
       </Pressable>
@@ -44,8 +45,15 @@ function Circle({ label, accessibilityLabel, onPress, children }: CircleProps) {
   );
 }
 
-function Ring({ color, children }: { color: string; children: ReactNode }) {
-  return <View style={[styles.ring, { borderColor: color }]}>{children}</View>;
+// Кольцо вокруг кружка: у непросмотренных истории — кольцо цвета primary (чёрное, в тёмной теме белое), у просмотренных — тонкая серая граница
+function Ring({ unseen, children }: { unseen: boolean; children: ReactNode }) {
+  const colors = useColors();
+  if (!unseen) return <View style={[styles.ring, { borderColor: colors.border }]}>{children}</View>;
+  return (
+    <View style={[styles.ringUnseen, { backgroundColor: colors.primary }]}>
+      <View style={[styles.ringInner, { backgroundColor: colors.background }]}>{children}</View>
+    </View>
+  );
 }
 
 // Ряд кружков вверху ленты; без историй и без права публиковать (гость) не показывается вовсе
@@ -66,16 +74,16 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
       {canPublish ? (
         mine && mine.stories.length > 0 ? (
           <Circle label="Ваша история" accessibilityLabel="Ваша история" onPress={() => open(mine.author.profileId)}>
-            <Ring color={mine.hasUnseen ? colors.accent : colors.border}>
+            <Ring unseen={mine.hasUnseen}>
               <Avatar avatarUrl={mine.author.avatarUrl} name={mine.author.displayName} size={AVATAR} />
             </Ring>
           </Circle>
         ) : (
-          <Circle label="Добавить" accessibilityLabel="Добавить историю" onPress={() => router.navigate({ pathname: '/create', params: { kind: 'story' } })}>
+          <Circle label="Ваша история" accessibilityLabel="Ваша история. Добавить" onPress={() => router.push('/stories/new')}>
             <View style={styles.ring}>
               <Avatar avatarUrl={profile?.avatarUrl ?? null} name={profile?.displayName ?? ''} size={AVATAR} />
-              <View style={[styles.plus, { backgroundColor: colors.accent, borderColor: colors.background }]}>
-                <Text style={[type.headline, styles.plusSign, { color: colors.onAccent }]}>+</Text>
+              <View style={[styles.plus, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+                <PlusIcon color={colors.onPrimary} size={10} />
               </View>
             </View>
           </Circle>
@@ -89,7 +97,7 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
           accessibilityLabel={`История: ${group.author.displayName}${group.hasUnseen ? ', есть новые' : ''}`}
           onPress={() => open(group.author.profileId)}
         >
-          <Ring color={group.hasUnseen ? colors.accent : colors.border}>
+          <Ring unseen={group.hasUnseen}>
             <Avatar avatarUrl={group.author.avatarUrl} name={group.author.displayName} size={AVATAR} />
           </Ring>
         </Circle>
@@ -101,7 +109,7 @@ export function StoriesRow({ groups }: { groups: StoryGroup[] | null }) {
 const styles = StyleSheet.create({
   // Ряд идёт от края до края экрана, а первый кружок выровнен по колонке
   scroll: { marginHorizontal: -20, flexGrow: 0 },
-  row: { paddingHorizontal: 20, gap: 4 },
+  row: { paddingHorizontal: 14, gap: 6 },
   item: { width: ITEM_WIDTH, alignItems: 'center', gap: 6 },
   ring: {
     width: OUTER,
@@ -112,6 +120,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ringUnseen: { width: OUTER, height: OUTER, borderRadius: OUTER / 2, alignItems: 'center', justifyContent: 'center' },
+  ringInner: { width: OUTER - 2 * RING, height: OUTER - 2 * RING, borderRadius: (OUTER - 2 * RING) / 2, alignItems: 'center', justifyContent: 'center' },
   label: { maxWidth: ITEM_WIDTH, textAlign: 'center' },
   plus: {
     position: 'absolute',
@@ -124,5 +134,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusSign: { fontSize: 16, lineHeight: 18 },
 });

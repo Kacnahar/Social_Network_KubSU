@@ -1,12 +1,17 @@
-import type { Post } from '@app/shared';
+import { can, type Comment, type Post } from '@app/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components';
 import { getPost } from '../../features/posts/api';
-import { CommentsCard } from '../../features/posts/CommentsCard';
+import { CommentComposer, CommentList, useComments } from '../../features/posts/Comments';
 import { PostCard } from '../../features/posts/PostCard';
+import { BackButton } from '../../ui/BackButton';
+import { IconButton } from '../../ui/IconButton';
+import { type, useColors } from '../../ui/theme';
 
 type LoadState =
   | { status: 'loading' }
@@ -49,18 +54,15 @@ export default function PostScreen() {
   if (state.status === 'loading') return <LoadingScreen />;
   if (state.status === 'ready') {
     return (
-      <Screen align="top">
-        <PostCard
-          post={state.post}
-          now={now}
-          expanded
-          onChanged={change}
-          // Удалённого поста больше нет — возвращаемся туда, откуда пришли
-          onDeleted={() => setState({ status: 'missing' })}
-        />
-        <CommentsCard postId={state.post.postId} now={now} onCountChange={countChanged} />
-        <Button variant="plain" title="Назад" onPress={back} />
-      </Screen>
+      <PostWithComments
+        post={state.post}
+        now={now}
+        onBack={back}
+        onChanged={change}
+        // Удалённого поста больше нет
+        onDeleted={() => setState({ status: 'missing' })}
+        onCountChange={countChanged}
+      />
     );
   }
   return (
@@ -72,3 +74,88 @@ export default function PostScreen() {
     </Screen>
   );
 }
+
+type PostWithCommentsProps = {
+  post: Post;
+  now: Date;
+  onBack: () => void;
+  onChanged: (post: Post) => void;
+  onDeleted: () => void;
+  onCountChange: (delta: number) => void;
+};
+
+// Пост сверху, под ним комментарии; поле ввода закреплено внизу и поднимается над клавиатурой
+function PostWithComments({ post, now, onBack, onChanged, onDeleted, onCountChange }: PostWithCommentsProps) {
+  const colors = useColors();
+  const { account, signOut } = useGuestExit();
+  const canReact = can(account.role, 'react');
+  const comments = useComments(post.postId, onCountChange);
+  const [focusKey, setFocusKey] = useState(0);
+
+  const reply = (comment: Comment) => {
+    comments.setReplyTo(comment);
+    setFocusKey((key) => key + 1);
+  };
+
+  return (
+    <View style={[styles.fill, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={styles.fill}>
+        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.column, styles.bar]}>
+            <BackButton inline onPress={onBack} />
+            <View style={styles.titleBox}>
+              <Text accessibilityRole="header" numberOfLines={1} style={[type.headline, styles.title, { color: colors.textPrimary }]}>
+                Комментарии
+              </Text>
+              {/* Склонять имя по падежам без ошибок нельзя, поэтому «Пост · Имя Фамилия» */}
+              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.subtitle, { color: colors.textSecondary }]}>
+                Пост · {post.author.displayName}
+              </Text>
+            </View>
+            <View style={styles.barSpace} />
+          </View>
+
+          <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <View style={styles.column}>
+              <PostCard post={post} now={now} expanded onChanged={onChanged} onDeleted={onDeleted} />
+              <CommentList comments={comments} now={now} canReact={canReact} onReply={reply} postAuthorId={post.author.profileId} />
+            </View>
+          </ScrollView>
+
+          <View style={styles.column}>
+            {canReact ? (
+              <CommentComposer comments={comments} focusKey={focusKey} />
+            ) : (
+              // Гость комментарии только читает
+              <View style={[styles.guest, { borderTopColor: colors.border }]}>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={signOut} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                  <Text style={[type.subhead, styles.guestText, { color: colors.accent }]}>Зарегистрируйтесь, чтобы комментировать</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+// Гостю кнопка регистрации завершает гостевой вход — откроется стартовый экран
+function useGuestExit() {
+  const { signOut } = useSession();
+  const { account } = useSignedIn();
+  return { account, signOut: () => void signOut() };
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 20 },
+  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 52 },
+  barSpace: { width: 40 },
+  titleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  title: { fontWeight: '700' },
+  subtitle: { fontSize: 12, lineHeight: 16, maxWidth: '100%' },
+  scroll: { flexGrow: 1, paddingBottom: 16 },
+  guest: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 16 },
+  guestText: { textAlign: 'center', fontWeight: '600' },
+});

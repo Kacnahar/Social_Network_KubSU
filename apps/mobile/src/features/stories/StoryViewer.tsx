@@ -9,18 +9,18 @@ import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { useFail } from '../../lib/useFail';
 import { Avatar } from '../../ui/Avatar';
-import { type, useReduceMotion } from '../../ui/theme';
+import { darkColors, type, useReduceMotion } from '../../ui/theme';
 import { deleteStory, getStoryViewers, markStoryViewed } from './api';
 
-// Просмотр фото всегда на чёрном фоне и в обеих темах: цвета темы здесь не подходят
-const VIEWER_BG = '#000000';
-const VIEWER_TEXT = '#FFFFFF';
-// Приглушённый светлый текст, подложки и дорожки полосок — тоже независимо от темы
-const VIEWER_MUTED = 'rgba(255,255,255,0.72)';
-const VIEWER_TRACK = 'rgba(255,255,255,0.32)';
-const VIEWER_SCRIM = 'rgba(0,0,0,0.6)';
-const VIEWER_PANEL = 'rgba(28,28,30,0.96)';
-const VIEWER_DANGER = '#FF6961';
+// Просмотр фото всегда на тёмном фоне и в обеих темах: берём цвета тёмной темы
+const VIEWER_BG = darkColors.background;
+const VIEWER_TEXT = darkColors.text;
+// Приглушённый текст, подложки и дорожки полосок — тоже из тёмной палитры
+const VIEWER_MUTED = darkColors.muted;
+const VIEWER_TRACK = darkColors.border;
+const VIEWER_SCRIM = darkColors.scrim;
+const VIEWER_PANEL = darkColors.surface;
+const VIEWER_DANGER = darkColors.danger;
 
 const STORY_MS = 5000;
 const HOLD_MS = 300;

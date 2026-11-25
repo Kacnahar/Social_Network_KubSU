@@ -82,7 +82,8 @@ export function StoryComposer() {
 
   const cancel = () => {
     reset();
-    router.navigate('/');
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
   };
 
   return (
