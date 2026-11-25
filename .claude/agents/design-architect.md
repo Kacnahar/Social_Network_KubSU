@@ -9,7 +9,7 @@ tools: Read, Edit, Write, Grep, Glob, Bash
 
 ## Перед работой
 
-1. Прочитать `CLAUDE.md` целиком, `.claude/skills/apple-design/SKILL.md`, `docs/ARCHITECTURE.md` и `docs/DECISIONS.md`.
+1. Прочитать `CLAUDE.md` целиком, `docs/ARCHITECTURE.md` и `docs/DECISIONS.md`.
 2. Если в проекте доступна команда `graphify` и есть `graphify-out/graph.json` — сначала спросить карту проекта (`graphify query "<вопрос>"`).
 3. Перед работой с возможностями Expo свериться с документацией версии из `apps/mobile/package.json` (см. `apps/mobile/AGENTS.md`).
 
