@@ -1,9 +1,4 @@
-import { ComingSoon } from '../../ui/ComingSoon';
-import { MapIcon } from '../../ui/icons';
-import { useColors } from '../../ui/theme';
+import { Map3DScreen } from '../../features/map3d/Map3DScreen';
 
-// Заглушка: раздела ещё нет, экран только занимает место во вкладках
-export default function MapScreen() {
-  const colors = useColors();
-  return <ComingSoon title="3D карта" text="Здесь появится объёмная карта корпусов и аудиторий" icon={<MapIcon color={colors.accent} />} />;
-}
+// Вкладка «3D карта»: объёмная карта территории и корпусов
+export default Map3DScreen;

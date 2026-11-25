@@ -63,7 +63,6 @@ function Navigation() {
         <Stack.Screen name="stories/[profileId]" />
         <Stack.Screen name="stories/new" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="admin/index" />
-        <Stack.Screen name="map" />
       </Stack.Protected>
       <Stack.Protected guard={hasProfile && canUseRooms}>
         <Stack.Screen name="rooms/nickname" />
