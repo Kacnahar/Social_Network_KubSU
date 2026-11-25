@@ -25,3 +25,8 @@ graphify-out/.graphify_analysis.json
 graphify-out/.graphify_partial.txt
 graphify-out/.graphify_semantic.json
 graphify-out/.graphify_chunk_*.json
+
+# 3D-карта: пробные картинки и текстуры, которые скрипт Blender создаёт заново
+apps/mobile/scripts/map3d/out/
+apps/mobile/scripts/map3d/tex/
+__pycache__/
