@@ -42,7 +42,7 @@ export function SectionRow({ title, caption, icon, index, onPress }: { title: st
       >
         <View style={[styles.icon, { backgroundColor: colors.fill }]}>{icon(colors.textPrimary)}</View>
         <View style={styles.text}>
-          <Text style={[type.headline, styles.title, { color: colors.textPrimary }]}>{title}</Text>
+          <Text numberOfLines={1} style={[type.headline, { color: colors.textPrimary }]}>{title}</Text>
           <Text numberOfLines={2} style={[type.footnote, { color: colors.textSecondary }]}>
             {caption}
           </Text>
@@ -68,5 +68,4 @@ const styles = StyleSheet.create({
   cardTall: { minHeight: 110 },
   icon: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
-  title: { fontSize: 17, fontWeight: '700' },
 });

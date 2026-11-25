@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { type, useColors, useReduceMotion, useScheme } from '../../ui/theme';
+import { radius, type, useColors, useReduceMotion, useScheme } from '../../ui/theme';
 
 const native = Platform.OS !== 'web';
 
@@ -31,11 +31,11 @@ export function CategoryTile({ title, caption, icon, index, onPress }: { title: 
         onPress={onPress}
         onPressIn={() => animate(true)}
         onPressOut={() => animate(false)}
-        style={[styles.tile, { backgroundColor: colors.fill, borderColor: colors.border, shadowColor: colors.shadow, shadowOpacity: light ? 1 : 0, elevation: light ? 2 : 0 }]}
+        style={[styles.tile, { backgroundColor: colors.fill, borderColor: light ? colors.border : colors.fillActive, shadowColor: colors.shadow, shadowOpacity: light ? 1 : 0, elevation: light ? 2 : 0 }]}
       >
         <View style={styles.icon}>{icon(colors.textPrimary)}</View>
         <View style={styles.text}>
-          <Text style={[type.headline, styles.title, { color: colors.textPrimary }]}>{title}</Text>
+          <Text style={[type.headline, { color: colors.textPrimary }]}>{title}</Text>
           <Text style={[type.footnote, { color: colors.textSecondary }]}>{caption}</Text>
         </View>
       </Pressable>
@@ -46,9 +46,9 @@ export function CategoryTile({ title, caption, icon, index, onPress }: { title: 
 const styles = StyleSheet.create({
   cell: { flexBasis: '47%', flexGrow: 1 },
   tile: {
-    aspectRatio: 1,
-    minHeight: 166,
-    borderRadius: 8,
+    minHeight: 150,
+    borderRadius: radius.field,
+    borderCurve: 'continuous',
     borderWidth: 1,
     padding: 14,
     justifyContent: 'space-between',
@@ -57,5 +57,4 @@ const styles = StyleSheet.create({
   },
   icon: { flexShrink: 0, alignSelf: 'flex-start' },
   text: { gap: 3 },
-  title: { fontSize: 16, lineHeight: 20, fontWeight: '700' },
 });

@@ -6,8 +6,9 @@ import { ApiError, getProfileById } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components';
 import { BackButton } from '../../ui/BackButton';
-import { IconButton } from '../../ui/IconButton';
-import { DotsIcon } from '../../ui/icons';
+import { FlagIcon, ShareIcon } from '../../ui/icons';
+import { MoreButton } from '../../ui/MoreButton';
+import { Popover, PopoverItem, useAnchor, type Rect } from '../../ui/Popover';
 import { ProfileBody } from '../../ui/ProfileBody';
 import { type, useColors } from '../../ui/theme';
 
@@ -24,7 +25,9 @@ export default function ProfileByIdScreen() {
   const colors = useColors();
   const { token, profile: mine, account } = useSignedIn();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Меню «⋯» открывается от кнопки, как меню «+» у аватарки в своём профиле
+  const menuAnchor = useAnchor();
+  const [menuAt, setMenuAt] = useState<Rect | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const isMine = mine !== null && mine.profileId === profileId;
 
@@ -66,16 +69,28 @@ export default function ProfileByIdScreen() {
       <Screen align="top">
         <View style={styles.bar}>
           <BackButton inline onPress={back} />
-          <IconButton label={menuOpen ? 'Скрыть действия' : 'Ещё действия'} onPress={() => setMenuOpen((value) => !value)}>
-            <DotsIcon color={colors.text} />
-          </IconButton>
+          <MoreButton label="Ещё действия" anchorRef={menuAnchor.ref} onPress={() => menuAnchor.measure(setMenuAt)} />
         </View>
-        {menuOpen ? (
-          <View style={styles.menu}>
-            <Button variant="plain" title="Поделиться" onPress={() => void share()} />
-            <Button variant="plainDanger" title="Пожаловаться" onPress={() => setNote('Жалобы на профиль скоро появятся. Пока можно пожаловаться на пост — через «…» у поста')} />
-          </View>
-        ) : null}
+        <Popover visible={menuAt !== null} anchor={menuAt} onClose={() => setMenuAt(null)}>
+          <PopoverItem
+            first
+            title="Поделиться"
+            icon={<ShareIcon color={colors.textPrimary} />}
+            onPress={() => {
+              setMenuAt(null);
+              void share();
+            }}
+          />
+          <PopoverItem
+            danger
+            title="Пожаловаться"
+            icon={<FlagIcon color={colors.danger} />}
+            onPress={() => {
+              setMenuAt(null);
+              setNote('Жалобы на профиль скоро появятся. Пока можно пожаловаться на пост — через «…» у поста');
+            }}
+          />
+        </Popover>
 
         <ProfileBody
           profile={profile}
@@ -115,7 +130,6 @@ export default function ProfileByIdScreen() {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: -4 },
-  menu: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4, marginVertical: -8 },
   actionsWrap: { gap: 8 },
   actions: { flexDirection: 'row', gap: 10 },
   action: { flex: 1 },
