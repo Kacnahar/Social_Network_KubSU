@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ApiError, updateProfile } from '../../lib/api';
+import { ApiError, checkUsername, updateProfile } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Avatar } from '../../ui/Avatar';
 import { Popover, PopoverItem, useAnchor, type Rect } from '../../ui/Popover';
@@ -28,7 +28,7 @@ import { useAvatarPhoto } from './useAvatarPhoto';
 import { BirthPicker } from './BirthPicker';
 import { birthLine, formatDate } from './birth';
 import { checkNickname, NICK_MAX, NICK_RULES, normalizeNickname } from '../../ui/nickname';
-import { setNickname, useNickname } from '../../ui/nicknameStore';
+import { useNickname } from '../../ui/nicknameStore';
 import { joinName, splitName } from '../../ui/plural';
 import { RoleBadge } from '../../ui/RoleBadge';
 import { SearchField } from '../../ui/SearchField';
@@ -38,7 +38,9 @@ import { filterFaculties, shortFaculty } from './faculties';
 import { detectService, MAX_LINKS, normalizeLink } from './links';
 import { ServiceLogo } from './ServiceLogo';
 import { DEFAULT_EXTRAS, type ProfileExtras } from './profileExtras';
-import { setExtras, useExtras } from './profileExtrasStore';
+import { useExtras } from './profileExtrasStore';
+import { toIsoDate } from './isoDate';
+import { rememberProfile } from './profileCache';
 
 const ABOUT_MAX = 150;
 const COURSES = ['1', '2', '3', '4', '5'] as const;
@@ -104,19 +106,35 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
 
   const setExtra = <K extends keyof ProfileExtras>(key: K, value: ProfileExtras[K]) => setExtrasState((current) => ({ ...current, [key]: value }));
 
-  // Проверка никнейма: неверная запись — сразу; верная — «проверяем» и через мгновение ответ (заглушка вместо сервера)
+  // Проверка никнейма: неверная запись — сразу; верная — «проверяем» и спрашиваем сервер, свободен ли он
   const nickCheck = nick === '' ? null : checkNickname(nick);
-  const nickSyntaxBad = nickCheck !== null && !nickCheck.ok && nickCheck.reason !== 'Этот никнейм занят';
+  const nickSyntaxBad = nickCheck !== null && !nickCheck.ok;
   const [nickState, setNickState] = useState<NickState>(nick === '' ? 'idle' : 'ok');
+  // Никнейм, про который сервер ответил «занят»
+  const [takenNick, setTakenNick] = useState<string | null>(null);
   useEffect(() => {
     if (nick === '') return setNickState('idle');
     if (nickSyntaxBad) return setNickState('bad');
     if (nick === start.nick) return setNickState('ok');
     setNickState('checking');
-    const timer = setTimeout(() => setNickState(checkNickname(nick).ok ? 'ok' : 'bad'), 450);
-    return () => clearTimeout(timer);
-  }, [nick, nickSyntaxBad, start.nick]);
-  const nickError = nickCheck && !nickCheck.ok && nickState !== 'checking' ? nickCheck.reason : null;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      checkUsername(token, nick)
+        .then((available) => {
+          if (cancelled) return;
+          setTakenNick(available ? null : nick);
+          setNickState(available ? 'ok' : 'bad');
+        })
+        // Нет связи — не мешаем: занятый никнейм сервер всё равно не сохранит
+        .catch(() => !cancelled && setNickState('ok'));
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [nick, nickSyntaxBad, start.nick, token]);
+  const nickTaken = takenNick !== null && takenNick === nick;
+  const nickError = nickState === 'checking' ? null : nickCheck && !nickCheck.ok ? nickCheck.reason : nickTaken ? 'Этот никнейм занят' : null;
 
   const linkErrors = extras.links.map((link) => (link.trim() !== '' && normalizeLink(link) === null ? 'Это не похоже на адрес' : null));
   const nameError = submitted && firstName.trim() === '' ? 'Введите имя' : null;
@@ -156,16 +174,23 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
     setSubmitted(true);
     setError(null);
     const links = extras.links.map((link) => link.trim()).filter(Boolean);
-    if (firstName.trim() === '' || lastName.trim() === '' || (nickCheck && !nickCheck.ok) || nickState === 'checking' || aboutError || linkErrors.some(Boolean)) {
+    if (firstName.trim() === '' || lastName.trim() === '' || (nickCheck && !nickCheck.ok) || nickTaken || nickState === 'checking' || aboutError || linkErrors.some(Boolean)) {
       setError('Проверьте выделенные поля');
       return;
     }
+    const privacy = { showFaculty: extras.showFaculty, showBirth: extras.showBirth, showFriends: extras.showFriends, showOnline: extras.showOnline };
     const parsed = updateProfileRequestSchema.safeParse({
       displayName,
       faculty,
       about,
       ...(isStudent ? { course: course === '' ? null : Number(course) } : {}),
       ...(avatarMediaId === undefined ? {} : { avatarMediaId }),
+      // Никнейм, ссылки, дата рождения и «что видно в профиле» хранятся на сервере
+      username: nickCheck?.ok ? nickCheck.value : null,
+      links: links.map((link) => normalizeLink(link) ?? link),
+      birthDate: extras.birth ? toIsoDate(extras.birth) : null,
+      privacy,
+      ...(account.role === 'teacher' ? { department: extras.chair } : {}),
     });
     if (!parsed.success) {
       setError('Проверьте выделенные поля');
@@ -174,13 +199,12 @@ export function EditProfile({ initial, onSaved, onClose }: Props) {
     setSaving(true);
     try {
       const saved = await updateProfile(token, parsed.data);
-      // Никнейм и остальное пока хранятся на устройстве
-      setNickname(saved.profileId, nickCheck?.ok ? nickCheck.value : '');
-      setExtras(saved.profileId, { ...extras, links: links.map((link) => normalizeLink(link) ?? link) });
+      rememberProfile(saved, privacy);
       showToast('Сохранено');
       onSaved(saved);
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') return void (await forgetSession());
+      if (caught instanceof ApiError && caught.code === 'username_taken') setTakenNick(nick);
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
       setSaving(false);
     }

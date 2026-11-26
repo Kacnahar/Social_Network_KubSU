@@ -1,6 +1,7 @@
-import { type AccountResponse, type Profile, type Role } from '@app/shared';
+import { type AccountResponse, type Profile, type Role, type Signup } from '@app/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiError, getAccount, getProfile, logout } from './api';
+import { rememberProfile } from '../features/profile/profileCache';
+import { ApiError, getAccount, getMyProfile, logout } from './api';
 import { disablePush } from './push';
 import { clearToken, loadToken, saveToken } from './tokenStorage';
 
@@ -11,7 +12,8 @@ type SessionState =
   | { status: 'signedIn'; token: string; account: AccountResponse; profile: Profile | null };
 
 // Почта, на которую отправлен код: живёт только в памяти, между экранами входа
-export type PendingLogin = { email: string; inviteCode?: string; devCode?: string };
+// signup — анкета регистрации: нужна, чтобы отправить код ещё раз
+export type PendingLogin = { email: string; inviteCode?: string; signup?: Signup; devCode?: string };
 
 type SessionContextValue = {
   state: SessionState;
@@ -42,8 +44,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     async (token: string) => {
       try {
         // Навигации нужно знать роль и есть ли профиль; персону комнат грузит сам модуль комнат
-        const [account, profile] = await Promise.all([getAccount(token), getProfile(token)]);
-        setState({ status: 'signedIn', token, account, profile });
+        const [account, mine] = await Promise.all([getAccount(token), getMyProfile(token)]);
+        // Никнейм и «что видно в профиле» экраны читают из хранилищ на устройстве — наполняем их ответом сервера
+        if (mine.profile) rememberProfile(mine.profile, mine.privacy);
+        setState({ status: 'signedIn', token, account, profile: mine.profile });
       } catch (error) {
         if (error instanceof ApiError && error.code === 'unauthorized') await forgetSession();
         else setState({ status: 'offline' });

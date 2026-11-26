@@ -1,8 +1,8 @@
-import { LOGIN_CODE_LENGTH } from '@app/shared';
+import { LOGIN_CODE_LENGTH, TEST_LOGIN_CODE, isTestLoginEmail } from '@app/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { SIGNUP_STEPS, getSignupDraft, setSignupDraft } from '../features/auth/registration';
-import { authStart, authVerify, updateProfile } from '../lib/api';
+import { SIGNUP_STEPS } from '../features/auth/registration';
+import { authStart, authVerify } from '../lib/api';
 import { useSession } from '../lib/session';
 import { CodeField } from '../ui/CodeField';
 import { Body, Button } from '../ui/components';
@@ -29,9 +29,11 @@ export default function VerifyScreen() {
 
   if (!pendingLogin) return <Redirect href="/welcome" />;
 
-  // Код приглашения в черновике входа есть только при регистрации — тогда показываем шаги
-  const isSignup = Boolean(pendingLogin.inviteCode);
-  const codeIsComplete = code.length === LOGIN_CODE_LENGTH;
+  // Анкета (или код приглашения) в черновике входа есть только при регистрации — тогда показываем шаги
+  const isSignup = Boolean(pendingLogin.signup ?? pendingLogin.inviteCode);
+  // Только при разработке: тестовые аккаунты входят по короткому коду. Боевой сервер его не принимает
+  const isTestCode = __DEV__ && isTestLoginEmail(pendingLogin.email) && code === TEST_LOGIN_CODE;
+  const codeIsComplete = code.length === LOGIN_CODE_LENGTH || isTestCode;
 
   const submit = async () => {
     if (!codeIsComplete) {
@@ -42,15 +44,8 @@ export default function VerifyScreen() {
     setNotice(null);
     setLoading('verify');
     try {
-      const token = await authVerify(pendingLogin.email, code);
-      // После регистрации сразу создаём профиль из анкеты, чтобы человек попал прямо в ленту.
-      // Не получилось — не страшно: приложение само откроет экран заполнения профиля.
-      const draft = getSignupDraft(pendingLogin.email);
-      if (draft) {
-        await updateProfile(token, { displayName: draft.displayName }).catch(() => undefined);
-        setSignupDraft(null);
-      }
-      await signIn(token);
+      // Профиль из анкеты сервер создаёт сам — человек попадает прямо в ленту
+      await signIn(await authVerify(pendingLogin.email, code));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
       setLoading(null);
@@ -62,7 +57,7 @@ export default function VerifyScreen() {
     setNotice(null);
     setLoading('resend');
     try {
-      const response = await authStart({ email: pendingLogin.email, inviteCode: pendingLogin.inviteCode });
+      const response = await authStart({ email: pendingLogin.email, inviteCode: pendingLogin.inviteCode, signup: pendingLogin.signup });
       setPendingLogin({ ...pendingLogin, devCode: response.devCode });
       setCode('');
       setNotice('Отправили новый код');

@@ -2,6 +2,7 @@ import { can, type Profile } from '@app/shared';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
+import { rememberProfile } from '../../features/profile/profileCache';
 import { ApiError, getProfileById } from '../../lib/api';
 import { useSession, useSignedIn } from '../../lib/session';
 import { Body, Button, LoadingScreen, Screen, Title } from '../../ui/components';
@@ -31,7 +32,10 @@ export default function ProfileByIdScreen() {
   const load = useCallback(async () => {
     setState({ status: 'loading' });
     try {
-      setState({ status: 'ready', profile: await getProfileById(token, profileId) });
+      const profile = await getProfileById(token, profileId);
+      // Никнейм, ссылки и дату рождения шапка профиля читает из хранилища на устройстве
+      rememberProfile(profile, null);
+      setState({ status: 'ready', profile });
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') await forgetSession();
       else if (caught instanceof ApiError && caught.code === 'not_found') setState({ status: 'missing' });

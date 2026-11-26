@@ -6,7 +6,7 @@ import { ApiError, unauthorized } from './errors';
 import { deletePersonaOfAccount } from './identity';
 import type { MediaStorage } from './media/storage';
 
-export type AccountStanding = { role: Role; status: 'active' | 'banned'; bannedUntil: Date | null; emailHash: string };
+export type AccountStanding = { role: Role; status: 'active' | 'banned'; bannedUntil: Date | null; emailHash: string | null };
 
 export async function getAccountStanding(db: DbOrTx, accountId: string): Promise<AccountStanding | null> {
   const [account] = await db

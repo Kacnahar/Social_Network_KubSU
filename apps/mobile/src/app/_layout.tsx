@@ -21,7 +21,8 @@ function Navigation() {
   }
 
   const signedIn = state.status === 'signedIn';
-  const hasProfile = signedIn && state.profile !== null;
+  // Гость только смотрит: профиль ему заполнять не нужно
+  const hasProfile = signedIn && (state.profile !== null || state.account.role === 'guest');
   const canUseRooms = signedIn && can(state.account.role, 'rooms');
 
   return (

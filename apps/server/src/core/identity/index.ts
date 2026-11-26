@@ -1,7 +1,7 @@
 // Единственное место в коде, которое знает связь «аккаунт ↔ персона комнат».
 // Таблицу persona_links нельзя импортировать за пределами этой папки — это проверяет автотест.
 
-import type { Role } from '@app/shared';
+import type { Gender, Role } from '@app/shared';
 import { eq } from 'drizzle-orm';
 import { isUniqueViolation, type Db, type DbOrTx, type Tx } from '../../db/client';
 import { accounts, personaLinks, personas } from '../../db/schema';
@@ -14,15 +14,28 @@ export async function findAccountIdByEmailHash(db: DbOrTx, emailHash: string): P
 
 export async function createAccount(
   tx: Tx,
-  input: { emailHash: string; emailEncrypted: string; inviteCodeId: string; role: Role; now: Date },
+  input: {
+    // Почты нет только у гостя без регистрации
+    emailHash: string | null;
+    emailEncrypted: string | null;
+    inviteCodeId?: string | null;
+    role: Role;
+    now: Date;
+    person?: { lastName: string; firstName: string; patronymic?: string | null; gender?: Gender | null; staffId?: string | null };
+  },
 ): Promise<string> {
   const [account] = await tx
     .insert(accounts)
     .values({
       emailHash: input.emailHash,
       emailEncrypted: input.emailEncrypted,
-      inviteCodeId: input.inviteCodeId,
+      inviteCodeId: input.inviteCodeId ?? null,
       role: input.role,
+      lastName: input.person?.lastName ?? null,
+      firstName: input.person?.firstName ?? null,
+      patronymic: input.person?.patronymic ?? null,
+      gender: input.person?.gender ?? null,
+      staffId: input.person?.staffId ?? null,
       createdAt: input.now,
     })
     .returning({ id: accounts.id });

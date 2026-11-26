@@ -1,8 +1,8 @@
 // Таблицы ЯДРА соцсети: аккаунт, вход, приглашения, уведомления.
 // Открытый профиль соцсети появится здесь же (см. docs/DATA_MODEL.md).
 
-import { boolean, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { ADMIN_ACTIONS, MEDIA_PURPOSES, ROLES } from '@app/shared';
+import { boolean, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { ADMIN_ACTIONS, GENDERS, MEDIA_PURPOSES, ROLES, type Signup } from '@app/shared';
 import { id, time } from './columns';
 
 // ---------- Зона аккаунта: наружу не выходит ----------
@@ -21,13 +21,19 @@ export const inviteCodes = pgTable('invite_codes', {
 
 export const accounts = pgTable('accounts', {
   id: id(),
-  emailEncrypted: text('email_encrypted').notNull(),
-  emailHash: text('email_hash').notNull().unique(),
-  inviteCodeId: uuid('invite_code_id')
-    .notNull()
-    .references(() => inviteCodes.id),
+  // Почты нет только у гостя, вошедшего без регистрации
+  emailEncrypted: text('email_encrypted'),
+  emailHash: text('email_hash').unique(),
+  // Есть только у тех, кто регистрировался по коду приглашения
+  inviteCodeId: uuid('invite_code_id').references(() => inviteCodes.id),
   // Меняет только админ
   role: text('role', { enum: ROLES }).notNull(),
+  // Анкета регистрации. Наружу не отдаётся; номер преподавателя видят только админы
+  lastName: text('last_name'),
+  firstName: text('first_name'),
+  patronymic: text('patronymic'),
+  gender: text('gender', { enum: GENDERS }),
+  staffId: text('staff_id'),
   status: text('status', { enum: ['active', 'banned'] })
     .notNull()
     .default('active'),
@@ -39,6 +45,8 @@ export const emailLoginCodes = pgTable('email_login_codes', {
   emailHash: text('email_hash').primaryKey(),
   codeHash: text('code_hash').notNull(),
   inviteCodeId: uuid('invite_code_id').references(() => inviteCodes.id),
+  // Анкета регистрации ждёт подтверждения почты; удаляется вместе с кодом
+  signup: jsonb('signup').$type<Signup>(),
   // false — письмо не отправлялось (аккаунта нет), код заведомо не подойдёт
   deliverable: boolean('deliverable').notNull(),
   attempts: integer('attempts').notNull().default(0),
@@ -99,6 +107,16 @@ export const profiles = pgTable('profiles', {
   faculty: text('faculty'),
   course: integer('course'),
   about: text('about'),
+  // Публичный никнейм соцсети (в API — username). К нику комнат отношения не имеет
+  username: text('username').unique(),
+  department: text('department'),
+  links: jsonb('links').$type<string[]>().notNull().default([]),
+  // «2005-03-14»; другим видна только при showBirth
+  birthDate: text('birth_date'),
+  showFaculty: boolean('show_faculty').notNull().default(true),
+  showBirth: boolean('show_birth').notNull().default(false),
+  showFriends: boolean('show_friends').notNull().default(true),
+  showOnline: boolean('show_online').notNull().default(true),
   createdAt: time('created_at').notNull(),
   updatedAt: time('updated_at').notNull(),
 });

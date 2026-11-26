@@ -2,6 +2,8 @@
 // Живёт вне модулей, потому что должна знать обо всех местах, где фото может использоваться.
 
 import { and, eq, isNull, lte } from 'drizzle-orm';
+import { deleteAccount } from './core/account';
+import { findAbandonedGuestIds } from './core/auth/service';
 import { deleteMedia, type MediaDeps } from './core/media/service';
 import { mediaFiles, postPhotos, profiles, stories } from './db/schema';
 import { purgeExpiredStories } from './modules/stories/service';
@@ -29,7 +31,15 @@ export async function purgeUnusedMedia(deps: MediaDeps, now: Date): Promise<numb
   return unused.length;
 }
 
+// Гости без регистрации, чья сессия закончилась: аккаунт больше никому не доступен
+export async function purgeAbandonedGuests(deps: MediaDeps, now: Date): Promise<number> {
+  const ids = await findAbandonedGuestIds(deps.db, now);
+  for (const id of ids) await deleteAccount(deps, id);
+  return ids.length;
+}
+
 export async function runMaintenance(deps: MediaDeps, now: Date): Promise<void> {
+  await purgeAbandonedGuests(deps, now);
   await purgeExpiredStories(deps, now);
   await purgeUnusedMedia(deps, now);
 }

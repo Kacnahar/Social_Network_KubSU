@@ -11,6 +11,7 @@ import {
   profileSchema,
   pushConfigResponseSchema,
   uploadMediaResponseSchema,
+  usernameAvailableResponseSchema,
   type AccountResponse,
   type AuthStartRequest,
   type AuthStartResponse,
@@ -93,6 +94,10 @@ export const authVerify = (email: string, code: string): Promise<string> =>
     (response) => response.token,
   );
 
+// Вход гостем без регистрации: сервер сразу выдаёт токен, смотреть можно, менять нельзя
+export const authGuest = (): Promise<string> =>
+  request('/auth/guest', authVerifyResponseSchema, { method: 'POST' }).then((response) => response.token);
+
 export const logout = (token: string) => request('/auth/logout', okResponseSchema, { method: 'POST', token });
 
 export const getAccount = (token: string): Promise<AccountResponse> =>
@@ -100,6 +105,15 @@ export const getAccount = (token: string): Promise<AccountResponse> =>
 
 export const getProfile = (token: string): Promise<Profile | null> =>
   request('/profile', myProfileResponseSchema, { token }).then((response: MyProfileResponse) => response.profile);
+
+// Свой профиль вместе с настройками «что видно в профиле»
+export const getMyProfile = (token: string): Promise<MyProfileResponse> => request('/profile', myProfileResponseSchema, { token });
+
+// Свободен ли публичный никнейм (свой нынешний считается свободным)
+export const checkUsername = (token: string, username: string): Promise<boolean> =>
+  request(`/profile/username-available?username=${encodeURIComponent(username)}`, usernameAvailableResponseSchema, { token }).then(
+    (response) => response.available,
+  );
 
 export const updateProfile = (token: string, body: UpdateProfileRequest): Promise<Profile> =>
   request('/profile', myProfileResponseSchema, { method: 'PUT', token, body }).then((response) => {
