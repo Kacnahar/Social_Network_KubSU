@@ -1,6 +1,6 @@
-import { AdForm } from '../../features/ads/AdForm';
+import { JobForm } from '../../features/ads/JobForm';
 
-// Форма «jobs»: пока заготовка с общими полями (фото, название, описание, цена), свои поля добавим позже
+// «Разместить вакансию»: форма на одной странице (общие части с остальными формами объявлений)
 export default function NewAd_job() {
-  return <AdForm category="jobs" />;
+  return <JobForm />;
 }

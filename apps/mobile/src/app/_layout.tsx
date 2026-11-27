@@ -52,7 +52,7 @@ function Navigation() {
         <Stack.Screen name="catalog/forum-new" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="catalog/events" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="catalog/schedule" />
-        <Stack.Screen name="ad/[adId]" />
+        <Stack.Screen name="ad/[adId]" options={{ animation: 'slide_from_right', gestureEnabled: true, fullScreenGestureEnabled: true }} />
         <Stack.Screen name="ad/new" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="ad/new-sell" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="ad/new-rent" options={{ animation: 'slide_from_right' }} />

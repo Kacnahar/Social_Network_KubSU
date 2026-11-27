@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BottomSheet } from '../../ui/BottomSheet';
 import { SearchField } from '../../ui/SearchField';
 import { radius, type, useColors, useReduceMotion, useScheme } from '../../ui/theme';
 import { fetchGifs, hasGiphy } from './giphy';
@@ -107,109 +108,13 @@ export function GifPicker({ visible, onPick, onClose }: { visible: boolean; onPi
   );
 }
 
-// Окно снизу на полэкрана («Отправить GIF» в комментариях): ручка и заголовок сверху; закрывается свайпом вниз
+// Окно снизу на полэкрана («Отправить GIF» в комментариях): общий `BottomSheet` с ручкой и заголовком; закрывается свайпом вниз
 // или нажатием на затемнённый фон; потянув вверх, окно раскрывается выше
 export function GifSheet({ visible, title = 'Отправить GIF', onPick, onClose }: { visible: boolean; title?: string; onPick: (gif: Gif) => void; onClose: () => void }) {
-  const colors = useColors();
-  const reduceMotion = useReduceMotion();
-  const insets = useSafeAreaInsets();
-  const { height: screenH } = useWindowDimensions();
-  const HALF = Math.round(screenH * 0.5);
-  const FULL = Math.round(screenH * 0.88);
-  const [mounted, setMounted] = useState(false);
-  const sheetH = useRef(new Animated.Value(HALF)).current;
-  const slide = useRef(new Animated.Value(1)).current; // 1 — за краем экрана, 0 — на месте
-  const baseH = useRef(HALF);
-  const curH = useRef(HALF);
-  const closing = useRef(false);
-  const dur = reduceMotion ? 0 : 240;
-  const native = Platform.OS !== 'web';
-
-  useEffect(() => {
-    const id = sheetH.addListener(({ value }) => {
-      curH.current = value;
-    });
-    return () => sheetH.removeListener(id);
-  }, [sheetH]);
-
-  const animateOut = (then: () => void) => {
-    if (closing.current) return;
-    closing.current = true;
-    Animated.timing(slide, { toValue: 1, duration: dur, easing: Easing.in(Easing.cubic), useNativeDriver: native }).start(() => {
-      closing.current = false;
-      setMounted(false);
-      then();
-    });
-  };
-
-  useEffect(() => {
-    if (visible && !mounted) {
-      sheetH.setValue(HALF);
-      baseH.current = HALF;
-      slide.setValue(1);
-      setMounted(true);
-      Animated.timing(slide, { toValue: 0, duration: dur, easing: Easing.out(Easing.cubic), useNativeDriver: native }).start();
-    } else if (!visible && mounted && !closing.current) {
-      animateOut(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
-
-  const dismiss = () => animateOut(onClose);
-
-  const pan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        baseH.current = curH.current;
-      },
-      onPanResponderMove: (_event, gesture) => {
-        sheetH.setValue(Math.max(60, Math.min(FULL, baseH.current - gesture.dy)));
-      },
-      onPanResponderRelease: (_event, gesture) => {
-        const projected = curH.current - gesture.vy * 120;
-        if (projected < HALF * 0.65) {
-          dismiss();
-          return;
-        }
-        const target = Math.abs(projected - FULL) < Math.abs(projected - HALF) ? FULL : HALF;
-        Animated.timing(sheetH, { toValue: target, duration: dur, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-      },
-    }),
-  ).current;
-
-  if (!mounted) return null;
   return (
-    <Modal visible transparent animationType="none" onRequestClose={dismiss}>
-      <View style={styles.sheetRoot}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: slide.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
-          <Pressable accessibilityLabel="Закрыть" style={StyleSheet.absoluteFill} onPress={dismiss} />
-        </Animated.View>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none">
-          <Animated.View
-            style={[
-              styles.sheet,
-              {
-                height: sheetH,
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                paddingBottom: insets.bottom,
-                transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [0, FULL] }) }],
-              },
-            ]}
-          >
-            <View {...pan.panHandlers} style={styles.grabArea}>
-              <View style={[styles.handle, { backgroundColor: colors.textSecondary }]} />
-              <Text accessibilityRole="header" style={[type.headline, { color: colors.textPrimary }]}>
-                {title}
-              </Text>
-            </View>
-            <GifBrowser active={visible} onPick={onPick} />
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+    <BottomSheet visible={visible} title={title} expandable onClose={onClose}>
+      <GifBrowser active={visible} onPick={onPick} />
+    </BottomSheet>
   );
 }
 
@@ -249,9 +154,5 @@ const styles = StyleSheet.create({
   column: { flex: 1, gap: GAP },
   state: { textAlign: 'center', paddingVertical: 28 },
   powered: { textAlign: 'center', paddingVertical: 8 },
-  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 14, borderTopRightRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderBottomWidth: 0, overflow: 'hidden' },
-  grabArea: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 6 },
-  handle: { width: 36, height: 4, borderRadius: 2, opacity: 0.5 },
   test: { borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', gap: 2 },
 });

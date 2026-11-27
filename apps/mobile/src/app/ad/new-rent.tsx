@@ -1,6 +1,6 @@
-import { AdForm } from '../../features/ads/AdForm';
+import { RentForm } from '../../features/ads/RentForm';
 
-// Форма «rent»: пока заготовка с общими полями (фото, название, описание, цена), свои поля добавим позже
+// «Сдать жильё»: форма на одной странице (общие части с «Продать вещь»)
 export default function NewAd_rent() {
-  return <AdForm category="rent" />;
+  return <RentForm />;
 }

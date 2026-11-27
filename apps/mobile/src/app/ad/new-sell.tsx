@@ -1,6 +1,6 @@
-import { AdForm } from '../../features/ads/AdForm';
+import { SellForm } from '../../features/ads/SellForm';
 
-// Форма «sell»: пока заготовка с общими полями (фото, название, описание, цена), свои поля добавим позже
+// «Продать вещь»: форма на одной странице (фото, название, цена, категория, состояние, описание)
 export default function NewAd_sell() {
-  return <AdForm category="sell" />;
+  return <SellForm />;
 }
