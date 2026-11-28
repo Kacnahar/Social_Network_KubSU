@@ -53,7 +53,7 @@ export async function findAdmin(db: Db, config: Config, accountId: string): Prom
   if (config.adminEmailHashes.length === 0) return null;
   const [account] = await db.select({ emailHash: accounts.emailHash }).from(accounts).where(eq(accounts.id, accountId));
   if (!account) throw unauthorized();
-  const index = config.adminEmailHashes.indexOf(account.emailHash);
+  const index = account.emailHash ? config.adminEmailHashes.indexOf(account.emailHash) : -1;
   return index === -1 ? null : { accountId, label: `Админ ${index + 1}` };
 }
 
@@ -245,7 +245,7 @@ async function accountOfProfile(db: Db, profileId: string) {
 // Запретить человеку публиковать, лайкать и комментировать на несколько дней. Вход и просмотр остаются
 export async function banAccount(db: Db, config: Config, admin: Admin, profileId: string, days: number, now: Date): Promise<void> {
   const account = await accountOfProfile(db, profileId);
-  if (config.adminEmailHashes.includes(account.emailHash)) throw new ApiError(403, 'forbidden', 'Админа заблокировать нельзя');
+  if (account.emailHash && config.adminEmailHashes.includes(account.emailHash)) throw new ApiError(403, 'forbidden', 'Админа заблокировать нельзя');
   await db
     .update(accounts)
     .set({ status: 'banned', bannedUntil: new Date(now.getTime() + days * DAY) })

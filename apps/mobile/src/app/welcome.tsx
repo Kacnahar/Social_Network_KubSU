@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Body, Button, ListScreen } from '../ui/components';
+import { authGuest } from '../lib/api';
+import { useSession } from '../lib/session';
+import { Button, ErrorText, ListScreen } from '../ui/components';
 import { Emblem } from '../ui/Emblem';
 import { type, useColors } from '../ui/theme';
 
@@ -9,7 +11,21 @@ import { type, useColors } from '../ui/theme';
 export default function WelcomeScreen() {
   const router = useRouter();
   const colors = useColors();
-  const [guestNote, setGuestNote] = useState(false);
+  const { signIn } = useSession();
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Гость входит без почты: сервер выдаёт сессию «только просмотр»
+  const enterAsGuest = async () => {
+    setError(null);
+    setGuestLoading(true);
+    try {
+      await signIn(await authGuest());
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');
+      setGuestLoading(false);
+    }
+  };
 
   return (
     <ListScreen>
@@ -25,15 +41,9 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={styles.actions}>
-          {guestNote ? (
-            <View accessibilityLiveRegion="polite" style={styles.note}>
-              <Body muted>
-                Вход без регистрации скоро появится. Пока можно зарегистрироваться — это займёт минуту.
-              </Body>
-            </View>
-          ) : null}
+          <ErrorText>{error}</ErrorText>
           <Button title="Регистрация" onPress={() => router.push('/register')} />
-          <Button variant="secondary" title="Продолжить как гость" onPress={() => setGuestNote(true)} />
+          <Button variant="secondary" title="Продолжить как гость" onPress={() => void enterAsGuest()} loading={guestLoading} />
           <Button
             variant="plain"
             title="У меня уже есть аккаунт"
@@ -50,5 +60,4 @@ const styles = StyleSheet.create({
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   center: { textAlign: 'center' },
   actions: { gap: 12 },
-  note: { paddingHorizontal: 4, paddingBottom: 4 },
 });

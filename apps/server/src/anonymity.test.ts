@@ -58,6 +58,15 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'GET', url: `/v1/stories/${postId}/viewers`, headers });
     await t.app.inject({ method: 'DELETE', url: `/v1/stories/${postId}`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL } });
+    await t.app.inject({ method: 'GET', url: '/v1/profile/username-available?username=anya.p', headers });
+    await t.app.inject({ method: 'GET', url: '/v1/profile/username-available?username=!', headers });
+    await t.app.inject({ method: 'PUT', url: '/v1/profile', headers, payload: { displayName: DISPLAY_NAME, username: 'anya.p', links: ['https://t.me/anya'], privacy: { showBirth: true } } });
+    await t.app.inject({ method: 'POST', url: '/v1/auth/guest' });
+    await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/start',
+      payload: { email: 'teacher-anon@example.com', signup: { role: 'teacher', lastName: 'Тайнова', firstName: 'Ольга', patronymic: null, staffId: 'STAFF-777' } },
+    });
     await t.app.inject({ method: 'POST', url: '/v1/auth/start', payload: { email: EMAIL, inviteCode: 'NOPE' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: EMAIL, code: '000000' } });
     await t.app.inject({ method: 'POST', url: '/v1/auth/verify', payload: { email: 'плохо', code: '1' } });
@@ -91,7 +100,8 @@ describe('анонимность', () => {
   it('ни один ответ не содержит почту, идентификатор аккаунта или сессии', async () => {
     const [account] = await t.db.select().from(accounts);
     const [session] = await t.db.select().from(sessions);
-    const secrets = [EMAIL, EMAIL.split('@')[0]!, account!.id, account!.emailHash, account!.emailEncrypted, session!.id, session!.tokenHash];
+    // Анкета регистрации (фамилия, номер преподавателя) тоже не должна попадать в ответы
+    const secrets = [EMAIL, EMAIL.split('@')[0]!, account!.id, account!.emailHash!, account!.emailEncrypted!, session!.id, session!.tokenHash, 'STAFF-777', 'Тайнова'];
 
     expect(t.responses.length).toBeGreaterThan(10);
     for (const { url, body } of t.responses) {
@@ -150,8 +160,8 @@ describe('анонимность', () => {
   it('почта лежит в базе зашифрованной, и расшифровать её можно только ключом', async () => {
     const [account] = await t.db.select().from(accounts);
     expect(JSON.stringify(account)).not.toContain(EMAIL);
-    expect(decryptEmail(account!.emailEncrypted, t.config.emailEncryptionKey)).toBe(EMAIL);
-    expect(() => decryptEmail(account!.emailEncrypted, Buffer.alloc(32, 9))).toThrow();
+    expect(decryptEmail(account!.emailEncrypted!, t.config.emailEncryptionKey)).toBe(EMAIL);
+    expect(() => decryptEmail(account!.emailEncrypted!, Buffer.alloc(32, 9))).toThrow();
   });
 
   it('токен сессии не хранится в базе в открытом виде', async () => {

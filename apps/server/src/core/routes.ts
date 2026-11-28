@@ -8,6 +8,7 @@ import {
   authVerifyRequestSchema,
   mediaPurposeSchema,
   updateProfileRequestSchema,
+  usernameSchema,
   pushSubscribeRequestSchema,
   pushUnsubscribeRequestSchema,
   type AccountResponse,
@@ -19,18 +20,19 @@ import {
   type Profile,
   type PushConfigResponse,
   type UploadMediaResponse,
+  type UsernameAvailableResponse,
 } from '@app/shared';
 import type { FastifyInstance } from 'fastify';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
 import { z } from 'zod';
 import { deleteAccount, getAccountStanding, isBanned } from './account';
-import { authenticate, endSession, startLogin, verifyLogin, type AuthDeps } from './auth/service';
+import { authenticate, endSession, isEmaillessGuest, startGuestSession, startLogin, verifyLogin, type AuthDeps } from './auth/service';
 import { ApiError, unauthorized } from './errors';
 import type { Mailer } from './mailer';
 import { readMedia, uploadMedia } from './media/service';
 import type { MediaStorage } from './media/storage';
-import { getOwnProfile, getProfileById, saveOwnProfile } from './profile/service';
+import { getOwnProfile, getProfileById, isUsernameAvailable, saveOwnProfile } from './profile/service';
 import { removeSubscription, saveSubscription, type PushGateway } from './push/service';
 
 const SERVICE_NAME = 'app-server';
@@ -69,9 +71,14 @@ export function registerCoreRoutes(app: FastifyInstance, { config, db, mailer, p
     verifyLogin(authDeps, authVerifyRequestSchema.parse(request.body)),
   );
 
+  // Вход гостем без регистрации: только просмотр. Почты у такого аккаунта нет
+  app.post(`${API_PREFIX}/auth/guest`, authLimit, async (): Promise<AuthVerifyResponse> => startGuestSession(db));
+
   app.post(`${API_PREFIX}/auth/logout`, async (request): Promise<OkResponse> => {
     const session = await authenticate(db, request.headers.authorization);
     await endSession(db, session.sessionId);
+    // Гостю без почты вернуться в аккаунт нечем — удаляем его вместе с сессией
+    if (await isEmaillessGuest(db, session.accountId)) await deleteAccount(mediaDeps, session.accountId);
     return { ok: true };
   });
 
@@ -87,7 +94,7 @@ export function registerCoreRoutes(app: FastifyInstance, { config, db, mailer, p
       role: account.role,
       status: banned ? 'banned' : 'active',
       bannedUntil: banned ? (account.bannedUntil?.toISOString() ?? null) : null,
-      isAdmin: config.adminEmailHashes.includes(account.emailHash),
+      isAdmin: account.emailHash !== null && config.adminEmailHashes.includes(account.emailHash),
     };
   });
 
@@ -101,17 +108,27 @@ export function registerCoreRoutes(app: FastifyInstance, { config, db, mailer, p
 
   app.get(`${API_PREFIX}/profile`, async (request): Promise<MyProfileResponse> => {
     const session = await authenticate(db, request.headers.authorization);
-    return { profile: await getOwnProfile(db, session.accountId) };
+    return getOwnProfile(db, session.accountId);
   });
 
   app.put(`${API_PREFIX}/profile`, async (request): Promise<MyProfileResponse> => {
     const session = await authenticate(db, request.headers.authorization);
-    return { profile: await saveOwnProfile(mediaDeps, session.accountId, updateProfileRequestSchema.parse(request.body)) };
+    return saveOwnProfile(mediaDeps, session.accountId, updateProfileRequestSchema.parse(request.body));
   });
 
+  // Свободен ли публичный никнейм: для подсказки в форме, пока человек печатает
+  app.get<{ Querystring: { username?: string } }>(
+    `${API_PREFIX}/profile/username-available`,
+    async (request): Promise<UsernameAvailableResponse> => {
+      const session = await authenticate(db, request.headers.authorization);
+      const username = usernameSchema.parse(request.query.username);
+      return { available: await isUsernameAvailable(db, session.accountId, username) };
+    },
+  );
+
   app.get<{ Params: { profileId: string } }>(`${API_PREFIX}/profiles/:profileId`, async (request): Promise<Profile> => {
-    await authenticate(db, request.headers.authorization);
-    return getProfileById(db, idParam.parse(request.params.profileId));
+    const session = await authenticate(db, request.headers.authorization);
+    return getProfileById(db, idParam.parse(request.params.profileId), session.accountId);
   });
 
   // ---------- Фото ----------

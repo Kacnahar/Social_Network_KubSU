@@ -36,7 +36,7 @@ describe('профиль и фото', () => {
 
   describe('профиль', () => {
     it('после регистрации профиля нет; после заполнения он есть и виден по своему адресу', async () => {
-      expect((await getMine()).json()).toEqual({ profile: null });
+      expect((await getMine()).json()).toEqual({ profile: null, privacy: null });
 
       const saved = await save({ displayName: ' Аня ', faculty: 'ФКТиПМ', course: 2, about: 'Люблю математику' });
       expect(saved.statusCode).toBe(200);
@@ -82,7 +82,9 @@ describe('профиль и фото', () => {
 
     it('в профиле нет ничего, кроме открытых полей', async () => {
       const profile = (await save({ displayName: 'Аня' })).json().profile;
-      expect(Object.keys(profile).sort()).toEqual(['about', 'avatarUrl', 'course', 'displayName', 'faculty', 'profileId', 'role']);
+      expect(Object.keys(profile).sort()).toEqual([
+        'about', 'avatarUrl', 'birthDate', 'course', 'department', 'displayName', 'faculty', 'links', 'profileId', 'role', 'username',
+      ]);
     });
   });
 

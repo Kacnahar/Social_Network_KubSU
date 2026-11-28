@@ -15,7 +15,8 @@ import { useAvatarPhoto } from '../features/profile/useAvatarPhoto';
 import { Avatar } from './Avatar';
 import { Button, ErrorText, Field } from './components';
 import { checkNickname, normalizeNickname, NICK_MAX, NICK_RULES } from './nickname';
-import { setNickname, useNickname } from './nicknameStore';
+import { useNickname } from './nicknameStore';
+import { rememberProfile } from '../features/profile/profileCache';
 import { joinName, splitName } from './plural';
 import { StepScreen } from './StepScreen';
 
@@ -54,7 +55,7 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
   const [faculty, setFaculty] = useState(initial?.faculty ?? '');
   const [course, setCourse] = useState(initial?.course ? String(initial.course) : '');
   const [about, setAbout] = useState(initial?.about ?? '');
-  // Публичный никнейм: пока хранится только на устройстве
+  // Публичный никнейм; занят ли он, ответит сервер при сохранении
   const [nick, setNick] = useState(() => savedNick ?? '');
   const nickCheck = nick === '' ? null : checkNickname(nick);
   const nickError = nickCheck && !nickCheck.ok ? nickCheck.reason : null;
@@ -97,8 +98,8 @@ export function ProfileForm({ title, initial, onSaved, footer, step, onBack }: P
     setErrors({});
     setSaving(true);
     try {
-      const saved = await updateProfile(token, result.data);
-      if (nickCheck?.ok) setNickname(saved.profileId, nickCheck.value);
+      const saved = await updateProfile(token, { ...result.data, ...(nickCheck?.ok ? { username: nickCheck.value } : {}) });
+      rememberProfile(saved, null);
       onSaved(saved);
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'unauthorized') {

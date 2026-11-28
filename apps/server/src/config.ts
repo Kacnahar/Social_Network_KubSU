@@ -21,6 +21,8 @@ const envSchema = z.object({
   EMAIL_ENCRYPTION_KEY: z.string().optional(),
   DEV_EXPOSE_LOGIN_CODES: flag.optional(),
   DEV_SEED_INVITE_CODE: z.string().optional(),
+  // Тестовые аккаунты 1@mail.ru, 2@mail.ru, 3@mail.ru с кодом входа 0000
+  DEV_TEST_ACCOUNTS: flag.optional(),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
   // Расписание по умолчанию: дни недели (1 — понедельник … 7 — воскресенье), пусто — не создавать
@@ -69,6 +71,8 @@ export type Config = {
   // Возвращать код входа прямо в ответе — пока не подключена отправка писем
   devExposeLoginCodes: boolean;
   devSeedInviteCode: string | null;
+  // Тестовые аккаунты с постоянным кодом входа 0000. Только при разработке
+  devTestAccounts: boolean;
   rateLimitPerMinute: number;
   authRateLimitPerMinute: number;
   schedule: ScheduleConfig;
@@ -100,6 +104,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     if (parsed.DEV_SEED_INVITE_CODE) {
       throw new Error('DEV_SEED_INVITE_CODE нельзя задавать в продакшене');
     }
+    if (parsed.DEV_TEST_ACCOUNTS) throw new Error('DEV_TEST_ACCOUNTS нельзя включать в продакшене');
     if (parsed.DEV_LIVE_SLOT) throw new Error('DEV_LIVE_SLOT нельзя включать в продакшене');
     if (parsed.LIVEKIT_API_KEY === 'devkey') throw new Error('В продакшене нужны свои ключи LiveKit');
   }
@@ -167,6 +172,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     emailHashKey: parsed.EMAIL_HASH_KEY ?? DEV_EMAIL_HASH_KEY,
     emailEncryptionKey,
     devExposeLoginCodes: parsed.DEV_EXPOSE_LOGIN_CODES ?? !isProduction,
+    devTestAccounts: parsed.DEV_TEST_ACCOUNTS ?? parsed.NODE_ENV === 'development',
     devSeedInviteCode: isProduction ? null : (parsed.DEV_SEED_INVITE_CODE ?? 'TEST-2026'),
     rateLimitPerMinute: parsed.RATE_LIMIT_PER_MINUTE,
     authRateLimitPerMinute: parsed.AUTH_RATE_LIMIT_PER_MINUTE,

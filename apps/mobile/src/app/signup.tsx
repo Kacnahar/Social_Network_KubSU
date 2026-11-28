@@ -2,10 +2,9 @@ import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DateField } from '../features/auth/DateField';
-import { SIGNUP_STEPS, inviteCodeForRole, parseSignupRole, setSignupDraft } from '../features/auth/registration';
+import { SIGNUP_STEPS, parseSignupRole, toSignup } from '../features/auth/registration';
 import {
   TEACHER_ID_MAX,
-  displayNameOf,
   emptySignupValues,
   validateSignup,
   type Gender,
@@ -50,18 +49,15 @@ export default function SignupScreen() {
 
   const submit = async () => {
     if (!valid) return;
-    const inviteCode = inviteCodeForRole(role);
-    if (inviteCode === null) {
-      setError('Регистрация скоро откроется');
-      return;
-    }
+    const signup = toSignup(role, values);
+    if (signup === null) return;
     const email = values.email.trim().toLowerCase();
     setError(null);
     setLoading(true);
     try {
-      const response = await authStart({ email, inviteCode });
-      setSignupDraft({ email, displayName: displayNameOf(values) });
-      setPendingLogin({ email, inviteCode, devCode: response.devCode });
+      // Роль и анкета уходят на сервер вместе с почтой; аккаунт и профиль появятся после кода из письма
+      const response = await authStart({ email, signup });
+      setPendingLogin({ email, signup, devCode: response.devCode });
       router.push('/verify');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Что-то пошло не так');

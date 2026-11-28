@@ -15,7 +15,7 @@ describe('никнейм', () => {
     expect(checkNickname('ivan petrov').ok).toBe(false);
     expect(checkNickname('ivan-p').ok).toBe(false);
   });
-  it('занятое (заглушка) отклоняет', () => {
-    expect(checkNickname('admin')).toMatchObject({ ok: false, reason: 'Этот никнейм занят' });
+  it('занят ли никнейм, здесь не проверяется — это отвечает сервер', () => {
+    expect(checkNickname('admin')).toEqual({ ok: true, value: 'admin' });
   });
 });

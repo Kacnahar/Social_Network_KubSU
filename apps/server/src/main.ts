@@ -4,6 +4,7 @@ import { buildApp } from './app';
 import { loadConfig, type Config, type VapidConfig } from './config';
 import { startMaintenance } from './maintenance';
 import { createDb } from './db/client';
+import { ensureDevTestAccounts } from './core/devAccounts';
 import { createInviteCode } from './core/invites';
 import { startBackgroundJobs } from './modules/rooms/jobs';
 import { ConsoleMailer } from './core/mailer';
@@ -39,6 +40,8 @@ if (config.devSeedInviteCode) {
   await createInviteCode(db, { code: 'TEACHER-2026', label: 'Разработка: преподаватель', maxUses: 1000, role: 'teacher' });
   await createInviteCode(db, { code: 'GUEST-2026', label: 'Разработка: гость', maxUses: 1000, role: 'guest' });
 }
+
+if (config.devTestAccounts) await ensureDevTestAccounts(db, config, new Date());
 
 const vapid = loadDevVapid(config);
 const push = vapid ? createWebPushGateway(vapid) : null;

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApiError,
+  authGuest,
   authVerify,
+  checkUsername,
   fetchHealth,
   getProfile,
   getProfileById,
@@ -22,7 +24,12 @@ const profile = {
   course: null,
   about: null,
   role: 'student',
+  username: 'anya.p',
+  department: null,
+  links: [],
+  birthDate: null,
 };
+const privacy = { showFaculty: true, showBirth: false, showFriends: true, showOnline: true };
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -98,17 +105,30 @@ describe('клиент API', () => {
   });
 
   it('getProfile возвращает профиль или null', async () => {
-    const fetchMock = mockFetch(200, { profile: null });
+    const fetchMock = mockFetch(200, { profile: null, privacy: null });
     expect(await getProfile('tok')).toBeNull();
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/profile$/);
   });
 
   it('updateProfile отправляет PUT и возвращает профиль', async () => {
-    const fetchMock = mockFetch(200, { profile });
+    const fetchMock = mockFetch(200, { profile, privacy });
     const result = await updateProfile('tok', { displayName: 'Аня' });
     expect(result.displayName).toBe('Аня');
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('PUT');
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ displayName: 'Аня' }));
+  });
+
+  it('authGuest входит без почты и возвращает токен', async () => {
+    const fetchMock = mockFetch(200, { token: 'guest-token' });
+    expect(await authGuest()).toBe('guest-token');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/auth\/guest$/);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('checkUsername спрашивает сервер, свободен ли никнейм', async () => {
+    const fetchMock = mockFetch(200, { available: false });
+    expect(await checkUsername('tok', 'anya.p')).toBe(false);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/profile\/username-available\?username=anya\.p$/);
   });
 
   it('getProfileById просит профиль по id', async () => {
