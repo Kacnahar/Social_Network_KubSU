@@ -11,7 +11,8 @@ import { baseScale, clampOffset, clampZoom, cropRect, MAX_ZOOM, maxOffset, outpu
 // Фото двигается пальцем, масштабируется двумя пальцами (в браузере — колёсиком), двойной тап увеличивает и возвращает.
 // За краем фото «пружинит» обратно. Движения считаются встроенным PanResponder и Animated (reanimated в проекте нет).
 
-type Props = { uri: string; onCancel: () => void; onDone: (croppedUri: string) => void };
+// shape: 'circle' — фото профиля (по умолчанию), 'square' — квадратная рамка 1:1 (фото объявления). Обрезанный результат всегда квадрат
+type Props = { uri: string; onCancel: () => void; onDone: (croppedUri: string) => void; shape?: 'circle' | 'square'; title?: string };
 
 const C = darkColors;
 const DOUBLE_TAP_MS = 300;
@@ -19,7 +20,7 @@ const DOUBLE_TAP_MS = 300;
 type Pt = { pageX: number; pageY: number };
 const dist = (a: Pt, b: Pt) => Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
 
-export function AvatarCropper({ uri, onCancel, onDone }: Props) {
+export function AvatarCropper({ uri, onCancel, onDone, shape = 'circle', title = 'Фото профиля' }: Props) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -290,7 +291,7 @@ export function AvatarCropper({ uri, onCancel, onDone }: Props) {
             <Text style={[type.body, { color: C.muted }]}>Отмена</Text>
           </Pressable>
           <Text accessibilityRole="header" style={[type.headline, styles.title, { color: C.text }]}>
-            Фото профиля
+            {title}
           </Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Готово" accessibilityState={{ disabled: !ready || busy }} hitSlop={10} onPress={() => void done()} disabled={!ready || busy} style={[styles.side, styles.right]}>
             {busy ? <ActivityIndicator color={C.text} /> : <Text style={[type.body, styles.done, { color: C.text, opacity: ready ? 1 : 0.35 }]}>Готово</Text>}
@@ -317,11 +318,15 @@ export function AvatarCropper({ uri, onCancel, onDone }: Props) {
                 <Defs>
                   <Mask id="hole">
                     <Rect width={stage.w} height={stage.h} fill="white" />
-                    <Circle cx={cx} cy={cy} r={D / 2} fill="black" />
+                    {shape === 'circle' ? <Circle cx={cx} cy={cy} r={D / 2} fill="black" /> : <Rect x={cx - D / 2} y={cy - D / 2} width={D} height={D} fill="black" />}
                   </Mask>
                 </Defs>
                 <Rect width={stage.w} height={stage.h} fill={C.background} fillOpacity={0.74} mask="url(#hole)" />
-                <Circle cx={cx} cy={cy} r={D / 2} fill="none" stroke={C.text} strokeOpacity={0.55} strokeWidth={1} />
+                {shape === 'circle' ? (
+                  <Circle cx={cx} cy={cy} r={D / 2} fill="none" stroke={C.text} strokeOpacity={0.55} strokeWidth={1} />
+                ) : (
+                  <Rect x={cx - D / 2} y={cy - D / 2} width={D} height={D} fill="none" stroke={C.text} strokeOpacity={0.55} strokeWidth={1} />
+                )}
               </Svg>
             </>
           ) : failed ? (

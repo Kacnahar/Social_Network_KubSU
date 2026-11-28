@@ -527,6 +527,94 @@ export function SendIcon({ color }: { color: string }) {
   );
 }
 
+// Карандаш: тонкая линия, «изменить»
+export function PencilIcon({ color, size = 16 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5L16.5 3.5z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// Телефонная трубка: тонкая линия
+export function PhoneIcon({ color, size = 22 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 5.3 5.3l1.4-2.2L19 14.5V18a1.5 1.5 0 0 1-1.6 1.5C10.5 19 5 13.5 4.5 6.6A1.5 1.5 0 0 1 5 4z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// Значки мессенджеров (WhatsApp, Telegram, MAX): тонкие, одним цветом
+export function MessengerIcon({ kind, color, size = 22 }: { kind: 'whatsapp' | 'telegram' | 'max'; color: string; size?: number }) {
+  const common = { stroke: color, strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {kind === 'whatsapp' ? (
+        <>
+          <Path d="M12 3.2a8.8 8.8 0 0 0-7.6 13.2L3.2 20.8l4.5-1.2A8.8 8.8 0 1 0 12 3.2z" {...common} />
+          <Path d="M9 8.6c.1 2.7 3.3 5.9 6 6.1l1.2-1.3-2.1-1.1-.9.9c-.9-.4-2.2-1.7-2.6-2.6l.9-.9-1-2.1z" {...common} />
+        </>
+      ) : null}
+      {kind === 'telegram' ? (
+        <>
+          <Path d="M20.8 4 3.2 10.8l5.4 2 1.9 6 3-3.6 4.6 3.4z" {...common} />
+          <Path d="m8.6 12.8 8.4-6" {...common} />
+        </>
+      ) : null}
+      {kind === 'max' ? (
+        <>
+          <Path d="M7.5 3.5h9A4 4 0 0 1 20.5 7.5v9a4 4 0 0 1-4 4h-9a4 4 0 0 1-4-4v-9a4 4 0 0 1 4-4z" {...common} />
+          <Path d="M8 16.2V8l4 5 4-5v8.2" {...common} />
+        </>
+      ) : null}
+    </Svg>
+  );
+}
+
+// Мелкие значки удобств жилья (мебель, Wi-Fi, стиральная машина, холодильник, кондиционер): тонкая линия
+export function AmenityIcon({ kind, color, size = 22 }: { kind: 'furniture' | 'wifi' | 'washer' | 'fridge' | 'ac'; color: string; size?: number }) {
+  const common = { stroke: color, strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {kind === 'furniture' ? (
+        <>
+          <Path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3" {...common} />
+          <Path d="M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z" {...common} />
+          <Path d="M6 17v2M18 17v2" {...common} />
+        </>
+      ) : null}
+      {kind === 'wifi' ? (
+        <>
+          <Path d="M3 9.5a14 14 0 0 1 18 0" {...common} />
+          <Path d="M6 13a9.5 9.5 0 0 1 12 0" {...common} />
+          <Path d="M9 16.4a5 5 0 0 1 6 0" {...common} />
+          <Path d="M12 19.5h.01" {...common} />
+        </>
+      ) : null}
+      {kind === 'washer' ? (
+        <>
+          <Path d="M5 3.5h14a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" {...common} />
+          <Path d="M12 17a4.2 4.2 0 1 0 0-8.4A4.2 4.2 0 0 0 12 17z" {...common} />
+          <Path d="M7 6.5h.01M10 6.5h.01" {...common} />
+        </>
+      ) : null}
+      {kind === 'fridge' ? (
+        <>
+          <Path d="M7 3.5h10a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" {...common} />
+          <Path d="M6 10.5h12M9 7v1.5M9 13v2.5" {...common} />
+        </>
+      ) : null}
+      {kind === 'ac' ? (
+        <>
+          <Path d="M4 5h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" {...common} />
+          <Path d="M7 16.5l-1 3M12 16.5v3M17 16.5l1 3" {...common} />
+        </>
+      ) : null}
+    </Svg>
+  );
+}
+
 // Крестик
 export function CloseIcon({ color, size = 12 }: { color: string; size?: number }) {
   return (

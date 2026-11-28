@@ -94,7 +94,10 @@ function ActionShell({ label, role = 'button', checked, onPress, size = 22, chil
 
 type LikeProps = {
   liked: boolean;
-  count: number;
+  // Без счётчика (например, «в избранное» на странице объявления) — не передавать
+  count?: number;
+  // Цвет сердца, пока оно не поставлено (по умолчанию серый); на фото — белый
+  idleColor?: string;
   // Нет onPress (гость) — сердце только показывает счёт
   onPress?: () => void;
   size?: number;
@@ -103,7 +106,7 @@ type LikeProps = {
 };
 
 // Сердце: при лайке сжимается и подпрыгивает, вокруг короткая вспышка; при снятии — тихо
-export function LikeButton({ liked, count, onPress, size = 22, label }: LikeProps) {
+export function LikeButton({ liked, count, onPress, size = 22, label, idleColor }: LikeProps) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
   const sound = useSound();
@@ -127,8 +130,8 @@ export function LikeButton({ liked, count, onPress, size = 22, label }: LikeProp
     Animated.timing(burst, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: native }).start();
   }, [liked, reduceMotion, sound.vibration, pop, burst]);
 
-  const tone = liked ? colors.danger : colors.muted;
-  const accessible = label ?? (onPress ? 'Нравится' : `Нравится: ${count}`);
+  const tone = liked ? colors.danger : (idleColor ?? colors.muted);
+  const accessible = label ?? (onPress ? 'Нравится' : `Нравится: ${count ?? 0}`);
 
   return (
     <ActionShell label={accessible} role={onPress ? 'switch' : 'text'} checked={liked} onPress={onPress} size={size} count={count} countColor={tone}>

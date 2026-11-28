@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Ad } from './ads';
+import { testAdsForFilters, testAdsForPage } from './testAds';
 
 // Тестовые объявления и те, что человек добавил сам за этот запуск приложения.
 // Заменится запросами к серверу, когда сервер научится хранить объявления.
@@ -9,6 +10,8 @@ const author = (displayName: string) => ({ profileId: null, displayName, avatarU
 const base: Pick<Ad, 'district' | 'rentTerm' | 'photos'> = { district: null, rentTerm: null, photos: [] };
 
 let ads: Ad[] = [
+  ...testAdsForPage(),
+  ...testAdsForFilters(),
   { ...base, adId: 't1', section: 'ads', kind: 'sell', title: 'Велосипед городской', description: 'Катался один сезон, есть замок и фонари. Заберёте у главного корпуса.', price: 9500, author: author('Игорь Лебедев'), createdAt: hoursAgo(1) },
   { ...base, adId: 't2', section: 'ads', kind: 'buy', title: 'Куплю недорогой ноутбук для учёбы', description: 'Нужен лёгкий, хватит для текстов и презентаций. Бюджет до 25 тысяч.', price: 25000, author: author('Марк Соколов'), createdAt: hoursAgo(2) },
   { ...base, adId: 't3', section: 'ads', kind: 'rent', title: 'Комната в двухкомнатной, 10 минут до корпуса', description: 'Комната 14 метров, есть стиральная машина и интернет. Ищу соседку, въезд с декабря.', price: 14000, district: 'Центральный', rentTerm: 'monthly', photos: [], author: author('Мария Орлова'), createdAt: hoursAgo(4) },
@@ -42,4 +45,10 @@ export function addAd(ad: Omit<Ad, 'adId' | 'createdAt'>): Ad {
   ads = [created, ...ads];
   listeners.forEach((listener) => listener());
   return created;
+}
+
+// Удалить своё объявление (страница объявления → «Удалить»)
+export function removeAd(adId: string) {
+  ads = ads.filter((ad) => ad.adId !== adId);
+  listeners.forEach((listener) => listener());
 }

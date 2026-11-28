@@ -9,7 +9,7 @@ import { StepScreen } from '../ui/StepScreen';
 // Вход в существующий аккаунт: только почта. Регистрация идёт через «Кто вы?» и анкету
 export default function LoginScreen() {
   const router = useRouter();
-  const { setPendingLogin } = useSession();
+  const { setPendingLogin, signIn } = useSession();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,16 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
+      // Только в разработке: тестовые почты (1@mail.ru, 2@mail.ru, 3@mail.ru) пускают сразу, код вводить не нужно.
+      // В настоящей сборке __DEV__ ложно, и этот кусок вырезается
+      if (__DEV__) {
+        const dev = require('../features/devAccounts/devSessions') as { devLoginToken: (email: string) => Promise<string | null> };
+        const token = await dev.devLoginToken(parsed.data.email);
+        if (token) {
+          await signIn(token);
+          return;
+        }
+      }
       const response = await authStart(parsed.data);
       setPendingLogin({ ...parsed.data, devCode: response.devCode });
       router.push('/verify');
