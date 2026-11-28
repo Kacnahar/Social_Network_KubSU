@@ -16,11 +16,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth/service';
 import { requireCapability } from '../../core/account';
+import { ApiError } from '../../core/errors';
 import { getOrCreatePersonaId } from '../../core/identity';
 import type { Db } from '../../db/client';
 import { joinSlot, leaveRoom } from './entry/service';
 import { castBallot, getRoomState, reportToAdmins, setPersonalMute, startVote } from './moderation/service';
 import { getPersona, setNickname } from './persona/service';
+import { setHand } from './presence/service';
 import { listUpcomingSlots } from './schedule/service';
 import type { VoiceGateway } from './voice/gateway';
 
@@ -97,6 +99,23 @@ export function registerRoomsRoutes(app: FastifyInstance, { db, voice }: RoomsDe
     await castBallot(moderation, personaId, idParam.parse(request.params.voteId), new Date());
     return { ok: true };
   });
+
+  // «Поднять руку»: видят все в комнате; опускается сама при выходе
+  for (const [method, raised] of [
+    ['PUT', true],
+    ['DELETE', false],
+  ] as const) {
+    app.route<{ Params: { roomId: string } }>({
+      method,
+      url: `${ROOMS_PREFIX}/:roomId/hand`,
+      handler: async (request): Promise<OkResponse> => {
+        const { personaId } = await whoIs(request);
+        const inRoom = await setHand(db, personaId, idParam.parse(request.params.roomId), raised, new Date());
+        if (!inRoom) throw new ApiError(409, 'room_not_open', 'Вы сейчас не в этой комнате');
+        return { ok: true };
+      },
+    });
+  }
 
   // «Заглушить для себя»: видит и слышит это только сам человек
   for (const [method, muted] of [

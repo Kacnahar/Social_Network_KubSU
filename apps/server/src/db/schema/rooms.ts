@@ -67,6 +67,8 @@ export const roomParticipations = pgTable('room_participations', {
     .references(() => personas.id, { onDelete: 'cascade' }),
   joinedAt: time('joined_at').notNull(),
   leftAt: time('left_at'),
+  // Когда человек поднял руку; пусто — рука опущена. Опускается сама при выходе
+  handRaisedAt: time('hand_raised_at'),
 });
 
 // ---------- Модерация комнат: всё по персоне, без аккаунта ----------

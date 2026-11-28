@@ -84,6 +84,9 @@ describe('анонимность', () => {
     await t.app.inject({ method: 'POST', url: `/v1/rooms/votes/${joinedRoomId}/ballot`, headers });
     await t.app.inject({ method: 'PUT', url: `/v1/rooms/me/mutes/${joinedRoomId}`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/rooms/reports', headers, payload: { text: 'жалоба' } });
+    await t.app.inject({ method: 'PUT', url: `/v1/rooms/${joined.json().roomId}/hand`, headers });
+    await t.app.inject({ method: 'GET', url: `/v1/rooms/${joined.json().roomId}/state`, headers });
+    await t.app.inject({ method: 'DELETE', url: `/v1/rooms/${joined.json().roomId}/hand`, headers });
     await t.app.inject({ method: 'POST', url: `/v1/rooms/${joined.json().roomId}/leave`, headers });
     await t.app.inject({ method: 'POST', url: '/v1/rooms/slots/not-an-id/join', headers });
     await t.app.inject({ method: 'GET', url: '/v1/push/config' });

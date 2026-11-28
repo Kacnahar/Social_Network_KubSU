@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { castBallot, getPersona, getRoomState, getSlots, joinRoom, leaveRoom, reportToAdmins, setPersonalMute, startVote } from './api';
+import { castBallot, getPersona, getRoomState, getSlots, joinRoom, leaveRoom, reportToAdmins, setHand, setPersonalMute, startVote } from './api';
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -63,6 +63,7 @@ describe('клиент API комнат', () => {
       mutedUntil: null,
       blockedUntil: null,
       personalMutes: ['p2'],
+      raisedHands: ['p3'],
     });
     const state = await getRoomState('tok', 'r1');
     expect(state.personalMutes).toEqual(['p2']);
@@ -81,6 +82,14 @@ describe('клиент API комнат', () => {
   it('startVote передаёт текст ошибки сервера', async () => {
     mockFetch(409, { error: { code: 'vote_in_progress', message: 'Голосование уже идёт' } });
     await expect(startVote('tok', 'r1', 'mute', 'p9')).rejects.toMatchObject({ code: 'vote_in_progress', message: 'Голосование уже идёт' });
+  });
+
+  it('setHand поднимает руку PUT-ом и опускает DELETE-ом', async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    await setHand('tok', 'r 1', true);
+    await setHand('tok', 'r 1', false);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/v1\/rooms\/r%201\/hand$/);
+    expect(fetchMock.mock.calls.map((call) => call[1]?.method)).toEqual(['PUT', 'DELETE']);
   });
 
   it('castBallot голосует POST-ом без тела', async () => {

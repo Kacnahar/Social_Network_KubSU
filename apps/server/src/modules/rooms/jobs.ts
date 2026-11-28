@@ -4,10 +4,12 @@ import type { PushGateway } from '../../core/push/service';
 import { runReminderTick } from './reminders/service';
 import { closeFinishedRooms } from './entry/service';
 import { liftExpiredMutes } from './moderation/service';
+import { syncPresence } from './presence/service';
 import type { VoiceGateway } from './voice/gateway';
 import { generateSlots } from './schedule/service';
 
-const REMINDER_TICK_MS = 30 * 1000;
+// Раз в 15 секунд: напоминания, закрытие комнат, сверка присутствия
+const REMINDER_TICK_MS = 15 * 1000;
 const SLOT_GENERATION_MS = 60 * 60 * 1000;
 
 type JobDeps = {
@@ -32,8 +34,11 @@ export async function startBackgroundJobs({ db, schedule, push, voice, onError }
     const now = new Date();
     Promise.all([
       push ? runReminderTick({ db, push, onError }, now).catch(onError) : undefined,
-      closeFinishedRooms({ db, voice, onError }, now).catch(onError),
-      liftExpiredMutes({ db, voice, onError }, now).catch(onError),
+      // Сначала закрываем закончившиеся комнаты и возвращаем микрофоны, потом сверяем, кто на самом деле в комнатах
+      closeFinishedRooms({ db, voice, onError }, now)
+        .then(() => liftExpiredMutes({ db, voice, onError }, now))
+        .then(() => syncPresence({ db, voice, onError }, now))
+        .catch(onError),
     ])
       .finally(() => {
         ticking = false;

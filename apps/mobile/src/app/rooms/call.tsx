@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { JoinRoomResponse } from '@app/shared';
-import { getRoomState, joinRoom, leaveRoom } from '../../features/rooms/api';
+import { getRoomState, joinRoom, leaveRoom, setHand } from '../../features/rooms/api';
 import { AfterRoom } from '../../features/rooms/AfterRoom';
 import { formatBlockedUntil, isInFuture, minutesLeft, voteResultText } from '../../features/rooms/moderation';
 import { ParticipantList } from '../../features/rooms/ParticipantList';
@@ -78,7 +78,7 @@ function Room({ slotId }: { slotId: string }) {
   const focused = useIsFocused();
   const names = useRef(new Map<string, string>());
   const otherNicknames = useRef<string[]>([]);
-  // Поднятая рука пока живёт только на этом экране: сервер о ней не знает, другие её не видят
+  // Поднятая рука: показываем сразу, сервер рассказывает о ней остальным в комнате
   const [handRaised, setHandRaised] = useState(false);
   const leftRef = useRef(false);
   const forgetRef = useRef(forgetSession);
@@ -144,6 +144,17 @@ function Room({ slotId }: { slotId: string }) {
     focused && call.status === 'connected' && blockedUntil === null,
     onUnauthorized,
   );
+
+  // Рука меняется на экране сразу; если сервер не принял — возвращаем как было
+  const toggleHand = () => {
+    if (!roomId) return;
+    const next = !handRaised;
+    setHandRaised(next);
+    setHand(token, roomId, next).then(refresh, (error: unknown) => {
+      if (error instanceof ApiError && error.code === 'unauthorized') return onUnauthorized();
+      setHandRaised(!next);
+    });
+  };
 
   // Ники помним, чтобы итог голосования назвал и того, кто уже вышел
   for (const participant of call.participants) names.current.set(participant.id, participant.name);
@@ -293,7 +304,7 @@ function Room({ slotId }: { slotId: string }) {
               micNote={micNote}
               onToggleMic={call.toggleMic}
               handRaised={handRaised}
-              onToggleHand={() => setHandRaised((value) => !value)}
+              onToggleHand={toggleHand}
               // Выход ведёт на экран «Хотите пообщаться ещё?», а не сразу к расписанию
               onLeave={() => leave(false)}
             />
@@ -319,6 +330,7 @@ function Room({ slotId }: { slotId: string }) {
           token={token}
           voteActive={vote !== null}
           handRaised={handRaised}
+          raisedHands={state?.raisedHands}
           onChanged={refresh}
           onUnauthorized={onUnauthorized}
         />

@@ -62,6 +62,8 @@ export const roomStateSchema = z.object({
   blockedUntil: z.iso.datetime().nullable(),
   // Кого я заглушил для себя
   personalMutes: z.array(z.string()),
+  // Кто сейчас поднял руку (personaId), от первого к последнему
+  raisedHands: z.array(z.string()),
 });
 export type RoomState = z.infer<typeof roomStateSchema>;
 

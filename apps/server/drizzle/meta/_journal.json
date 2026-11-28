@@ -15,6 +15,13 @@
       "when": 1795708269748,
       "tag": "0001_accounts_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795823249173,
+      "tag": "0002_room_hand",
+      "breakpoints": true
     }
   ]
 }
