@@ -47,5 +47,9 @@ export const setPersonalMute = (token: string, personaId: string, muted: boolean
     token,
   });
 
+// «Поднять руку»: видят все в комнате
+export const setHand = (token: string, roomId: string, raised: boolean) =>
+  request(`/rooms/${encodeURIComponent(roomId)}/hand`, okResponseSchema, { method: raised ? 'PUT' : 'DELETE', token });
+
 export const reportToAdmins = (token: string, body: RoomReportRequest) =>
   request('/rooms/reports', okResponseSchema, { method: 'POST', token, body });

@@ -1,0 +1,1 @@
+ALTER TABLE "room_participations" ADD COLUMN "hand_raised_at" timestamp with time zone;

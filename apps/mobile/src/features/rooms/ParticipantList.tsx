@@ -100,15 +100,17 @@ type Props = {
   roomId: string;
   token: string;
   voteActive: boolean;
-  // Моя рука поднята (пока видна только мне)
+  // Моя рука поднята
   handRaised?: boolean;
+  // Кто ещё в комнате поднял руку (идентификаторы участников), по данным сервера
+  raisedHands?: readonly string[];
   onChanged: () => void;
   onUnauthorized: () => void;
 };
 
 // Участники кружками в три столбца. Действия с участником (заглушить для себя, голосование, жалоба) —
 // по кнопке «…» у кружка: панель открывается под сеткой
-export function ParticipantList({ participants, roomId, token, voteActive, handRaised = false, onChanged, onUnauthorized }: Props) {
+export function ParticipantList({ participants, roomId, token, voteActive, handRaised = false, raisedHands = [], onChanged, onUnauthorized }: Props) {
   const colors = useColors();
   // Раскрыта только одна панель; если человек вышел, панель пропадает сама
   const [openId, setOpenId] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export function ParticipantList({ participants, roomId, token, voteActive, handR
             key={participant.id}
             participant={participant}
             selected={open?.id === participant.id}
-            handRaised={participant.isMe && handRaised}
+            handRaised={participant.isMe ? handRaised : raisedHands.includes(participant.id)}
             onMore={() => setOpenId(open?.id === participant.id ? null : participant.id)}
           />
         ))}

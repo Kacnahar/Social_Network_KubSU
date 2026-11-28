@@ -132,7 +132,7 @@ export async function joinSlot(
 export async function leaveRoom(db: Db, personaId: string, roomId: string, now: Date): Promise<void> {
   await db
     .update(roomParticipations)
-    .set({ leftAt: now })
+    .set({ leftAt: now, handRaisedAt: null })
     .where(
       and(eq(roomParticipations.roomId, roomId), eq(roomParticipations.personaId, personaId), isNull(roomParticipations.leftAt)),
     );

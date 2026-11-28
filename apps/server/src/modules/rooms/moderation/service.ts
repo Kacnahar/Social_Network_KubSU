@@ -24,6 +24,7 @@ import {
   roomVotes,
   rooms,
 } from '../../../db/schema';
+import { listRaisedHands } from '../presence/service';
 import type { VoiceGateway } from '../voice/gateway';
 
 const MINUTE = 60 * 1000;
@@ -122,7 +123,13 @@ async function countBallots(db: Db, voteId: string): Promise<number> {
 
 async function applyPassedVote(deps: ModerationDeps, vote: Vote, room: Room, now: Date): Promise<void> {
   const { db, voice } = deps;
-  await db.update(roomVotes).set({ result: 'passed', resolvedAt: now }).where(eq(roomVotes.id, vote.id));
+  // Два голоса могли прийти одновременно: решение исполняет только тот запрос, который первым закрыл голосование
+  const closed = await db
+    .update(roomVotes)
+    .set({ result: 'passed', resolvedAt: now })
+    .where(and(eq(roomVotes.id, vote.id), eq(roomVotes.result, 'pending')))
+    .returning({ id: roomVotes.id });
+  if (closed.length === 0) return;
 
   if (vote.type === 'mute') {
     await db.insert(roomSanctions).values({
@@ -148,7 +155,7 @@ async function applyPassedVote(deps: ModerationDeps, vote: Vote, room: Room, now
   });
   await db
     .update(roomParticipations)
-    .set({ leftAt: now })
+    .set({ leftAt: now, handRaisedAt: null })
     .where(
       and(eq(roomParticipations.roomId, room.id), eq(roomParticipations.personaId, vote.targetPersonaId), isNull(roomParticipations.leftAt)),
     );
@@ -293,10 +300,11 @@ export async function getRoomState(deps: ModerationDeps, personaId: string, room
     };
   }
 
-  const [muted, blocked, personal] = await Promise.all([
+  const [muted, blocked, personal, raisedHands] = await Promise.all([
     mutedUntil(db, personaId, roomId, now),
     blockedUntil(db, personaId, now),
     db.select({ id: roomPersonalMutes.mutedPersonaId }).from(roomPersonalMutes).where(eq(roomPersonalMutes.personaId, personaId)),
+    listRaisedHands(db, roomId),
   ]);
 
   return {
@@ -315,6 +323,7 @@ export async function getRoomState(deps: ModerationDeps, personaId: string, room
     mutedUntil: muted?.toISOString() ?? null,
     blockedUntil: blocked?.toISOString() ?? null,
     personalMutes: personal.map((row) => row.id),
+    raisedHands,
   };
 }
 
