@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef, type Ref } from 'react';
-import { Animated, Easing, Image, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Animated, Easing, Image, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View, type ViewStyle } from 'react-native';
 import { CloseIcon, PencilIcon, PlusIcon } from '../../ui/icons';
 import { useSound } from '../../ui/soundStore';
 import { darkColors, radius, type, useColors, useReduceMotion } from '../../ui/theme';
@@ -194,6 +194,7 @@ function Thumb({ uri, index, count, drag, onDrag, active, onTap, onEdit, onRemov
       accessibilityLabel={`Фото ${index + 1} из ${count}`}
       style={[
         styles.thumbBox,
+        webGrab,
         {
           zIndex: dragging ? 10 : 0,
           backgroundColor: colors.fill,
@@ -227,9 +228,12 @@ function Thumb({ uri, index, count, drag, onDrag, active, onTap, onEdit, onRemov
   );
 }
 
+// Курсор «рука» при наведении — только в браузере: в типах React Native такого значения нет
+const webGrab = Platform.OS === 'web' ? ({ cursor: 'grab' } as unknown as ViewStyle) : null;
+
 const styles = StyleSheet.create({
   row: { gap: GAP, paddingVertical: 8, paddingRight: 6, alignItems: 'center' },
-  thumbBox: { width: SIZE, height: SIZE, borderRadius: 10, borderCurve: 'continuous', shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, cursor: 'grab', userSelect: 'none' },
+  thumbBox: { width: SIZE, height: SIZE, borderRadius: 10, borderCurve: 'continuous', shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, userSelect: 'none' },
   thumb: { width: SIZE, height: SIZE, borderRadius: 10, borderCurve: 'continuous' },
   add: { width: SIZE, height: SIZE, borderRadius: 10, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   cover: { position: 'absolute', left: 4, bottom: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: radius.control - 4 },
