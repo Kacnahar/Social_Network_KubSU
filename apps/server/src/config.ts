@@ -41,6 +41,9 @@ const envSchema = z.object({
   DEV_LIVE_SLOT: flag.optional(),
   // Почты админов через запятую; порядок задаёт подписи «Админ 1», «Админ 2» в журнале
   ADMIN_EMAILS: z.string().optional(),
+  // Ключ каталога gifs.ru (поиск GIF). Только здесь, в переменных окружения сервера; в приложение не попадает
+  GIFS_RU_API_KEY: z.string().trim().min(1).optional(),
+  GIFS_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(90),
 });
 
 // url — адрес для приложений; apiUrl — адрес, по которому к серверу звука ходит наш сервер
@@ -83,6 +86,10 @@ export type Config = {
   devLiveSlot: boolean;
   // Отпечатки почт админов, по порядку. Пусто — админов нет
   adminEmailHashes: string[];
+  // null — ключ gifs.ru не задан, окно GIF отвечает «недоступно»
+  gifsRuApiKey: string | null;
+  // Сколько запросов GIF в минуту можно одному человеку
+  gifsRateLimitPerMinute: number;
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -142,6 +149,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 
   return {
     adminEmailHashes,
+    gifsRuApiKey: parsed.GIFS_RU_API_KEY ?? null,
+    gifsRateLimitPerMinute: parsed.GIFS_RATE_LIMIT_PER_MINUTE,
     mediaDir: parsed.MEDIA_DIR ?? (parsed.NODE_ENV === 'test' ? null : '.data/media'),
     voice,
     devLiveSlot: parsed.DEV_LIVE_SLOT ?? parsed.NODE_ENV === 'development',

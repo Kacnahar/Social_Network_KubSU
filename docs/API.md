@@ -115,23 +115,38 @@
 
 До 10 МБ; JPEG, PNG, WebP. Отказы: `media_invalid`, `media_too_large`.
 
+### GIF ✅
+
+GIF берутся из каталога gifs.ru. Приложение ходит только на наш сервер, а к gifs.ru обращается сам сервер: ключ gifs.ru (`GIFS_RU_API_KEY` в `apps/server/.env`) в приложение, ответы и журнал не попадает.
+
+| Запрос | Что делает | Кому можно |
+|---|---|---|
+| `GET /v1/gifs/trending?pos=…` | Популярные GIF, по 24 | студент, преподаватель |
+| `GET /v1/gifs/search?q=…&pos=…` | Поиск GIF по словам (до 50 знаков, русский и английский), по 24 | студент, преподаватель |
+
+Ответ: `{ gifs: [{ id, previewUrl, url, width, height }], next }`. `id` — идентификатор в gifs.ru; `previewUrl` — маленькая версия (для сетки и комментариев), `url` — полная (для поста); `width`/`height` — для правильных пропорций; `next` передаётся в `?pos=`, чтобы получить следующую порцию (`null` — больше нет).
+
+Ответы запоминаются на сервере: популярные на 10 минут, поиск на час (сейчас — в памяти сервера; Redis в проекте нет, хранилище подменяется через `GifCache`). Не больше 90 запросов в минуту на человека (`GIFS_RATE_LIMIT_PER_MINUTE`), дальше `too_many_requests`. Гостю — `forbidden`. Если gifs.ru не отвечает, превышен их суточный лимит или ключ не задан — `gifs_unavailable` (503); приложение показывает «GIF сейчас недоступны».
+
+Выбранный GIF прикрепляется к посту или комментарию целиком этим же объектом (поле `gif`). Сервер хранит идентификатор, адреса и размеры, сам файл не хранит; адреса принимаются только с серверов gifs.ru.
+
 ---
 
 ## Модуль «Посты» — `/v1/posts` ✅
 
 | Запрос | Что делает | Кому можно |
 |---|---|---|
-| `POST /v1/posts` | Опубликовать пост: текст (до 5000 знаков) и до 10 фото, загруженных через `POST /v1/media?purpose=post` | студент, преподаватель |
+| `POST /v1/posts` | Опубликовать пост: текст (до 5000 знаков) и до 10 фото, загруженных через `POST /v1/media?purpose=post`, либо один GIF (`gif`, без фото) | студент, преподаватель |
 | `GET /v1/posts/:postId` | Один пост | все вошедшие |
 | `DELETE /v1/posts/:postId` | Удалить свой пост вместе с фото, лайками и комментариями | автор |
 | `GET /v1/profiles/:profileId/posts?before=…` | Посты человека, новые сверху, по 20 | все вошедшие |
 | `PUT/DELETE /v1/posts/:postId/like` | Поставить или убрать лайк | студент, преподаватель |
 | `GET /v1/posts/:postId/comments?after=…` | Комментарии, от старых к новым, по 50 | все вошедшие |
-| `POST /v1/posts/:postId/comments` | Написать комментарий (до 1000 знаков) | студент, преподаватель |
+| `POST /v1/posts/:postId/comments` | Написать комментарий: текст (до 1000 знаков) и/или один GIF (`gif`) | студент, преподаватель |
 | `DELETE /v1/posts/comments/:commentId` | Удалить комментарий | автор комментария или автор поста |
 | `POST /v1/posts/:postId/report`, `POST /v1/posts/comments/:commentId/report` | Пожаловаться | все вошедшие, включая гостя |
 
-В ответе о посте: автор (профиль: идентификатор, имя, аватар, роль), текст, фото с размерами, число лайков, поставил ли лайк я, число комментариев, время, могу ли я удалить. Чтобы публиковать, лайкать и комментировать, нужен заполненный профиль — иначе отказ `profile_required`.
+В ответе о посте: автор (профиль: идентификатор, имя, аватар, роль), текст, фото с размерами, GIF (`gif` или `null`), число лайков, поставил ли лайк я, число комментариев, время, могу ли я удалить. Чтобы публиковать, лайкать и комментировать, нужен заполненный профиль — иначе отказ `profile_required`.
 
 ## Модуль «Лента» — `/v1/feed` ✅
 
@@ -238,4 +253,4 @@
 
 ## Коды ошибок
 
-`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. `forbidden` (роль не позволяет), `profile_required` (сначала заполните профиль), `media_invalid`, `media_too_large`.
+`validation_error`, `invalid_invite`, `invalid_code`, `too_many_requests`, `unauthorized`, `nickname_invalid`, `nickname_taken`, `nickname_change_too_soon`, `nickname_required`, `room_not_open`, `account_banned`, `voice_unavailable`, `push_unavailable`, `not_found`, `internal_error`. `forbidden` (роль не позволяет), `profile_required` (сначала заполните профиль), `media_invalid`, `media_too_large`, `gifs_unavailable` (каталог GIF сейчас недоступен).

@@ -17,6 +17,7 @@ import { showToast } from '../../ui/toastStore';
 import { type, useColors } from '../../ui/theme';
 import { deletePost, likePost, reportPost, unlikePost } from './api';
 import { PostPhotos } from './PostPhotos';
+import { PostGif } from '../gif/GifPicker';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useFail } from '../../lib/useFail';
 import { ReportDialog } from './ReportDialog';
@@ -188,6 +189,12 @@ export function PostCard({ post, now, expanded = false, onChanged, onDeleted }: 
           {post.photos.length > 0 ? (
             <View style={styles.photos}>
               <PostPhotos photos={post.photos} />
+            </View>
+          ) : null}
+
+          {post.gif ? (
+            <View style={styles.photos}>
+              <PostGif gif={post.gif} />
             </View>
           ) : null}
         </DoubleTapLike>

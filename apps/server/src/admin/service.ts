@@ -172,6 +172,7 @@ export async function listPostReports(db: Db, status: ReportStatus, now: Date): 
             ? {
                 author,
                 text: record.text,
+                gif: record.gif ?? null,
                 photos:
                   row.targetType === 'post'
                     ? photoRows

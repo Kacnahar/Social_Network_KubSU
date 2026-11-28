@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { gifSchema } from '../core/gifs';
 import { roleSchema } from '../core/roles';
 
 export const POST_TEXT_MAX = 5000;
@@ -29,6 +30,8 @@ export const postSchema = z.object({
   author: authorSchema,
   text: z.string(),
   photos: z.array(postPhotoSchema),
+  // GIF из gifs.ru (не больше одного и только без фото); нет — null
+  gif: gifSchema.nullish(),
   likeCount: z.number().int(),
   likedByMe: z.boolean(),
   commentCount: z.number().int(),
@@ -43,9 +46,14 @@ export const createPostRequestSchema = z
     text: z.string().trim().max(POST_TEXT_MAX).default(''),
     // Идентификаторы фото, загруженных через POST /v1/media?purpose=post, в нужном порядке
     photoMediaIds: z.array(z.uuid()).max(POST_PHOTOS_MAX).default([]),
+    // GIF, выбранный в окне GIF (данные из GET /v1/gifs/*)
+    gif: gifSchema.optional(),
   })
-  .refine((post) => post.text.length > 0 || post.photoMediaIds.length > 0, {
+  .refine((post) => post.text.length > 0 || post.photoMediaIds.length > 0 || post.gif !== undefined, {
     message: 'Пост не может быть пустым',
+  })
+  .refine((post) => post.gif === undefined || post.photoMediaIds.length === 0, {
+    message: 'GIF и фото вместе прикрепить нельзя',
   })
   .refine((post) => new Set(post.photoMediaIds).size === post.photoMediaIds.length, {
     message: 'Одно фото нельзя прикрепить дважды',
@@ -68,17 +76,24 @@ export type LikeResponse = z.infer<typeof likeResponseSchema>;
 export const commentSchema = z.object({
   commentId: z.string(),
   author: authorSchema,
+  // Пустой, если комментарий из одного GIF
   text: z.string(),
+  gif: gifSchema.nullish(),
   createdAt: z.iso.datetime(),
   // Можно ли мне удалить: это мой комментарий или комментарий под моим постом
   canDelete: z.boolean(),
 });
 export type Comment = z.infer<typeof commentSchema>;
 
-export const createCommentRequestSchema = z.object({
-  text: z.string().trim().min(1).max(COMMENT_TEXT_MAX),
-});
-export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
+export const createCommentRequestSchema = z
+  .object({
+    text: z.string().trim().max(COMMENT_TEXT_MAX).default(''),
+    gif: gifSchema.optional(),
+  })
+  .refine((comment) => comment.text.length > 0 || comment.gif !== undefined, {
+    message: 'Комментарий не может быть пустым',
+  });
+export type CreateCommentRequest = z.input<typeof createCommentRequestSchema>;
 
 export const commentsPageSchema = z.object({
   // От старых к новым

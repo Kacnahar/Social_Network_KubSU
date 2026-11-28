@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GifPicker, GifPreview } from '../features/gif/GifPicker';
-import type { Gif } from '../features/gif/gifs';
+import { toServerGif, type Gif } from '../features/gif/gifs';
 import { createPost } from '../features/posts/api';
 import { uploadMedia } from '../lib/api';
 import { pausedBodyText } from '../lib/banText';
@@ -139,12 +139,12 @@ export default function ComposeScreen() {
 
   const publish = async () => {
     setError(null);
-    // Сервер пока не умеет хранить GIF: отправляем только текст и фото, а о GIF честно говорим
-    if (gif && text.trim() === '' && photos.length === 0) {
-      showToast('GIF пока нельзя отправить: нужна поддержка сервера');
-      return;
+    // Тестовую плитку (на сервере нет ключа gifs.ru) отправить нельзя — об этом честно говорим
+    const attached = toServerGif(gif);
+    if (gif && !attached) {
+      showToast('Тестовый GIF не отправляется: на сервере нет ключа gifs.ru');
+      if (text.trim() === '' && photos.length === 0) return;
     }
-    if (gif) showToast('GIF пока не сохраняется: нужна поддержка сервера');
     setPublishing(true);
     try {
       const ids: string[] = [];
@@ -158,7 +158,7 @@ export default function ComposeScreen() {
         ids.push(mediaId);
       }
       setProgress(null);
-      await createPost(token, { text: text.trim(), photoMediaIds: ids });
+      await createPost(token, { text: text.trim(), photoMediaIds: ids, gif: attached });
       // Лента обновляется сама при возврате на неё — новый пост окажется сверху
       close();
     } catch (caught) {

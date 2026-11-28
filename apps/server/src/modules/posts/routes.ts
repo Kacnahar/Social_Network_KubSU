@@ -99,8 +99,8 @@ export function registerPostsRoutes(app: FastifyInstance, { db, media }: PostsDe
 
   app.post<{ Params: { postId: string } }>(`${POSTS}/:postId/comments`, async (request): Promise<Comment> => {
     const me = await requireProfile(db, await accountOf(request), 'react', 'new');
-    const { text } = createCommentRequestSchema.parse(request.body);
-    return addComment(db, me, idParam.parse(request.params.postId), text);
+    const { text, gif } = createCommentRequestSchema.parse(request.body);
+    return addComment(db, me, idParam.parse(request.params.postId), text, gif);
   });
 
   app.delete<{ Params: { commentId: string } }>(`${POSTS}/comments/:commentId`, async (request): Promise<OkResponse> => {

@@ -5,6 +5,7 @@ import {
   type Author,
   type Comment,
   type CommentsPage,
+  type Gif,
   type LikeResponse,
   type Post,
   type PostsPage,
@@ -94,6 +95,7 @@ async function toPosts(db: Db, rows: PostRow[], viewerProfileId: string | null):
     postId: row.id,
     author: authors.get(row.authorProfileId)!,
     text: row.text,
+    gif: row.gif ?? null,
     photos: photos
       .filter((photo) => photo.postId === row.id)
       .map((photo) => ({ url: mediaPath(photo.mediaId), width: photo.width, height: photo.height })),
@@ -117,7 +119,7 @@ export async function createPost(
   db: Db,
   me: ProfileRef,
   accountId: string,
-  input: { text: string; photoMediaIds: string[] },
+  input: { text: string; photoMediaIds: string[]; gif?: Gif },
 ): Promise<Post> {
   if (input.photoMediaIds.length > 0) {
     // Прикрепить можно только свои фото, загруженные для поста и ещё нигде не использованные
@@ -136,7 +138,7 @@ export async function createPost(
   const row = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(posts)
-      .values({ authorProfileId: me.profileId, text: input.text, createdAt: new Date() })
+      .values({ authorProfileId: me.profileId, text: input.text, gif: input.gif ?? null, createdAt: new Date() })
       .returning();
     if (input.photoMediaIds.length > 0) {
       await tx
@@ -225,6 +227,7 @@ async function toComments(db: Db, rows: CommentRow[], postAuthorId: string, view
     commentId: row.id,
     author: authors.get(row.authorProfileId)!,
     text: row.text,
+    gif: row.gif ?? null,
     createdAt: row.createdAt.toISOString(),
     canDelete: viewerProfileId !== null && (row.authorProfileId === viewerProfileId || postAuthorId === viewerProfileId),
   }));
@@ -257,11 +260,11 @@ export async function listComments(
   };
 }
 
-export async function addComment(db: Db, me: ProfileRef, postId: string, text: string): Promise<Comment> {
+export async function addComment(db: Db, me: ProfileRef, postId: string, text: string, gif?: Gif): Promise<Comment> {
   const post = await loadPostRow(db, postId);
   const [row] = await db
     .insert(postComments)
-    .values({ postId, authorProfileId: me.profileId, text, createdAt: new Date() })
+    .values({ postId, authorProfileId: me.profileId, text, gif: gif ?? null, createdAt: new Date() })
     .returning();
   return (await toComments(db, [row!], post.authorProfileId, me.profileId))[0]!;
 }

@@ -1,6 +1,7 @@
 // Таблицы МОДУЛЯ «Посты». Работают с открытым профилем; о комнатах и персоне ничего не знают.
 
-import { integer, pgTable, primaryKey, text, uuid } from 'drizzle-orm/pg-core';
+import type { Gif } from '@app/shared';
+import { integer, jsonb, pgTable, primaryKey, text, uuid } from 'drizzle-orm/pg-core';
 import { id, time } from './columns';
 import { mediaFiles, profiles } from './core';
 
@@ -10,6 +11,8 @@ export const posts = pgTable('posts', {
     .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   text: text('text').notNull(),
+  // GIF из gifs.ru: идентификатор, адреса и размеры; сам файл у нас не хранится
+  gif: jsonb('gif').$type<Gif>(),
   createdAt: time('created_at').notNull(),
 });
 
@@ -51,6 +54,7 @@ export const postComments = pgTable('post_comments', {
     .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   text: text('text').notNull(),
+  gif: jsonb('gif').$type<Gif>(),
   createdAt: time('created_at').notNull(),
 });
 

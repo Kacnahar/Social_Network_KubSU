@@ -7,6 +7,7 @@ import {
   postSchema,
   postsPageSchema,
   type Comment,
+  type Gif,
   type CommentsPage,
   type CreatePostRequest,
   type LikeResponse,
@@ -34,8 +35,9 @@ export const unlikePost = (token: string, postId: string): Promise<LikeResponse>
 export const getComments = (token: string, postId: string, after?: string | null): Promise<CommentsPage> =>
   request(`/posts/${id(postId)}/comments${after ? `?after=${encodeURIComponent(after)}` : ''}`, commentsPageSchema, { token });
 
-export const addComment = (token: string, postId: string, text: string): Promise<Comment> =>
-  request(`/posts/${id(postId)}/comments`, commentSchema, { method: 'POST', token, body: { text } });
+// gif — GIF, выбранный в окне GIF; комментарий может состоять из одного GIF, без текста
+export const addComment = (token: string, postId: string, text: string, gif?: Gif): Promise<Comment> =>
+  request(`/posts/${id(postId)}/comments`, commentSchema, { method: 'POST', token, body: { text, gif } });
 
 export const deleteComment = (token: string, commentId: string) =>
   request(`/posts/comments/${id(commentId)}`, okResponseSchema, { method: 'DELETE', token });

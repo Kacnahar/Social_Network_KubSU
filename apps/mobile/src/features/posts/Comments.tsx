@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GifPreview, GifSheet } from '../gif/GifPicker';
-import type { Gif } from '../gif/gifs';
+import { toServerGif, type Gif } from '../gif/gifs';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { useFail } from '../../lib/useFail';
@@ -34,7 +34,7 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
-  // Выбранный GIF (не больше одного) — только в памяти приложения, на сервер пока не уходит
+  // Выбранный GIF (не больше одного)
   const [draftGif, setDraftGif] = useState<Gif | null>(null);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
@@ -78,14 +78,16 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
   };
 
   const send = async () => {
-    // Комментарий из одного GIF отправляется с текстом-заглушкой: сервер требует непустой текст
-    const text = draft.trim() || (draftGif ? GIF_PLACEHOLDER : '');
-    if (text === '' || sending) return;
-    const gif = draftGif;
+    // Настоящий GIF уходит на сервер. Тестовую плитку (на сервере нет ключа gifs.ru) отправить нельзя:
+    // она остаётся в памяти приложения, а на сервер уходит текст-заглушка
+    const attached = toServerGif(draftGif);
+    const gif = attached ? null : draftGif;
+    const text = draft.trim() || (gif ? GIF_PLACEHOLDER : '');
+    if ((text === '' && !attached) || sending) return;
     setSendError(null);
     setSending(true);
     try {
-      const comment = await addComment(token, postId, text);
+      const comment = await addComment(token, postId, text, attached);
       if (replyTo) rememberReply(comment.commentId, replyTo.commentId);
       if (gif) rememberCommentGif(comment.commentId, gif);
       setLastAdded({ id: comment.commentId, parentId: replyTo ? replyTo.commentId : null });
@@ -271,7 +273,9 @@ function useHandle(author: Comment['author']): string {
 function MentionLine({ comment, mention }: { comment: Comment; mention: Comment | null }) {
   const colors = useColors();
   const mentionName = useHandle((mention ?? comment).author);
-  const gif = useCommentGif(comment.commentId);
+  const localGif = useCommentGif(comment.commentId);
+  // GIF с сервера; тестовая плитка — из памяти приложения
+  const gif = comment.gif ?? localGif;
   const text = visibleCommentText(comment.text, gif);
   return (
     <View style={styles.mentionLine}>

@@ -9,6 +9,8 @@ import { ZodError } from 'zod';
 import { registerAdminRoutes } from './admin/routes';
 import type { Config } from './config';
 import { ApiError } from './core/errors';
+import type { GifProvider } from './core/gifs/gifsru';
+import { registerGifsRoutes } from './core/gifs/routes';
 import type { Mailer } from './core/mailer';
 import type { MediaStorage } from './core/media/storage';
 import type { PushGateway } from './core/push/service';
@@ -30,13 +32,15 @@ export type AppDeps = {
   voice: VoiceGateway | null;
   // Где хранятся фото
   media: MediaStorage;
+  // Источник GIF (gifs.ru); null — ключ не задан, GIF недоступны
+  gifs: GifProvider | null;
   // Сообщает о каждом зарегистрированном адресе — для автотестов, которые проверяют все адреса сразу
   onRoute?: (route: { method: string; url: string }) => void;
 };
 
 const errorBody = (code: ErrorCode, message: string): ErrorResponse => ({ error: { code, message } });
 
-export async function buildApp({ config, db, mailer, push, voice, media, onRoute }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ config, db, mailer, push, voice, media, gifs, onRoute }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: config.env !== 'test' });
 
   if (onRoute) {
@@ -83,6 +87,7 @@ export async function buildApp({ config, db, mailer, push, voice, media, onRoute
   );
 
   registerCoreRoutes(app, { config, db, mailer, push, media });
+  registerGifsRoutes(app, { db, gifs, rateLimitPerMinute: config.gifsRateLimitPerMinute });
   registerRoomsRoutes(app, { db, voice });
   registerPostsRoutes(app, { db, media });
   registerFeedRoutes(app, { db });

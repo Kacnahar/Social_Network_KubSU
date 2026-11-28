@@ -7,7 +7,8 @@ import type { Mailer } from './core/mailer';
 import { MemoryMediaStorage } from './core/media/storage';
 import type { Role } from '@app/shared';
 import type { PushGateway, PushTarget } from './core/push/service';
-import type { PushMessage } from '@app/shared';
+import type { GifsPage, PushMessage } from '@app/shared';
+import type { GifProvider } from './core/gifs/gifsru';
 import type { VoiceGateway } from './modules/rooms/voice/gateway';
 
 export class CapturingMailer implements Mailer {
@@ -35,6 +36,36 @@ export class CapturingPush implements PushGateway {
     if (this.goneEndpoints.has(target.endpoint)) return 'gone';
     this.sent.push({ endpoint: target.endpoint, message, ttlSeconds });
     return 'sent';
+  }
+}
+
+// Подделка gifs.ru: отдаёт заранее заданные GIF и запоминает, о чём её спрашивали
+export class FakeGifs implements GifProvider {
+  readonly calls: { kind: 'trending' | 'search'; query: string; pos: string | undefined }[] = [];
+  down = false;
+  page: GifsPage = {
+    gifs: [
+      {
+        id: 'gif1',
+        previewUrl: 'https://media1.gifs.ru/gif1_300.webp',
+        url: 'https://media1.gifs.ru/gif1_500.webp',
+        width: 889,
+        height: 500,
+      },
+    ],
+    next: '24',
+  };
+
+  async trending(pos?: string): Promise<GifsPage> {
+    this.calls.push({ kind: 'trending', query: '', pos });
+    if (this.down) throw new Error('gifs.ru не отвечает');
+    return this.page;
+  }
+
+  async search(query: string, pos?: string): Promise<GifsPage> {
+    this.calls.push({ kind: 'search', query, pos });
+    if (this.down) throw new Error('gifs.ru не отвечает');
+    return this.page;
   }
 }
 
@@ -97,6 +128,7 @@ export type TestContext = {
   push: CapturingPush;
   voice: FakeVoice;
   media: MemoryMediaStorage;
+  gifs: FakeGifs;
   // Все адреса сервера — чтобы тесты могли пройти по каждому
   routes: { method: string; url: string }[];
   registerAs: (role: Role, email: string) => Promise<string>;
@@ -124,8 +156,9 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
   const push = new CapturingPush();
   const voice = new FakeVoice();
   const media = new MemoryMediaStorage();
+  const gifs = new FakeGifs();
   const routes: TestContext['routes'] = [];
-  const app = await buildApp({ config, db, mailer, push, voice, media, onRoute: (route) => routes.push(route) });
+  const app = await buildApp({ config, db, mailer, push, voice, media, gifs, onRoute: (route) => routes.push(route) });
 
   const responses: TestContext['responses'] = [];
   app.addHook('onSend', async (request, _reply, payload) => {
@@ -153,6 +186,7 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     push,
     voice,
     media,
+    gifs,
     routes,
     registerAs: (role, email) => register(email, TEST_INVITE_BY_ROLE[role]),
     responses,

@@ -1,3 +1,4 @@
+import { GifPreview } from '../gif/GifPicker';
 import type { AdminPostReport } from '@app/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -68,6 +69,7 @@ export function PostReportCard({ report, now, onDone }: Props) {
             </Text>
           </Pressable>
           {target.text ? <Body>{target.text}</Body> : null}
+          {target.gif ? <GifPreview gif={target.gif} width={120} onFill /> : null}
           {shown.length > 0 ? (
             <View style={styles.thumbs}>
               {shown.map((photo, index) => (

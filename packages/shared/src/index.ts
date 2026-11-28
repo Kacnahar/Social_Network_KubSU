@@ -1,6 +1,7 @@
 // Ядро соцсети: вход, аккаунт, уведомления, общие ошибки
 export * from './core/auth';
 export * from './core/errors';
+export * from './core/gifs';
 export * from './core/health';
 export * from './core/media';
 export * from './core/profile';

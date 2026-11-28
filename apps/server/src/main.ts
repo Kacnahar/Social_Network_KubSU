@@ -6,11 +6,15 @@ import { startMaintenance } from './maintenance';
 import { createDb } from './db/client';
 import { createInviteCode } from './core/invites';
 import { startBackgroundJobs } from './modules/rooms/jobs';
+import { createGifsRuProvider } from './core/gifs/gifsru';
 import { ConsoleMailer } from './core/mailer';
 import { DiskMediaStorage, MemoryMediaStorage } from './core/media/storage';
 import { createWebPushGateway, generateVapidKeys } from './core/push/service';
 import { ensureDevLiveSlot } from './modules/rooms/schedule/service';
 import { createLiveKitGateway } from './modules/rooms/voice/gateway';
+
+// Секреты (например, GIFS_RU_API_KEY) читаются из файла apps/server/.env, если он есть; в git он не попадает
+if (existsSync('.env')) process.loadEnvFile('.env');
 
 const config = loadConfig();
 
@@ -45,7 +49,9 @@ const push = vapid ? createWebPushGateway(vapid) : null;
 const mailer = new ConsoleMailer((message) => app.log.info(message));
 const voice = config.voice ? createLiveKitGateway(config.voice) : null;
 const media = config.mediaDir ? new DiskMediaStorage(config.mediaDir) : new MemoryMediaStorage();
-const app = await buildApp({ config, db, mailer, push, voice, media });
+const gifs = config.gifsRuApiKey ? createGifsRuProvider(config.gifsRuApiKey) : null;
+const app = await buildApp({ config, db, mailer, push, voice, media, gifs });
+if (!gifs) app.log.warn('GIFS_RU_API_KEY не задан: окно GIF будет отвечать «недоступно»');
 
 await startBackgroundJobs({ db, schedule: config.schedule, push, voice, onError: (error) => app.log.error(error) });
 if (config.devLiveSlot) await ensureDevLiveSlot(db, new Date());

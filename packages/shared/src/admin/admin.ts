@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { gifSchema } from '../core/gifs';
 import { authorSchema, postPhotoSchema } from '../posts/posts';
 
 // Админка: разбор жалоб. Жалобы соцсети показывают профили, жалобы комнат — только ники;
@@ -28,6 +29,7 @@ export const adminPostReportSchema = z.object({
     .object({
       author: authorSchema,
       text: z.string(),
+      gif: gifSchema.nullish(),
       photos: z.array(postPhotoSchema),
       createdAt: z.iso.datetime(),
     })

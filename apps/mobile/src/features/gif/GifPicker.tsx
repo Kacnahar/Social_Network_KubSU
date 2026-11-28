@@ -1,53 +1,106 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { SearchField } from '../../ui/SearchField';
 import { radius, type, useColors, useReduceMotion, useScheme } from '../../ui/theme';
-import { fetchGifs, hasGiphy } from './giphy';
-import { searchTestGifs, splitColumns, type Gif } from './gifs';
+import { ApiError } from '../../lib/api';
+import { useSignedIn } from '../../lib/session';
+import { useFail } from '../../lib/useFail';
+import { fetchGifs } from './api';
+import { appendGifs, searchTestGifs, splitColumns, type Gif } from './gifs';
 
 const COLUMNS = 2;
 const GAP = 8;
+const SEARCH_DELAY_MS = 300;
+// За сколько точек до конца списка начинать подгрузку
+const LOAD_MORE_BEFORE_END = 600;
+const POST_GIF_MAX = 280;
+const OFFLINE_TEXT = 'Нет соединения. Проверьте интернет';
 
 // Содержимое окна выбора GIF (общее для «Нового поста» и комментариев): поиск, сетка в два столбца
-// (сначала популярные, при вводе — результаты поиска), внизу мелко «Powered by GIPHY».
-// Без ключа GIPHY показывает тестовые плитки. headerRight — кнопка справа от поиска (например, «Отмена»)
+// (сначала популярные, при вводе — результаты поиска), при прокрутке вниз подгружаются следующие, внизу мелко «Powered by GIFS.RU».
+// GIF приходят с нашего сервера. Если на сервере нет ключа gifs.ru, при разработке показываются тестовые плитки.
+// headerRight — кнопка справа от поиска (например, «Отмена»)
 export function GifBrowser({ active, onPick, headerRight }: { active: boolean; onPick: (gif: Gif) => void; headerRight?: ReactNode }) {
   const colors = useColors();
+  const fail = useFail();
+  const { token } = useSignedIn();
   const [query, setQuery] = useState('');
   const [gifs, setGifs] = useState<Gif[]>([]);
+  const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // Текст ошибки первой загрузки: «нет соединения» или «GIF недоступны»
+  const [problem, setProblem] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const [testTiles, setTestTiles] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
+  // Номер текущего запроса: ответы на устаревшие запросы (другие слова поиска) отбрасываются
+  const generation = useRef(0);
 
   useEffect(() => {
     if (!active) {
       setQuery('');
       return;
     }
-    if (!hasGiphy) {
-      setGifs(searchTestGifs(query));
-      return;
-    }
-    const controller = new AbortController();
+    const mine = ++generation.current;
     setLoading(true);
-    setFailed(false);
+    setProblem(null);
+    setMoreFailed(false);
+    setLoadingMore(false);
     // Запрос уходит с небольшой задержкой, чтобы не слать его на каждую букву
     const timer = setTimeout(async () => {
       try {
-        setGifs(await fetchGifs(query, controller.signal));
-      } catch {
-        if (!controller.signal.aborted) setFailed(true);
+        const page = await fetchGifs(token, query);
+        if (generation.current !== mine) return;
+        setTestTiles(false);
+        setGifs(page.gifs);
+        setNext(page.next);
+      } catch (caught) {
+        if (generation.current !== mine) return;
+        if (__DEV__ && caught instanceof ApiError && (caught.code === 'gifs_unavailable' || caught.code === 'not_found')) {
+          // На сервере разработки нет ключа GIF (или запущен старый сервер без GIF) — показываем тестовые плитки
+          setTestTiles(true);
+          setGifs(searchTestGifs(query));
+          setNext(null);
+        } else {
+          setGifs([]);
+          setNext(null);
+          setProblem(caught instanceof ApiError && caught.code === 'network_error' ? OFFLINE_TEXT : ((await fail(caught)) ?? OFFLINE_TEXT));
+        }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (generation.current === mine) setLoading(false);
       }
-    }, query.trim() ? 350 : 0);
+    }, query.trim() ? SEARCH_DELAY_MS : 0);
     return () => {
       clearTimeout(timer);
-      controller.abort();
+      generation.current += 1;
     };
-  }, [active, query]);
+  }, [active, query, token, fail]);
+
+  // Следующая порция — когда список докрутили почти до конца
+  const loadMore = async () => {
+    if (next === null || loading || loadingMore) return;
+    const mine = generation.current;
+    setMoreFailed(false);
+    setLoadingMore(true);
+    try {
+      const page = await fetchGifs(token, query, next);
+      if (generation.current !== mine) return;
+      setGifs((current) => appendGifs(current, page.gifs));
+      setNext(page.next);
+    } catch {
+      if (generation.current === mine) setMoreFailed(true);
+    } finally {
+      if (generation.current === mine) setLoadingMore(false);
+    }
+  };
+
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    if (!moreFailed && contentOffset.y + layoutMeasurement.height >= contentSize.height - LOAD_MORE_BEFORE_END) void loadMore();
+  };
 
   const columns = splitColumns(gifs, COLUMNS);
   const tileWidth = Math.max(0, Math.floor((gridWidth - GAP * (COLUMNS - 1)) / COLUMNS));
@@ -61,12 +114,19 @@ export function GifBrowser({ active, onPick, headerRight }: { active: boolean; o
         {headerRight}
       </View>
 
-      <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.fill}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+      >
         <Text style={[type.footnote, { color: colors.textSecondary }]}>{query.trim() ? 'Результаты поиска' : 'Популярные'}</Text>
-        {__DEV__ && !hasGiphy ? <Text style={[type.caption, { color: colors.muted }]}>Тестовые плитки: ключа GIPHY пока нет</Text> : null}
-        {loading && gifs.length === 0 ? <ActivityIndicator color={colors.muted} style={styles.state} /> : null}
-        {failed ? <Text style={[type.body, styles.state, { color: colors.muted }]}>Не получилось загрузить GIF. Проверьте интернет</Text> : null}
-        {!loading && !failed && gifs.length === 0 ? <Text style={[type.body, styles.state, { color: colors.muted }]}>Ничего не нашлось. Попробуйте другие слова</Text> : null}
+        {__DEV__ && testTiles ? <Text style={[type.caption, { color: colors.muted }]}>Тестовые плитки: на сервере пока нет ключа gifs.ru</Text> : null}
+        {loading && gifs.length === 0 ? <ActivityIndicator accessibilityLabel="Загрузка" color={colors.muted} style={styles.state} /> : null}
+        {problem ? <Text style={[type.body, styles.state, { color: colors.muted }]}>{problem}</Text> : null}
+        {!loading && !problem && gifs.length === 0 ? <Text style={[type.body, styles.state, { color: colors.muted }]}>Ничего не найдено. Попробуйте другие слова</Text> : null}
         <View style={styles.grid} onLayout={(event) => setGridWidth(Math.floor(event.nativeEvent.layout.width))}>
           {columns.map((column, index) => (
             <View key={index} style={styles.column}>
@@ -76,9 +136,15 @@ export function GifBrowser({ active, onPick, headerRight }: { active: boolean; o
             </View>
           ))}
         </View>
+        {loadingMore ? <ActivityIndicator accessibilityLabel="Загрузка" color={colors.muted} style={styles.more} /> : null}
+        {moreFailed ? (
+          <Pressable accessibilityRole="button" onPress={() => void loadMore()} style={({ pressed }) => [styles.more, { opacity: pressed ? 0.5 : 1 }]}>
+            <Text style={[type.footnote, styles.moreText, { color: colors.muted }]}>Не получилось загрузить ещё. Нажмите, чтобы повторить</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
-      <Text style={[type.caption, styles.powered, { color: colors.textPrimary, opacity: 0.6 }]}>Powered by GIPHY</Text>
+      <Text style={[type.caption, styles.powered, { color: colors.textPrimary, opacity: 0.6 }]}>Powered by GIFS.RU</Text>
     </View>
   );
 }
@@ -119,14 +185,17 @@ export function GifSheet({ visible, title = 'Отправить GIF', onPick, on
 }
 
 // Плитка GIF в сетке (и крупное превью в посте): картинка или, у тестовых, ровная плитка с названием
+// full — показывать полную версию (в посте), иначе маленькое превью (сетка, комментарий)
 // onFill — когда превью лежит на фоне `fill` (например, внутри строки комментария): тогда плитка на `card`, чтобы её было видно
-export function GifPreview({ gif, width, onFill = false }: { gif: Gif; width: number; onFill?: boolean }) {
+export function GifPreview({ gif, width, onFill = false, full = false }: { gif: Gif; width: number; onFill?: boolean; full?: boolean }) {
   const colors = useColors();
   const scheme = useScheme();
   const height = Math.round((width * gif.height) / gif.width);
-  if (gif.previewUrl) return <Image source={{ uri: gif.previewUrl }} accessibilityLabel={`GIF: ${gif.title}`} style={{ width, height, borderRadius: radius.control, backgroundColor: colors.fill }} />;
+  const label = gif.title ? `GIF: ${gif.title}` : 'GIF';
+  const uri = full ? (gif.url ?? gif.previewUrl) : gif.previewUrl;
+  if (uri) return <Image source={{ uri }} accessibilityLabel={label} style={{ width, height, borderRadius: radius.control, backgroundColor: colors.fill }} />;
   return (
-    <View accessibilityLabel={`GIF: ${gif.title}`} style={[styles.test, { width, height, backgroundColor: onFill ? colors.card : colors.fill, borderWidth: scheme === 'light' ? 1 : 0, borderColor: colors.border }]}>
+    <View accessibilityLabel={label} style={[styles.test, { width, height, backgroundColor: onFill ? colors.card : colors.fill, borderWidth: scheme === 'light' ? 1 : 0, borderColor: colors.border }]}>
       <Text style={[type.headline, { color: colors.textPrimary }]}>GIF</Text>
       <Text numberOfLines={1} style={[type.footnote, { color: colors.textSecondary }]}>
         {gif.title}
@@ -135,9 +204,19 @@ export function GifPreview({ gif, width, onFill = false }: { gif: Gif; width: nu
   );
 }
 
+// GIF в посте: во всю ширину, но не шире POST_GIF_MAX, с родными пропорциями
+export function PostGif({ gif }: { gif: Gif }) {
+  const [width, setWidth] = useState(0);
+  return (
+    <View onLayout={(event) => setWidth(Math.floor(event.nativeEvent.layout.width))}>
+      {width > 0 ? <GifPreview gif={gif} width={Math.min(width, POST_GIF_MAX)} full /> : null}
+    </View>
+  );
+}
+
 function GifTile({ gif, width, onPress }: { gif: Gif; width: number; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Выбрать GIF: ${gif.title}`} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={gif.title ? `Выбрать GIF: ${gif.title}` : 'Выбрать GIF'} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
       <GifPreview gif={gif} width={width} />
     </Pressable>
   );
@@ -153,6 +232,8 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: GAP },
   column: { flex: 1, gap: GAP },
   state: { textAlign: 'center', paddingVertical: 28 },
+  more: { paddingVertical: 12 },
+  moreText: { textAlign: 'center' },
   powered: { textAlign: 'center', paddingVertical: 8 },
   test: { borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', gap: 2 },
 });

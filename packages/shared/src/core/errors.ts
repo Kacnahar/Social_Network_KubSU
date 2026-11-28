@@ -20,6 +20,7 @@ export const ERROR_CODES = [
   'vote_cooldown',
   'vote_not_possible',
   'voice_unavailable',
+  'gifs_unavailable',
   'nickname_required',
   'account_banned',
   'not_found',
