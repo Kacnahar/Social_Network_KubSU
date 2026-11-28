@@ -44,11 +44,15 @@ export function Popover({ visible, anchor, onClose, size = 'menu', children }: P
   const [mounted, setMounted] = useState(visible);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const progress = useRef(new Animated.Value(0)).current;
+  // Анимация появления запускается один раз за открытие. Если потом размер меню изменился (например, поставили галочку и текст стал шире),
+  // меню только перестраивается, а не «моргает» заново
+  const opened = useRef(false);
   const lastAnchor = useRef<Rect | null>(anchor);
   if (anchor) lastAnchor.current = anchor;
 
   useEffect(() => {
     if (visible) {
+      opened.current = false;
       setBox(null);
       setMounted(true);
     } else if (mounted) {
@@ -65,7 +69,8 @@ export function Popover({ visible, anchor, onClose, size = 'menu', children }: P
 
   // Когда размер меню известен и оно поставлено на место — запускаем появление и лёгкую вибрацию (только на Android)
   useEffect(() => {
-    if (!visible || !box) return;
+    if (!visible || !box || opened.current) return;
+    opened.current = true;
     if (Platform.OS === 'android' && sound.vibration) Vibration.vibrate(8);
     if (reduceMotion) {
       progress.setValue(1);
@@ -141,6 +146,7 @@ export function Popover({ visible, anchor, onClose, size = 'menu', children }: P
 type ItemProps = {
   title: string;
   icon?: ReactNode;
+  // Если передан (true или false), справа резервируется место под галочку: меню не меняет ширину при выборе
   selected?: boolean;
   danger?: boolean;
   first?: boolean;
@@ -150,14 +156,14 @@ type ItemProps = {
 };
 
 // Пункт меню: тонкая иконка слева, текст, у выбранного галочка справа; опасные — красным; между пунктами тонкая линия
-export function PopoverItem({ title, icon, selected = false, danger = false, first = false, compact = false, onPress }: ItemProps) {
+export function PopoverItem({ title, icon, selected, danger = false, first = false, compact = false, onPress }: ItemProps) {
   const colors = useColors();
   const color = danger ? colors.danger : colors.textPrimary;
   return (
     <Pressable
       accessibilityRole="menuitem"
       accessibilityLabel={title}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected: selected === true }}
       onPress={onPress}
       style={({ pressed }) => [styles.item, !first && { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth }, { opacity: pressed ? 0.6 : 1 }]}
     >
@@ -165,7 +171,7 @@ export function PopoverItem({ title, icon, selected = false, danger = false, fir
       <Text numberOfLines={2} style={[compact ? type.subhead : type.body, styles.itemText, { color }]}>
         {title}
       </Text>
-      {selected ? <CheckIcon color={colors.textPrimary} /> : null}
+      {selected ? <CheckIcon color={colors.textPrimary} /> : selected === false ? <View style={styles.checkSlot} /> : null}
     </Pressable>
   );
 }
@@ -183,4 +189,5 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 16, paddingVertical: 8 },
   itemIcon: { width: 24, alignItems: 'center' },
   itemText: { flex: 1 },
+  checkSlot: { width: 24, height: 24 },
 });

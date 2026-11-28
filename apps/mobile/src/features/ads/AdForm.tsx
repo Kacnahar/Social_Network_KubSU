@@ -114,7 +114,7 @@ export function AdForm({ category }: { category: AdCategory }) {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Убрать фото ${index + 1}`}
-                  hitSlop={8}
+                  hitSlop={11}
                   onPress={() => setPhotos((current) => current.filter((item) => item !== uri))}
                   style={[styles.remove, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
                 >

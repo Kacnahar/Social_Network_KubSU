@@ -1,6 +1,8 @@
 import type { Comment } from '@app/shared';
 import { useCallback, useState } from 'react';
 import { useSignedIn } from '../../lib/session';
+import type { Gif } from '../gif/gifs';
+import { GIF_PLACEHOLDER, rememberCommentGif } from './commentGifs';
 import { rememberReply, setBaseLikes } from './commentThreads';
 
 // ТЕСТОВЫЕ комментарии с несколькими уровнями ответов, чтобы видеть ветки (экран /comments-demo).
@@ -42,20 +44,23 @@ export function useDemoComments() {
   const { profile } = useSignedIn();
   const [comments, setComments] = useState<Comment[]>(build);
   const [draft, setDraft] = useState('');
+  const [draftGif, setDraftGif] = useState<Gif | null>(null);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [lastAdded, setLastAdded] = useState<{ id: string; parentId: string | null } | null>(null);
 
   const send = useCallback(async () => {
-    const text = draft.trim();
+    const text = draft.trim() || (draftGif ? GIF_PLACEHOLDER : '');
     if (text === '' || !profile) return;
     const id = `demo-new-${Date.now()}`;
     const author = { profileId: profile.profileId, displayName: profile.displayName, avatarUrl: profile.avatarUrl, role: profile.role };
     if (replyTo) rememberReply(id, replyTo.commentId);
+    if (draftGif) rememberCommentGif(id, draftGif);
     setComments((current) => [...current, { commentId: id, author, text, createdAt: new Date().toISOString(), canDelete: false }]);
     setLastAdded({ id, parentId: replyTo ? replyTo.commentId : null });
     setDraft('');
+    setDraftGif(null);
     setReplyTo(null);
-  }, [draft, profile, replyTo]);
+  }, [draft, draftGif, profile, replyTo]);
 
   return {
     state: { status: 'ready' as const, comments, nextCursor: null },
@@ -65,6 +70,8 @@ export function useDemoComments() {
     moreError: null,
     draft,
     setDraft,
+    draftGif,
+    setDraftGif,
     replyTo,
     setReplyTo,
     send,

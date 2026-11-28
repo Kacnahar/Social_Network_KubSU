@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryOfAd, emptyAdDraft, filterAds, filterByCategory, formatAdPrice, formatPrice, isSection, kindOptions, priceOf, validateAdDraft, type Ad, type AdDraft } from './ads';
+import { sortAds, cardPrice, categoryOfFilter, filterByAdFilter, filterOfCategory, categoryOfAd, emptyAdDraft, filterAds, filterByCategory, formatAdPrice, formatPrice, isSection, kindOptions, priceOf, validateAdDraft, type Ad, type AdDraft } from './ads';
 
 const ad = (patch: Partial<Ad>): Ad => ({
   adId: 'a',
@@ -135,5 +135,64 @@ describe('категории «Объявлений»', () => {
     expect(filterByCategory(ads, 'rent', '').map((item) => item.adId)).toEqual(['3']);
     expect(filterByCategory(ads, 'services', '').map((item) => item.adId)).toEqual(['5']);
     expect(filterByCategory(ads, null, 'учебник')).toEqual([]);
+  });
+});
+
+describe('фильтр экрана «Объявления»', () => {
+  it('«Вещи» — куплю и продам, «Жильё» — аренда, книги не попадают', () => {
+    expect(filterByAdFilter(ads, 'all', '').map((item) => item.adId)).toEqual(['1', '2', '3', '5']);
+    expect(filterByAdFilter(ads, 'things', '').map((item) => item.adId)).toEqual(['1', '2']);
+    expect(filterByAdFilter(ads, 'housing', '').map((item) => item.adId)).toEqual(['3']);
+    expect(filterByAdFilter(ads, 'services', '').map((item) => item.adId)).toEqual(['5']);
+    expect(filterByAdFilter(ads, 'jobs', '')).toEqual([]);
+  });
+
+  it('поиск работает вместе с фильтром', () => {
+    expect(filterByAdFilter(ads, 'things', 'ноутбук').map((item) => item.adId)).toEqual(['2']);
+    expect(filterByAdFilter(ads, 'housing', 'ноутбук')).toEqual([]);
+  });
+
+  it('связывает фильтр, категорию и форму «+»', () => {
+    expect(filterOfCategory('buy')).toBe('things');
+    expect(filterOfCategory('rent')).toBe('housing');
+    expect(filterOfCategory(null)).toBe('all');
+    expect(categoryOfFilter('all')).toBeNull();
+    expect(categoryOfFilter('housing')).toBe('rent');
+  });
+
+  it('на карточке без цены у вакансии и услуги подпись, а не «Договорная»', () => {
+    expect(cardPrice(ad({ section: 'jobs', kind: null, price: null }))).toBe('Вакансия');
+    expect(cardPrice(ad({ section: 'services', kind: null, price: null }))).toBe('Услуга');
+    expect(cardPrice(ad({ price: null }))).toBe('Договорная');
+    expect(cardPrice(ad({ price: 500 }))).toBe(formatAdPrice(ad({ price: 500 })));
+  });
+});
+
+describe('сортировка объявлений', () => {
+  const list = [
+    ad({ adId: 'a', title: 'Яблоки', price: 300, createdAt: '2026-11-22T10:00:00.000Z' }),
+    ad({ adId: 'b', title: 'Арбуз', price: null, createdAt: '2026-11-23T10:00:00.000Z' }),
+    ad({ adId: 'c', title: 'Банан', price: 100, createdAt: '2026-11-21T10:00:00.000Z' }),
+  ];
+  const ids = (sort: Parameters<typeof sortAds>[1]) => sortAds(list, sort).map((item) => item.adId);
+
+  it('по дате', () => {
+    expect(ids('new')).toEqual(['b', 'a', 'c']);
+    expect(ids('old')).toEqual(['c', 'a', 'b']);
+  });
+
+  it('по цене: без цены всегда в конце', () => {
+    expect(ids('cheap')).toEqual(['c', 'a', 'b']);
+    expect(ids('expensive')).toEqual(['a', 'c', 'b']);
+  });
+
+  it('по имени', () => {
+    expect(ids('az')).toEqual(['b', 'c', 'a']);
+    expect(ids('za')).toEqual(['a', 'c', 'b']);
+  });
+
+  it('не меняет исходный список', () => {
+    sortAds(list, 'az');
+    expect(list.map((item) => item.adId)).toEqual(['a', 'b', 'c']);
   });
 });

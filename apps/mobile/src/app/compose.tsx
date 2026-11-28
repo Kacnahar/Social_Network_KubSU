@@ -17,7 +17,7 @@ import { Body, Button, ErrorText, Screen, Title, noOutline } from '../ui/compone
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { CameraIcon, CloseIcon, GalleryIcon, GifIcon, PollIcon } from '../ui/icons';
 import { showToast } from '../ui/toastStore';
-import { radius, type, useColors } from '../ui/theme';
+import { radius, type, useColors, useReduceMotion } from '../ui/theme';
 
 // Свой предел короче серверного: пост — короткая заметка. Счётчик появляется ближе к пределу
 const TEXT_MAX = 500;
@@ -33,6 +33,7 @@ export default function ComposeScreen() {
   const router = useRouter();
   const colors = useColors();
   const fail = useFail();
+  const reduceMotion = useReduceMotion();
   const { token, account, profile } = useSignedIn();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<Picked[]>([]);
@@ -64,8 +65,12 @@ export default function ComposeScreen() {
       inputH.setValue(targetH);
       return;
     }
+    if (reduceMotion) {
+      inputH.setValue(targetH);
+      return;
+    }
     Animated.timing(inputH, { toValue: targetH, duration: 150, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [targetH, inputH]);
+  }, [targetH, inputH, reduceMotion]);
 
   // Гость публиковать не может: по прямому адресу возвращаем в ленту
   if (!can(account.role, 'publish')) return <Redirect href="/" />;
@@ -184,8 +189,8 @@ export default function ComposeScreen() {
       <SafeAreaView style={styles.fill}>
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.column, styles.bar, { borderBottomColor: colors.border }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Отмена" hitSlop={10} disabled={publishing} onPress={cancel} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-              <Text style={[type.body, { color: colors.text }]}>Отмена</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Отмена" hitSlop={10} disabled={publishing} onPress={cancel} style={({ pressed }) => [styles.barButton, { opacity: pressed ? 0.6 : 1 }]}>
+              <Text style={[type.headline, { color: colors.text }]}>Отмена</Text>
             </Pressable>
             {/* Заголовок занимает всё место между «Отмена» и кнопкой: на узком экране равные поля по бокам не помещаются */}
             <Text accessibilityRole="header" numberOfLines={1} style={[type.headline, styles.title, { color: colors.text }]}>
@@ -198,7 +203,7 @@ export default function ComposeScreen() {
               hitSlop={10}
               disabled={empty || picking || publishing}
               onPress={() => void publish()}
-              style={({ pressed }) => ({ opacity: empty || picking ? 0.35 : publishing ? 0.5 : pressed ? 0.4 : 1 })}
+              style={({ pressed }) => [styles.barButton, { opacity: empty || picking ? 0.35 : publishing ? 0.5 : pressed ? 0.4 : 1 }]}
             >
               <Text style={[type.headline, { color: colors.textPrimary }]}>{publishing ? 'Отправляем…' : 'Опубликовать'}</Text>
             </Pressable>
@@ -266,7 +271,7 @@ export default function ComposeScreen() {
                         <Pressable
                           accessibilityRole="button"
                           accessibilityLabel={`Убрать фото ${index + 1}`}
-                          hitSlop={8}
+                          hitSlop={11}
                           disabled={publishing}
                           onPress={() => removePhoto(photo.key)}
                           style={[styles.remove, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
@@ -284,7 +289,7 @@ export default function ComposeScreen() {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="Убрать GIF"
-                      hitSlop={8}
+                      hitSlop={11}
                       disabled={publishing}
                       onPress={() => setGif(null)}
                       style={[styles.remove, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
@@ -298,40 +303,40 @@ export default function ComposeScreen() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Фото из галереи"
-                    hitSlop={8}
+                    hitSlop={11}
                     disabled={busy || room <= 0}
                     onPress={() => void pickFromGallery()}
-                    style={({ pressed }) => ({ opacity: busy || room <= 0 ? 0.35 : pressed ? 0.6 : 1 })}
+                    style={({ pressed }) => [styles.tool, { opacity: busy || room <= 0 ? 0.35 : pressed ? 0.6 : 1 }]}
                   >
                     <GalleryIcon color={colors.muted} />
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Снять на камеру"
-                    hitSlop={8}
+                    hitSlop={11}
                     disabled={busy || room <= 0}
                     onPress={() => void takePhoto()}
-                    style={({ pressed }) => ({ opacity: busy || room <= 0 ? 0.35 : pressed ? 0.6 : 1 })}
+                    style={({ pressed }) => [styles.tool, { opacity: busy || room <= 0 ? 0.35 : pressed ? 0.6 : 1 }]}
                   >
                     <CameraIcon color={colors.muted} />
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="GIF"
-                    hitSlop={8}
+                    hitSlop={11}
                     disabled={busy || photos.length > 0}
                     onPress={() => setPickingGif(true)}
-                    style={({ pressed }) => ({ opacity: busy || photos.length > 0 ? 0.35 : pressed ? 0.6 : 1 })}
+                    style={({ pressed }) => [styles.tool, { opacity: busy || photos.length > 0 ? 0.35 : pressed ? 0.6 : 1 }]}
                   >
                     <GifIcon color={colors.muted} />
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Опрос"
-                    hitSlop={8}
+                    hitSlop={11}
                     disabled={busy}
                     onPress={() => showToast('Опросы скоро появятся')}
-                    style={({ pressed }) => ({ opacity: busy ? 0.35 : pressed ? 0.6 : 1 })}
+                    style={({ pressed }) => [styles.tool, { opacity: busy ? 0.35 : pressed ? 0.6 : 1 }]}
                   >
                     <PollIcon color={colors.muted} />
                   </Pressable>
@@ -385,6 +390,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  tools: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingTop: 8, marginLeft: -2 },
+  tool: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  barButton: { minHeight: 44, justifyContent: 'center' },
+  tools: { flexDirection: 'row', alignItems: 'center', gap: 0, paddingTop: 0, marginLeft: -10 },
   gifBox: { alignSelf: 'flex-start', paddingTop: 8 },
 });

@@ -2,8 +2,9 @@ import { can } from '@app/shared';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { AdsScreen } from '../../features/ads/AdsScreen';
 import { AdRow } from '../../features/ads/AdItem';
-import { AD_CATEGORIES, AD_SECTIONS, filterAds, filterByCategory, isCategory, isSection, kindOptions, type Ad, type AdCategory, type AdKind } from '../../features/ads/ads';
+import { AD_CATEGORIES, AD_SECTIONS, filterAds, filterByCategory, isCategory, isSection, kindOptions, type Ad, type AdCategory, type AdKind, type AdSection } from '../../features/ads/ads';
 import { useAds } from '../../features/ads/store';
 import { useSignedIn } from '../../lib/session';
 import { Chips } from '../../ui/Chips';
@@ -16,18 +17,23 @@ import { type, useColors } from '../../ui/theme';
 
 // Раздел каталога («Объявления» с категориями Купить, Продать, Аренда жилья, Услуги, Вакансии): «назад» и «+», заголовок, поиск, чипы типов и список
 export default function SectionScreen() {
+  const params = useLocalSearchParams<{ section?: string; category?: string }>();
+  if (!isSection(params.section)) return <Redirect href="/catalog" />;
+  // «Объявления» — сетка 2×2 с фильтром; остальные разделы (книги и т. д.) остаются списком
+  if (params.section === 'ads') return <AdsScreen initialCategory={isCategory(params.category) ? params.category : null} />;
+  return <ListSection section={params.section} category={params.category} />;
+}
+
+function ListSection({ section, category: initialCategory }: { section: AdSection; category?: string }) {
   const router = useRouter();
   const colors = useColors();
   const { account } = useSignedIn();
-  const params = useLocalSearchParams<{ section?: string; category?: string }>();
   const ads = useAds();
   const [kind, setKind] = useState<AdKind | null>(null);
-  const [category, setCategory] = useState<AdCategory | null>(isCategory(params.category) ? params.category : null);
+  const [category, setCategory] = useState<AdCategory | null>(isCategory(initialCategory) ? initialCategory : null);
   const [query, setQuery] = useState('');
   const [now] = useState(() => new Date());
 
-  if (!isSection(params.section)) return <Redirect href="/catalog" />;
-  const section = params.section;
   const meta = AD_SECTIONS.find((item) => item.value === section);
   const kinds = kindOptions(section);
   // «Объявления» собирают в себе услуги и вакансии: пять категорий-чипов, одна лента

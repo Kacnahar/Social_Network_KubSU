@@ -1,6 +1,6 @@
 import { can } from '@app/shared';
 import { useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSession, useSignedIn } from '../../lib/session';
 import { BackButton } from '../../ui/BackButton';
@@ -11,6 +11,10 @@ import { SettingsGroup, SettingsRow } from '../../ui/SettingsList';
 import { themeChoiceLabel } from '../../ui/themeChoice';
 import { useThemeChoice } from '../../ui/themeStore';
 import { useColors } from '../../ui/theme';
+
+// Тестовые аккаунты — только в режиме разработки. require внутри условия: в настоящей сборке __DEV__ ложно,
+// и сборщик выбрасывает этот код целиком (его там вообще нет)
+const TestAccounts: ComponentType | null = __DEV__ ? (require('../../features/devAccounts/TestAccountsSwitcher') as { TestAccountsSwitcher: ComponentType }).TestAccountsSwitcher : null;
 
 // Настройки: список с тонкими иконками. У гостя только «Язык» и «Тема»
 export default function SettingsScreen() {
@@ -64,6 +68,8 @@ export default function SettingsScreen() {
           <SettingsRow title="О приложении" icon={<MarkIcon color={icon} mark="i" />} onPress={() => open('about')} />
         </SettingsGroup>
       ) : null}
+
+      {TestAccounts ? <TestAccounts /> : null}
 
       {/* Выход — отдельно, с отступом, красным текстом по центру, без рамки */}
       {full ? (

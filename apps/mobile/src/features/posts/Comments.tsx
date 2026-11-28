@@ -2,6 +2,8 @@ import { COMMENT_TEXT_MAX, type Comment } from '@app/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { GifPreview, GifSheet } from '../gif/GifPicker';
+import type { Gif } from '../gif/gifs';
 import { formatPostTime } from '../../lib/relativeTime';
 import { useSignedIn } from '../../lib/session';
 import { useFail } from '../../lib/useFail';
@@ -9,11 +11,12 @@ import { Avatar } from '../../ui/Avatar';
 import { Button, ErrorText, noOutline } from '../../ui/components';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { CommentButton, LikeButton } from '../../ui/ActionButtons';
-import { CloseIcon, DotsIcon, FlagIcon, SendIcon, TrashIcon } from '../../ui/icons';
+import { CloseIcon, DotsIcon, FlagIcon, GifIcon, SendIcon, TrashIcon } from '../../ui/icons';
 import { useNickname } from '../../ui/nicknameStore';
 import { Popover, PopoverItem, PopoverSeparator, useAnchor, type Rect } from '../../ui/Popover';
 import { plural } from '../../ui/plural';
 import { type, useColors, useReduceMotion } from '../../ui/theme';
+import { GIF_PLACEHOLDER, rememberCommentGif, useCommentGif, visibleCommentText } from './commentGifs';
 import { addComment, deleteComment, getComments, reportComment } from './api';
 import { ancestorsOf, buildTree, isCommentLiked, likeCountOf, parentOfComment, rememberReply, toggleCommentLike, visibleReplies, type TreeNode } from './commentThreads';
 
@@ -31,6 +34,8 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  // Выбранный GIF (не больше одного) — только в памяти приложения, на сервер пока не уходит
+  const [draftGif, setDraftGif] = useState<Gif | null>(null);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -73,16 +78,20 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
   };
 
   const send = async () => {
-    const text = draft.trim();
+    // Комментарий из одного GIF отправляется с текстом-заглушкой: сервер требует непустой текст
+    const text = draft.trim() || (draftGif ? GIF_PLACEHOLDER : '');
     if (text === '' || sending) return;
+    const gif = draftGif;
     setSendError(null);
     setSending(true);
     try {
       const comment = await addComment(token, postId, text);
       if (replyTo) rememberReply(comment.commentId, replyTo.commentId);
+      if (gif) rememberCommentGif(comment.commentId, gif);
       setLastAdded({ id: comment.commentId, parentId: replyTo ? replyTo.commentId : null });
       setState((current) => (current.status === 'ready' ? { ...current, comments: [...current.comments, comment] } : current));
       setDraft('');
+      setDraftGif(null);
       setReplyTo(null);
       onCountChange(1);
     } catch (caught) {
@@ -99,7 +108,7 @@ export function useComments(postId: string, onCountChange: (delta: number) => vo
     onCountChange(-1);
   };
 
-  return { state, load, loadMore, loadingMore, moreError, draft, setDraft, replyTo, setReplyTo, send, sending, sendError, removed, lastAdded };
+  return { state, load, loadMore, loadingMore, moreError, draft, setDraft, draftGif, setDraftGif, replyTo, setReplyTo, send, sending, sendError, removed, lastAdded };
 }
 
 type CommentsApi = ReturnType<typeof useComments>;
@@ -109,6 +118,10 @@ const AVATAR = 32;
 const INDENT = AVATAR + 10;
 const LINE = 1.5;
 const ROW_PAD = 8;
+// Поле комментария: одна строка = высота строки текста 23 + отступы по 4,5 = 32 (как аватарка); максимум 5 строк
+const INPUT_PAD = 4.5;
+const INPUT_MIN = 23 + INPUT_PAD * 2;
+const INPUT_MAX = 23 * 5 + INPUT_PAD * 2;
 const ELBOW_Y = ROW_PAD + AVATAR / 2; // на какой высоте ветка подходит к аватарке ответа
 const LINE_X = AVATAR / 2 - LINE / 2; // где проходит вертикальная линия под аватаркой родителя
 
@@ -258,11 +271,23 @@ function useHandle(author: Comment['author']): string {
 function MentionLine({ comment, mention }: { comment: Comment; mention: Comment | null }) {
   const colors = useColors();
   const mentionName = useHandle((mention ?? comment).author);
+  const gif = useCommentGif(comment.commentId);
+  const text = visibleCommentText(comment.text, gif);
   return (
-    <Text style={[type.body, { color: colors.text }]}>
-      {mention ? <Text style={{ color: colors.muted }}>@{mentionName} </Text> : null}
-      {comment.text}
-    </Text>
+    <View style={styles.mentionLine}>
+      {text !== '' || mention ? (
+        <Text style={[type.body, { color: colors.text }]}>
+          {mention ? <Text style={{ color: colors.muted }}>@{mentionName} </Text> : null}
+          {text}
+        </Text>
+      ) : null}
+      {/* GIF под текстом комментария */}
+      {gif ? (
+        <View style={styles.commentGif}>
+          <GifPreview gif={gif} width={140} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -411,8 +436,22 @@ export function CommentComposer({ comments, focusKey }: { comments: CommentsApi;
   const replyHandle = useNickname(comments.replyTo?.author.profileId);
   const { profile } = useSignedIn();
   const input = useRef<ComponentRef<typeof TextInput>>(null);
-  const [focused, setFocused] = useState(false);
-  const canSend = comments.draft.trim() !== '' && !comments.sending;
+  const [pickingGif, setPickingGif] = useState(false);
+  // Высота поля: одна строка по умолчанию, растёт ровно на строку, максимум 5 строк, дальше текст прокручивается внутри
+  const reduceMotion = useReduceMotion();
+  const [textH, setTextH] = useState(INPUT_MIN);
+  const inputH = useRef(new Animated.Value(INPUT_MIN)).current;
+  const placed = useRef(false);
+  const targetH = Math.max(INPUT_MIN, Math.min(textH, INPUT_MAX));
+  useEffect(() => {
+    if (!placed.current || reduceMotion) {
+      placed.current = true;
+      inputH.setValue(targetH);
+      return;
+    }
+    Animated.timing(inputH, { toValue: targetH, duration: 150, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [targetH, inputH, reduceMotion]);
+  const canSend = (comments.draft.trim() !== '' || comments.draftGif !== null) && !comments.sending;
 
   // «Ответить» ставит курсор в поле
   useEffect(() => {
@@ -432,35 +471,82 @@ export function CommentComposer({ comments, focusKey }: { comments: CommentsApi;
         </View>
       ) : null}
       <ErrorText>{comments.sendError}</ErrorText>
-      <View style={styles.composerRow}>
-        <Avatar avatarUrl={profile?.avatarUrl ?? null} name={profile?.displayName ?? ''} size={32} />
-        <TextInput
-          ref={input}
-          accessibilityLabel="Написать комментарий"
-          value={comments.draft}
-          onChangeText={comments.setDraft}
-          placeholder="Написать комментарий…"
-          placeholderTextColor={colors.muted}
-          selectionColor={colors.accent}
-          maxLength={COMMENT_TEXT_MAX}
-          autoCapitalize="sentences"
-          autoCorrect
-          multiline
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={[type.body, styles.input, noOutline, { color: colors.text, backgroundColor: focused ? colors.fillActive : colors.fill }]}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Отправить"
-          accessibilityState={{ disabled: !canSend, busy: comments.sending }}
-          disabled={!canSend}
-          onPress={() => void comments.send()}
-          style={({ pressed }) => [styles.send, { backgroundColor: colors.primary, opacity: !canSend ? 0.4 : pressed ? 0.8 : 1 }]}
-        >
-          {comments.sending ? <ActivityIndicator color={colors.onPrimary} /> : <SendIcon color={colors.onPrimary} />}
-        </Pressable>
+      {/* Всё в одном блоке: GIF (если выбран), а в ряду — аватарка, поле, GIF, «Отправить» */}
+      <View style={[styles.composerBox, { backgroundColor: colors.fill }]}>
+        {comments.draftGif ? (
+          <View style={styles.draftGif}>
+            <GifPreview gif={comments.draftGif} width={120} onFill />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Убрать GIF"
+              hitSlop={11}
+              onPress={() => comments.setDraftGif(null)}
+              style={[styles.removeGif, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
+            >
+              <CloseIcon color={colors.text} size={10} />
+            </Pressable>
+          </View>
+        ) : null}
+        <View style={styles.composerRow}>
+          <Avatar avatarUrl={profile?.avatarUrl ?? null} name={profile?.displayName ?? ''} size={32} />
+          <Animated.View style={[styles.inputWrap, { height: inputH }]}>
+            <TextInput
+              ref={input}
+              accessibilityLabel="Написать комментарий"
+              value={comments.draft}
+              onChangeText={comments.setDraft}
+              placeholder="Комментарий…"
+              placeholderTextColor={colors.muted}
+              selectionColor={colors.accent}
+              maxLength={COMMENT_TEXT_MAX}
+              autoCapitalize="sentences"
+              autoCorrect
+              multiline
+              scrollEnabled={textH > INPUT_MAX}
+              style={[type.body, styles.input, noOutline, { color: colors.text }]}
+            />
+            {/* Невидимая копия текста: по её высоте узнаём, сколько строк нужно */}
+            <Text
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              onLayout={(event) => setTextH(Math.ceil(event.nativeEvent.layout.height))}
+              style={[type.body, styles.mirror]}
+            >
+              {`${comments.draft}\u200b`}
+            </Text>
+          </Animated.View>
+          {/* Один GIF на комментарий: пока он выбран, кнопка бледная; чтобы заменить, сначала уберите прежний крестиком */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="GIF"
+            disabled={comments.draftGif !== null}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+            onPress={() => setPickingGif(true)}
+            style={({ pressed }) => [styles.gifButton, { opacity: comments.draftGif !== null ? 0.3 : pressed ? 0.5 : 1 }]}
+          >
+            <GifIcon color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Отправить"
+            accessibilityState={{ disabled: !canSend, busy: comments.sending }}
+            disabled={!canSend}
+            onPress={() => void comments.send()}
+            style={({ pressed }) => [styles.send, { backgroundColor: colors.primary, opacity: !canSend ? 0.4 : pressed ? 0.8 : 1 }]}
+          >
+            {comments.sending ? <ActivityIndicator color={colors.onPrimary} /> : <SendIcon color={colors.onPrimary} />}
+          </Pressable>
+        </View>
       </View>
+      <GifSheet
+        visible={pickingGif}
+        onClose={() => setPickingGif(false)}
+        onPick={(gif) => {
+          comments.setDraftGif(gif);
+          setPickingGif(false);
+        }}
+      />
     </View>
   );
 }
@@ -493,9 +579,19 @@ const styles = StyleSheet.create({
   through: { position: 'absolute', left: -INDENT + LINE_X, top: ELBOW_Y, bottom: 0, width: LINE, borderRadius: 1 },
   moreReplies: { paddingVertical: 10, paddingLeft: 0, minHeight: 44, justifyContent: 'center' },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, paddingBottom: 8, gap: 6 },
-  composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  input: { flex: 1, minHeight: 40, maxHeight: 120, borderRadius: 20, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8 },
-  send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  // Один общий блок: фон, скругление 12 px; всё внутри выровнено по вертикальному центру аватарки
+  composerBox: { borderRadius: 12, borderCurve: 'continuous', paddingHorizontal: 8, paddingVertical: 4, gap: 6 },
+  // Аватарка, GIF и «Отправить» прижаты к нижней строке поля (как в Instagram и Telegram)
+  composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  inputWrap: { flex: 1, overflow: 'hidden' },
+  input: { flex: 1, paddingHorizontal: 6, paddingTop: INPUT_PAD, paddingBottom: INPUT_PAD, textAlignVertical: 'top' },
+  mirror: { position: 'absolute', left: 0, right: 0, top: 0, opacity: 0, paddingHorizontal: 6, paddingTop: INPUT_PAD, paddingBottom: INPUT_PAD },
+  gifButton: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center' },
+  send: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  draftGif: { alignSelf: 'flex-start', paddingTop: 4, paddingLeft: 4 },
+  removeGif: { position: 'absolute', right: -6, top: -2, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 },
+  mentionLine: { gap: 6 },
+  commentGif: { alignSelf: 'flex-start' },
   replyChip: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', maxWidth: '100%', paddingLeft: 12, paddingRight: 10, paddingVertical: 6, borderRadius: 999 },
   replyText: { fontWeight: '600', flexShrink: 1 },
 });

@@ -1,6 +1,6 @@
-import { AdForm } from '../../features/ads/AdForm';
+import { ServiceForm } from '../../features/ads/ServiceForm';
 
-// Форма «services»: пока заготовка с общими полями (фото, название, описание, цена), свои поля добавим позже
+// «Предложить услугу»: форма на одной странице (общие части с «Продать вещь» и «Сдать жильё»)
 export default function NewAd_service() {
-  return <AdForm category="services" />;
+  return <ServiceForm />;
 }
